@@ -3,7 +3,7 @@
 # daemon, so Super+D could never transcribe or type. Install both.
 set -eEo pipefail
 
-sudo pacman -S --noconfirm --needed whisper.cpp ydotool 2>/dev/null || true
+sudo pacman -S --noconfirm --needed whisper-cpp ydotool 2>/dev/null || true
 
 # ydotool needs its daemon running and /dev/uinput writable by the input group.
 if systemctl list-unit-files 2>/dev/null | grep -q '^ydotoold.service'; then
