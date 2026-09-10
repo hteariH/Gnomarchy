@@ -243,7 +243,12 @@ else
 fi
 
 chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
-ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
+mkdir -p /mnt/usr/local/bin
+for cmd in "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/gnomarchy*; do
+  [ -f "$cmd" ] || continue
+  name="$(basename "$cmd")"
+  ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/$name" "/mnt/usr/local/bin/$name" 2>/dev/null || true
+done
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
 
 # The ISO ships the repo without .git (rsync --exclude=.git), so turn the
@@ -266,16 +271,21 @@ fi
 chmod +x "$GNOMARCHY_TARGET/bin"/* 2>/dev/null || true
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
 
-# Pre-populate all 22 bundled wallpapers into target system
-echo "Installing bundled wallpapers to target system..."
+# Pre-populate the bundled fallback wallpapers into the target system.
+# One directory per theme: gnomarchy-theme-set resolves
+# /usr/share/backgrounds/gnomarchy/<theme>/, so a flat layout is never found.
+echo "Installing bundled fallback wallpapers to target system..."
 mkdir -p /mnt/usr/share/backgrounds/gnomarchy
-for bg in "/mnt/home/$USERNAME/.local/share/gnomarchy"/themes/*/backgrounds/*; do
-  if [ -f "$bg" ]; then
-    cp -f "$bg" /mnt/usr/share/backgrounds/gnomarchy/ 2>/dev/null || true
-  fi
+for theme_dir in "/mnt/home/$USERNAME/.local/share/gnomarchy"/themes/*/; do
+  theme_name="$(basename "$theme_dir")"
+  for bg in "$theme_dir"backgrounds/*; do
+    [ -f "$bg" ] || continue
+    mkdir -p "/mnt/usr/share/backgrounds/gnomarchy/$theme_name"
+    cp -f "$bg" "/mnt/usr/share/backgrounds/gnomarchy/$theme_name/" 2>/dev/null || true
+  done
 done
-chmod 755 /mnt/usr/share/backgrounds/gnomarchy 2>/dev/null || true
-chmod 644 /mnt/usr/share/backgrounds/gnomarchy/* 2>/dev/null || true
+chmod -R 755 /mnt/usr/share/backgrounds/gnomarchy 2>/dev/null || true
+find /mnt/usr/share/backgrounds/gnomarchy -type f -exec chmod 644 {} + 2>/dev/null || true
 
 # Preinstall Flatpak applications directly into target system storage
 echo -e "\n\033[1;36m==> Preinstalling Flatpak Desktop Applications (Bazaar App Store, LocalSend)\033[0m"
@@ -322,7 +332,12 @@ arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
   bash /home/$USERNAME/.local/share/gnomarchy/install.sh
 "
 chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
-ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
+mkdir -p /mnt/usr/local/bin
+for cmd in "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/gnomarchy*; do
+  [ -f "$cmd" ] || continue
+  name="$(basename "$cmd")"
+  ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/$name" "/mnt/usr/local/bin/$name" 2>/dev/null || true
+done
 
 # Revoke the temporary passwordless sudo grant.
 cleanup_install_sudo

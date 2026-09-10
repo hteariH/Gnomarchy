@@ -32,7 +32,7 @@ else
 Type=Application
 Name=Gnomarchy First Run Setup
 Comment=Applies Gnomarchy desktop settings and keyboard shortcuts
-Exec=gnomarchy-first-run
+Exec=/usr/local/bin/gnomarchy first-run
 Icon=preferences-desktop
 Terminal=false
 X-GNOME-Autostart-enabled=true
