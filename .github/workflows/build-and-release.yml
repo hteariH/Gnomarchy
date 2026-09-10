@@ -1,0 +1,112 @@
+name: Build and Release ISO
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Gnomarchy ISO
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        run: |
+          echo "Freeing disk space on runner..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
+
+      - name: Build ISO via Arch Linux Container
+        run: |
+          docker run --rm --privileged \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            archlinux:latest \
+            bash -c "
+              pacman -Syu --noconfirm archlinux-keyring && \
+              pacman -S --noconfirm --needed archiso git rsync base-devel && \
+              chmod +x iso/builder/build-iso.sh && \
+              ./iso/builder/build-iso.sh /workspace/out
+            "
+
+      - name: Generate Checksums
+        run: |
+          cd out
+          sha256sum *.iso > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnomarchy-iso
+          path: out/*
+          retention-days: 14
+
+      - name: Determine Release Tag
+        id: vars
+        run: |
+          if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=v1.0.0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.vars.outputs.tag }}
+        run: |
+          PRERELEASE_FLAG=""
+          if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          NOTES="## Gnomarchy Linux Release \${TAG_NAME}
+
+          **Gnomarchy** is an opinionated, developer-first Arch Linux distribution featuring the GNOME desktop environment, Btrfs/Snapper rollbacks, and turnkey developer tooling.
+
+          ### Key Features
+          - **Pure Arch Linux Base**: Rolling-release packages with GDM & GNOME 47/48.
+          - **Tactile Grid Tiling**: Instant window management with \`<Super>T\`.
+          - **Unified Theme Engine**: 7 curated themes (Tokyo Night, Catppuccin, Gruvbox, Everforest, Nord, Rose Pine, Matte Black) syncing GNOME, terminal, and editor.
+          - **Snapper Rollbacks**: Automated boot snapshots integrated with Limine.
+
+          ### Verification & Flashing
+          Verify your download with \`sha256sum -c SHA256SUMS\`.
+
+          \`\`\`bash
+          sudo dd if=gnomarchy-linux-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
+          \`\`\`
+          "
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Uploading assets to existing release $TAG_NAME..."
+            gh release upload "$TAG_NAME" out/* --clobber
+          else
+            echo "Creating new release $TAG_NAME..."
+            gh release create "$TAG_NAME" out/* \
+              --title "Gnomarchy Linux ${TAG_NAME}" \
+              --notes "$NOTES" \
+              $PRERELEASE_FLAG
+          fi
