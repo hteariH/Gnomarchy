@@ -1,0 +1,145 @@
+#!/bin/bash
+
+# Gnomarchy Command Center (Super + Alt + Space)
+#
+# The GNOME Overview covers app launching; this covers the system-action half:
+# themes, webapps, capture, snapshots, updates and power. Rendered with gum
+# inside a floating Alacritty window.
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+export PATH="$GNOMARCHY_PATH/bin:$PATH"
+
+# When launched from a keybinding there is no terminal attached, so re-exec
+# into one. GNOMARCHY_MENU_TTY marks the inner run.
+if [[ -z "$GNOMARCHY_MENU_TTY" ]] && ! [[ -t 0 ]]; then
+  export GNOMARCHY_MENU_TTY=1
+  if command -v gnome-terminal >/dev/null 2>&1; then
+    exec gnome-terminal \
+      --class=Gnomarchy \
+      --title="Gnomarchy" \
+      --geometry=76x24 \
+      -- "$0" "$@"
+  elif command -v alacritty >/dev/null 2>&1; then
+    exec alacritty --class Gnomarchy,Gnomarchy \
+      -o 'window.dimensions.columns=76' \
+      -o 'window.dimensions.lines=24' \
+      -e "$0" "$@"
+  fi
+fi
+
+if ! command -v gum >/dev/null 2>&1; then
+  echo "gum is required for the Gnomarchy menu (pacman -S gum)." >&2
+  read -rp "Press Enter to close..." _
+  exit 1
+fi
+
+header() {
+  clear
+  gum style --border rounded --padding "0 2" --margin "1 0" --align center \
+    "Gnomarchy" "$(gnomarchy-version 2>/dev/null | head -n1)"
+}
+
+choose() {
+  gum choose --header "$1" --height 12 "${@:2}"
+}
+
+# --- Actions ---------------------------------------------------------------
+
+menu_theme() {
+  local themes selected
+  # Enumerate the theme directories directly: gnomarchy-theme-list is coloured
+  # for humans and is not safe to parse.
+  mapfile -t themes < <(
+    for dir in "$GNOMARCHY_PATH/themes"/*/ "$HOME/.config/gnomarchy/themes"/*/; do
+      [[ -d "$dir" ]] && basename "$dir"
+    done | sort -u
+  )
+  [[ ${#themes[@]} -eq 0 ]] && { gum style --foreground 1 "No themes found."; sleep 2; return; }
+  selected="$(printf '%s\n' "${themes[@]}" | gum filter --header "Select a theme" --height 14)" || return 0
+  [[ -n "$selected" ]] && gnomarchy-theme-set "$selected"
+  sleep 1
+}
+
+menu_webapp() {
+  local action
+  action="$(choose "Web Apps" "Add" "List" "Remove" "Back")" || return 0
+  case "$action" in
+    Add)
+      local name url
+      name="$(gum input --placeholder "Name (e.g. Linear)")" || return 0
+      url="$(gum input --placeholder "https://linear.app")" || return 0
+      [[ -n "$name" && -n "$url" ]] && gnomarchy-webapp add "$name" "$url"
+      ;;
+    List) gnomarchy-webapp list; gum input --placeholder "Press Enter to continue" >/dev/null ;;
+    Remove)
+      local name
+      name="$(gum input --placeholder "Name of web app to remove")" || return 0
+      [[ -n "$name" ]] && gnomarchy-webapp remove "$name"
+      ;;
+  esac
+}
+
+menu_capture() {
+  local action
+  action="$(choose "Screen Capture" "Annotate region (Satty)" "Region to file" "Whole screen" "Back")" || return 0
+  case "$action" in
+    "Annotate region (Satty)") exec gnomarchy-capture annotate ;;
+    "Region to file") exec gnomarchy-capture region ;;
+    "Whole screen") exec gnomarchy-capture screen ;;
+  esac
+}
+
+menu_snapshot() {
+  local action
+  action="$(choose "Snapshots" "Create" "List" "Back")" || return 0
+  case "$action" in
+    Create)
+      local desc
+      desc="$(gum input --placeholder "Snapshot description")" || return 0
+      gnomarchy-snapshot-create "${desc:-Manual snapshot}"
+      ;;
+    List) gnomarchy-snapshot-list; gum input --placeholder "Press Enter to continue" >/dev/null ;;
+  esac
+}
+
+menu_system() {
+  local action
+  action="$(choose "System" "Update everything" "GNOME shortcuts" "Restart GNOME Shell" "Extensions" "Back")" || return 0
+  case "$action" in
+    "Update everything") gnomarchy-update; gum input --placeholder "Press Enter to continue" >/dev/null ;;
+    "GNOME shortcuts") gnomarchy-gnome-hotkeys; gum input --placeholder "Press Enter to continue" >/dev/null ;;
+    "Restart GNOME Shell") gnomarchy-gnome-restart ;;
+    Extensions) gnomarchy-gnome-extensions list; gum input --placeholder "Press Enter to continue" >/dev/null ;;
+  esac
+}
+
+menu_power() {
+  local action
+  action="$(choose "Power" "Lock" "Suspend" "Log out" "Reboot" "Power off" "Back")" || return 0
+  case "$action" in
+    Lock) exec loginctl lock-session ;;
+    Suspend) exec systemctl suspend ;;
+    "Log out") gum confirm "Log out now?" && exec gnome-session-quit --logout --no-prompt ;;
+    Reboot) gum confirm "Reboot now?" && exec systemctl reboot ;;
+    "Power off") gum confirm "Power off now?" && exec systemctl poweroff ;;
+  esac
+}
+
+# --- Main loop -------------------------------------------------------------
+
+while true; do
+  header
+  choice="$(choose "What do you need?" \
+    "Theme" "Web App" "Capture" "Snapshot" "System" "Power" "Exit")" || exit 0
+
+  case "$choice" in
+    Theme) menu_theme ;;
+    "Web App") menu_webapp ;;
+    Capture) menu_capture ;;
+    Snapshot) menu_snapshot ;;
+    System) menu_system ;;
+    Power) menu_power ;;
+    Exit | "") exit 0 ;;
+  esac
+done

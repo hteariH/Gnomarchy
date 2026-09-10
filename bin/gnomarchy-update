@@ -25,6 +25,12 @@ if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
   git -C "$GNOMARCHY_PATH" pull --rebase origin main || true
 fi
 
+# Apply any migrations the pull just brought in. This is what carries config
+# changes onto machines that are already installed.
+if command -v gnomarchy-migrate >/dev/null 2>&1; then
+  gnomarchy-migrate || true
+fi
+
 if command -v gnomarchy-hook-run >/dev/null 2>&1; then
   gnomarchy-hook-run on-update "post" || true
 fi

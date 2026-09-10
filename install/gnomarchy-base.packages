@@ -63,6 +63,7 @@ exfatprogs
 flatpak
 
 # Developer CLI & Terminal Environment
+gnome-terminal
 alacritty
 micro
 neovim
@@ -112,13 +113,16 @@ noto-fonts-cjk
 noto-fonts-emoji
 ttf-jetbrains-mono-nerd
 
-# Graphic Annotations & Utilities
+# Screen Capture, Annotation & Utilities
+grim
+slurp
 satty
 libnotify
 cmatrix
 imagemagick
 perl-image-exiftool
 sox
+whisper.cpp
 ydotool
 qemu-desktop
 edk2-ovmf

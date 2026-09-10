@@ -30,11 +30,11 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys next "['<Shift>AudioP
 # Custom Keybindings Slot Setup
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
-  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/', '$BINDING_PATH/custom4/', '$BINDING_PATH/custom5/']"
+  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/', '$BINDING_PATH/custom4/', '$BINDING_PATH/custom5/', '$BINDING_PATH/custom6/']"
 
 # 1. Terminal (Super + Return)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ name 'Terminal'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ command 'alacritty'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ command 'gnome-terminal'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ binding '<Super>Return'
 
 # 2. Browser (Super + B) - Brave Origin
@@ -49,7 +49,7 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BI
 
 # 4. Satty Annotation Screenshot (Ctrl + Print)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ name 'Annotate Screenshot'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ command 'gnome-screenshot -a -f /tmp/satty-shot.png && satty -f /tmp/satty-shot.png'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ command 'gnomarchy-capture annotate'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ binding '<Control>Print'
 
 # 5. Voxtype AI Speech-to-Text Dictation (Super + D)
@@ -61,5 +61,10 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BI
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ name 'Retro Screensaver'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ command 'gnomarchy screensaver'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ binding '<Super>Escape'
+
+# 7. Gnomarchy Command Center Menu (Super + Alt + Space)
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ name 'Gnomarchy Menu'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ command 'gnomarchy-menu'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ binding '<Super><Alt>space'
 
 gnomarchy_step "Developer hotkeys established"

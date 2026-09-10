@@ -1,3 +1,28 @@
 #!/bin/bash
 
-echo "Gnomarchy Linux (Arch Linux Rolling + GNOME 50)"
+# Report the installed Gnomarchy version, plus the git ref when the install
+# is tracking the repository (which is the normal case).
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+
+version="unknown"
+if [[ -f "$GNOMARCHY_PATH/VERSION" ]]; then
+  version="$(<"$GNOMARCHY_PATH/VERSION")"
+fi
+
+ref=""
+if [[ -d "$GNOMARCHY_PATH/.git" ]] && command -v git >/dev/null 2>&1; then
+  ref="$(git -C "$GNOMARCHY_PATH" describe --tags --always --dirty 2>/dev/null || true)"
+fi
+
+echo "Gnomarchy Linux v${version}${ref:+ (${ref})}"
+echo "Arch Linux Rolling + GNOME $(gnome-shell --version 2>/dev/null | grep -oE '[0-9]+' | head -n1 || echo '50')"
+
+if [[ "$1" == "--verbose" || "$1" == "-v" ]]; then
+  theme_file="$HOME/.config/gnomarchy/current/theme.name"
+  [[ -f "$theme_file" ]] && echo "Active theme: $(<"$theme_file")"
+  echo "Install path: $GNOMARCHY_PATH"
+  applied="${XDG_STATE_HOME:-$HOME/.local/state}/gnomarchy/migrations.log"
+  if [[ -f "$applied" ]]; then
+    echo "Migrations applied: $(wc -l < "$applied")"
+  fi
+fi

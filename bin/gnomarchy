@@ -21,7 +21,10 @@ usage() {
 Usage: gnomarchy <command> [subcommand] [arguments...]
 
 Commands:
+  menu                         Open the Gnomarchy command center (Super+Alt+Space)
   theme <set|list|current>     Manage system and desktop color themes
+  backgrounds [--list|--verify]
+                               Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
                                Manage GNOME desktop settings & workflow
   snapshot <create|list>       Manage Btrfs Snapper rollback snapshots
@@ -31,9 +34,12 @@ Commands:
   voxtype [toggle|start|stop]  Speech-to-text AI dictation (Super+D)
   windows <setup|start|stop>   Manage accelerated Windows 11 KVM VM
   reminder <time|dur> <msg>    Schedule desktop notification reminders
+  capture <annotate|region|screen>
+                               Screenshot, optionally into the Satty annotator
   screensaver                  Launch retro fullscreen Matrix terminal screensaver
   hook <run|list>              Trigger or inspect Gnomarchy lifecycle hooks
   update                       Perform system & Gnomarchy configuration updates
+  migrate [--list]             Apply pending Gnomarchy migrations
   version                      Display Gnomarchy version
   help                         Show this help message
 EOF
@@ -45,6 +51,13 @@ if [[ -z "$command_group" || "$command_group" == "help" || "$command_group" == "
 fi
 
 case "$command_group" in
+  menu)
+    exec gnomarchy-menu
+    ;;
+  backgrounds)
+    shift
+    exec gnomarchy-backgrounds "$@"
+    ;;
   theme)
     case "$subcommand" in
       set)
@@ -120,6 +133,10 @@ case "$command_group" in
     shift
     exec gnomarchy-reminder "$@"
     ;;
+  capture)
+    shift
+    exec gnomarchy-capture "$@"
+    ;;
   screensaver)
     exec gnomarchy-screensaver
     ;;
@@ -129,6 +146,10 @@ case "$command_group" in
     ;;
   update)
     exec gnomarchy-update
+    ;;
+  migrate)
+    shift
+    exec gnomarchy-migrate "$@"
     ;;
   version)
     exec gnomarchy-version

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# Gnomarchy screen capture helper
+#
+# Wraps grim + slurp (Wayland-native) and hands the result to Satty for
+# annotation. Falls back to the XDG desktop portal when grim is unavailable,
+# which keeps the binding working on locked-down/portal-only sessions.
+set -eEo pipefail
+
+SHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+mkdir -p "$SHOT_DIR"
+TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+OUTFILE="$SHOT_DIR/gnomarchy-$TIMESTAMP.png"
+
+notify() {
+  command -v notify-send >/dev/null 2>&1 && notify-send -i "$2" "Gnomarchy Capture" "$1" || true
+}
+
+# Grab a region into $1. Returns non-zero if the user cancelled the selection.
+grab_region() {
+  local target="$1"
+  if command -v grim >/dev/null 2>&1 && command -v slurp >/dev/null 2>&1; then
+    local geometry
+    geometry="$(slurp -d 2>/dev/null)" || return 1
+    [[ -z "$geometry" ]] && return 1
+    grim -g "$geometry" "$target"
+  elif command -v gnome-screenshot >/dev/null 2>&1; then
+    gnome-screenshot -a -f "$target" || return 1
+  else
+    notify "No screenshot backend found (install grim + slurp)." dialog-error
+    return 1
+  fi
+  [[ -s "$target" ]]
+}
+
+grab_full() {
+  local target="$1"
+  if command -v grim >/dev/null 2>&1; then
+    grim "$target"
+  elif command -v gnome-screenshot >/dev/null 2>&1; then
+    gnome-screenshot -f "$target" || return 1
+  else
+    notify "No screenshot backend found (install grim)." dialog-error
+    return 1
+  fi
+  [[ -s "$target" ]]
+}
+
+copy_to_clipboard() {
+  command -v wl-copy >/dev/null 2>&1 && wl-copy --type image/png < "$1" || true
+}
+
+action="${1:-annotate}"
+
+case "$action" in
+  annotate)
+    # Satty writes the annotated result over a temporary grab, so capture to
+    # /tmp first and let Satty own the save into $SHOT_DIR.
+    TMPSHOT="$(mktemp --suffix=.png)"
+    trap 'rm -f "$TMPSHOT"' EXIT
+    if ! grab_region "$TMPSHOT"; then
+      exit 0 # user cancelled the selection; not an error
+    fi
+    if command -v satty >/dev/null 2>&1; then
+      satty --filename "$TMPSHOT" --output-filename "$OUTFILE" --early-exit --copy-command wl-copy
+    else
+      cp -f "$TMPSHOT" "$OUTFILE"
+      copy_to_clipboard "$OUTFILE"
+      notify "Saved to $OUTFILE (satty not installed)" applets-screenshooter
+    fi
+    ;;
+  region)
+    grab_region "$OUTFILE" || exit 0
+    copy_to_clipboard "$OUTFILE"
+    notify "Region saved to $OUTFILE" applets-screenshooter
+    ;;
+  screen | full)
+    grab_full "$OUTFILE" || exit 0
+    copy_to_clipboard "$OUTFILE"
+    notify "Screen saved to $OUTFILE" applets-screenshooter
+    ;;
+  *)
+    echo "Usage: gnomarchy capture <annotate|region|screen>"
+    exit 1
+    ;;
+esac

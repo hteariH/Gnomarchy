@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Gnomarchy migration runner
+#
+# A rolling config repo is only useful if changes reach machines that are
+# already installed. Each file in migrations/ is a timestamped, idempotent
+# script that is executed exactly once per machine; the ledger of applied
+# migrations lives in $XDG_STATE_HOME/gnomarchy/migrations.log.
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+MIGRATIONS_DIR="$GNOMARCHY_PATH/migrations"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/gnomarchy"
+LEDGER="$STATE_DIR/migrations.log"
+
+mkdir -p "$STATE_DIR"
+touch "$LEDGER"
+
+if [[ ! -d "$MIGRATIONS_DIR" ]]; then
+  echo "No migrations directory at $MIGRATIONS_DIR"
+  exit 0
+fi
+
+# Collect migrations in lexical (== chronological, given the naming) order.
+mapfile -t all_migrations < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sh' -printf '%f\n' 2>/dev/null | sort)
+
+pending=()
+for migration in "${all_migrations[@]}"; do
+  grep -qxF "$migration" "$LEDGER" || pending+=("$migration")
+done
+
+case "${1:-run}" in
+  --list | list)
+    echo "Applied migrations: $(wc -l < "$LEDGER")"
+    if [[ ${#pending[@]} -eq 0 ]]; then
+      echo "No pending migrations."
+    else
+      echo "Pending (${#pending[@]}):"
+      printf '  %s\n' "${pending[@]}"
+    fi
+    exit 0
+    ;;
+  --baseline | baseline)
+    # Mark every existing migration as applied without running it. Used right
+    # after a fresh install, where the installer already produced the end state.
+    printf '%s\n' "${all_migrations[@]}" > "$LEDGER"
+    echo "Baselined ${#all_migrations[@]} migrations (marked applied, not run)."
+    exit 0
+    ;;
+esac
+
+if [[ ${#pending[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+echo -e "\033[1;36m==> Applying ${#pending[@]} pending Gnomarchy migration(s)\033[0m"
+
+for migration in "${pending[@]}"; do
+  echo -e "\033[0;36m  -> $migration\033[0m"
+  if bash "$MIGRATIONS_DIR/$migration"; then
+    echo "$migration" >> "$LEDGER"
+  else
+    echo -e "\033[1;31m  Migration $migration failed. Stopping.\033[0m" >&2
+    echo -e "  Fix the issue and re-run \033[1mgnomarchy migrate\033[0m." >&2
+    exit 1
+  fi
+done
+
+echo -e "\033[1;32m✓ Migrations applied\033[0m"
