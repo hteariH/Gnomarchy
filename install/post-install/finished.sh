@@ -18,4 +18,8 @@ echo -e "  - \033[1mTactile Grid Tiling\033[0m: Press \033[33mSuper + T\033[0m t
 echo -e "  - \033[1mDeveloper Terminal\033[0m: Press \033[33mSuper + Return\033[0m for Alacritty"
 echo -e "  - \033[1mTheme Switcher\033[0m: Run \033[33mgnomarchy theme set <Theme>\033[0m"
 echo -e "  - \033[1mBtrfs Rollbacks\033[0m: Run \033[33mgnomarchy snapshot create <name>\033[0m"
-echo -e "\nPlease reboot your machine to start your Gnomarchy session."
+if [ -n "$GNOMARCHY_CHROOT_INSTALL" ]; then
+  echo -e "\n\033[1;32mInstallation fully completed! Preparing system reboot...\033[0m"
+else
+  echo -e "\nPlease reboot your machine to start your Gnomarchy session."
+fi

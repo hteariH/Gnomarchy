@@ -257,19 +257,6 @@ done
 chmod 755 /mnt/usr/share/backgrounds/gnomarchy 2>/dev/null || true
 chmod 644 /mnt/usr/share/backgrounds/gnomarchy/* 2>/dev/null || true
 
-# Run Gnomarchy desktop installer inside chroot
-echo -e "\n\033[1;36m==> Executing Gnomarchy Desktop & Environment Installer\033[0m"
-arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
-  export GNOMARCHY_PATH=\"/home/$USERNAME/.local/share/gnomarchy\"
-  export GNOMARCHY_CHROOT_INSTALL=1
-  export USER=\"$USERNAME\"
-  export HOME=\"/home/$USERNAME\"
-  export PATH=\"/usr/local/bin:/home/$USERNAME/.local/share/gnomarchy/bin:\$PATH\"
-  bash /home/$USERNAME/.local/share/gnomarchy/install.sh
-"
-chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
-ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
-
 # Preinstall Flatpak applications directly into target system storage
 echo -e "\n\033[1;36m==> Preinstalling Flatpak Desktop Applications (Bazaar App Store, LocalSend)\033[0m"
 if command -v flatpak >/dev/null 2>&1; then
@@ -288,6 +275,19 @@ TARGET_FLATPAK_EOF
   # Configure flathub remote inside target system
   arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 fi
+
+# Run Gnomarchy desktop installer inside chroot
+echo -e "\n\033[1;36m==> Executing Gnomarchy Desktop & Environment Installer\033[0m"
+arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
+  export GNOMARCHY_PATH=\"/home/$USERNAME/.local/share/gnomarchy\"
+  export GNOMARCHY_CHROOT_INSTALL=1
+  export USER=\"$USERNAME\"
+  export HOME=\"/home/$USERNAME\"
+  export PATH=\"/usr/local/bin:/home/$USERNAME/.local/share/gnomarchy/bin:\$PATH\"
+  bash /home/$USERNAME/.local/share/gnomarchy/install.sh
+"
+chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
+ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 
 echo -e "\n\033[1;32mInstallation complete! Unmounting filesystems...\033[0m"
 umount -R /mnt
