@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="https://gnomarchy.pages.dev"><img src="https://img.shields.io/badge/Website-gnomarchy.pages.dev-7aa2f7?style=for-the-badge&logo=cloudflarepages&logoColor=white" alt="Website"></a>
   <a href="https://github.com/hteariH/Gnomarchy/releases"><img src="https://img.shields.io/github/v/release/hteariH/Gnomarchy?style=for-the-badge&color=89b4fa&logo=github" alt="Release"></a>
   <img src="https://img.shields.io/badge/Arch%20Linux-Rolling-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux">
   <img src="https://img.shields.io/badge/GNOME-50-4a86cf?style=for-the-badge&logo=gnome&logoColor=white" alt="GNOME 50">

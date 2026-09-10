@@ -1,0 +1,14 @@
+{
+  "name": "gnomarchy-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official website for Gnomarchy Linux",
+  "scripts": {
+    "dev": "wrangler pages dev site",
+    "build": "node -e \"console.log('Site ready in site/')\"",
+    "deploy": "wrangler pages deploy site --project-name gnomarchy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.130.0"
+  }
+}
