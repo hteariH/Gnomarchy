@@ -35,29 +35,67 @@ else
   echo -e "\033[1;32m[OK]\033[0m Booted in modern UEFI mode.\n"
 fi
 
-# List disks
-echo "Available Disks:"
-lsblk -d -n -o NAME,SIZE,MODEL | grep -v "loop" | grep -v "airootfs"
-
-echo -e "\nSelect disk to install Gnomarchy onto (WARNING: THIS DISK WILL BE WIPED):"
-read -rp "Target disk (e.g. /dev/vda or /dev/nvme0n1): " TARGET_DISK
-
-if [ ! -b "$TARGET_DISK" ]; then
-  echo "Invalid block device: $TARGET_DISK"
-  exit 1
+# Detect available hard disks (excluding read-only optical drives like sr0 and loop devices)
+available_disks=($(lsblk -d -n -o NAME,TYPE | awk '$2=="disk"{print $1}'))
+default_disk=""
+if [ ${#available_disks[@]} -eq 1 ]; then
+  default_disk="/dev/${available_disks[0]}"
 fi
 
-read -rp "Full Name: " USER_FULLNAME
-read -rp "Username: " USERNAME
-read -rsp "Password: " PASSWORD
-echo ""
-read -rsp "Confirm Password: " PASSWORD_CONFIRM
+echo "Available Storage Disks:"
+lsblk -d -n -o NAME,SIZE,MODEL,TYPE | grep -v "loop" | grep -v "airootfs"
 echo ""
 
-if [[ "$PASSWORD" != "$PASSWORD_CONFIRM" ]]; then
-  echo "Passwords do not match!"
-  exit 1
-fi
+while true; do
+  echo "Select disk to install Gnomarchy onto (WARNING: THIS DISK WILL BE WIPED):"
+  prompt="Target disk (e.g. sda, /dev/sda, nvme0n1)"
+  if [ -n "$default_disk" ]; then
+    prompt="$prompt [default: $default_disk]"
+  fi
+  read -rp "$prompt: " input_disk
+  input_disk="${input_disk:-$default_disk}"
+
+  # Normalize input: handle /sda, sda, dev/sda, /dev/sda
+  cleaned="${input_disk#/}"
+  if [[ "$cleaned" =~ ^dev/ ]]; then
+    TARGET_DISK="/$cleaned"
+  elif [[ "$cleaned" =~ ^[a-zA-Z0-9]+ ]]; then
+    TARGET_DISK="/dev/$cleaned"
+  else
+    TARGET_DISK="$input_disk"
+  fi
+
+  if [ -b "$TARGET_DISK" ]; then
+    echo -e "✓ Selected target disk: \033[1;32m$TARGET_DISK\033[0m\n"
+    break
+  else
+    echo -e "\033[1;31m[ERROR]\033[0m '$TARGET_DISK' is not a valid block device. Please choose from the list above.\n"
+  fi
+done
+
+while true; do
+  read -rp "Full Name: " USER_FULLNAME
+  if [ -n "$USER_FULLNAME" ]; then break; fi
+  echo "Full name cannot be empty."
+done
+
+while true; do
+  read -rp "Username: " USERNAME
+  USERNAME=$(echo "$USERNAME" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+  if [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then break; fi
+  echo "Invalid username. Must start with a letter and contain only lowercase letters, digits, or hyphens."
+done
+
+while true; do
+  read -rsp "Password: " PASSWORD
+  echo ""
+  read -rsp "Confirm Password: " PASSWORD_CONFIRM
+  echo ""
+  if [[ -n "$PASSWORD" && "$PASSWORD" == "$PASSWORD_CONFIRM" ]]; then
+    break
+  fi
+  echo -e "\033[1;31mPasswords do not match or empty. Please try again.\033[0m\n"
+done
 
 read -rp "Encrypt system with LUKS? (Y/n): " ENCRYPT_OPT
 ENCRYPT_OPT="${ENCRYPT_OPT:-Y}"
