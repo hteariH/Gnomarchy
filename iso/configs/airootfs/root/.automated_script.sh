@@ -296,6 +296,21 @@ TARGET_FLATPAK_EOF
   arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 fi
 
+# Grant the install user passwordless sudo for the duration of the install.
+#
+# The installer runs unattended inside arch-chroot and calls sudo throughout.
+# Under the normal %wheel rule it stops at a password prompt nobody is
+# watching; `sudo -v` then times out and aborts the whole installation after
+# the base system is already on disk. Removed as soon as the stage finishes,
+# including on failure.
+echo "$USERNAME ALL=(ALL:ALL) NOPASSWD: ALL" > "/mnt/etc/sudoers.d/99-gnomarchy-install"
+chmod 440 "/mnt/etc/sudoers.d/99-gnomarchy-install"
+
+cleanup_install_sudo() {
+  rm -f "/mnt/etc/sudoers.d/99-gnomarchy-install" 2>/dev/null || true
+}
+trap cleanup_install_sudo EXIT
+
 # Run Gnomarchy desktop installer inside chroot
 echo -e "\n\033[1;36m==> Executing Gnomarchy Desktop & Environment Installer\033[0m"
 arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
@@ -308,6 +323,10 @@ arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
 "
 chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
 ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
+
+# Revoke the temporary passwordless sudo grant.
+cleanup_install_sudo
+trap - EXIT
 
 echo -e "\n\033[1;32mInstallation complete! Unmounting filesystems...\033[0m"
 umount -R /mnt
