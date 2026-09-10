@@ -65,9 +65,78 @@ def download_and_extract(urls):
     os.makedirs(INSTALL_DIR, exist_ok=True)
     with zipfile.ZipFile(temp_zip) as zf:
         zf.extractall(INSTALL_DIR)
+        restore_permissions(zf, INSTALL_DIR)
+
+    ensure_executables(INSTALL_DIR)
 
     if os.path.exists(temp_zip):
         os.remove(temp_zip)
+
+
+def restore_permissions(zf, dest):
+    """Reapply Unix modes recorded in the zip.
+
+    zipfile.extractall() drops the executable bit, so Brave's helper binaries
+    land as 0644 and the browser dies at startup with
+    "spawn .../chrome_crashpad_handler: Permission denied".
+    """
+    for info in zf.infolist():
+        mode = info.external_attr >> 16
+        if not mode:
+            continue
+        target = os.path.join(dest, info.filename)
+        if not os.path.exists(target):
+            continue
+        try:
+            os.chmod(target, mode & 0o7777)
+        except OSError as e:
+            log(f"Warning: could not set mode on {info.filename}: {e}")
+
+
+def is_elf(path):
+    try:
+        with open(path, "rb") as f:
+            return f.read(4) == b"ELF"
+    except OSError:
+        return False
+
+
+def ensure_executables(root):
+    """Make every binary executable, whatever the archive claimed.
+
+    Belt and braces: some Brave release zips carry no mode bits at all, so
+    detect ELF binaries directly rather than trusting the archive.
+    """
+    fixed = 0
+    for dirpath, _, filenames in os.walk(root):
+        for name in filenames:
+            path = os.path.join(dirpath, name)
+            if os.path.islink(path):
+                continue
+            if not (is_elf(path) or name.endswith(".sh")):
+                continue
+            try:
+                current = os.stat(path).st_mode
+                if not current & 0o111:
+                    os.chmod(path, 0o755)
+                    fixed += 1
+            except OSError:
+                pass
+
+    if fixed:
+        log(f"Restored the executable bit on {fixed} file(s).")
+
+    # chrome-sandbox must be setuid root, or Chromium refuses to start its
+    # sandbox and aborts.
+    sandbox = os.path.join(root, "chrome-sandbox")
+    if os.path.isfile(sandbox):
+        try:
+            if hasattr(os, "chown"):
+                os.chown(sandbox, 0, 0)
+            os.chmod(sandbox, 0o4755)
+            log("Configured chrome-sandbox (setuid root).")
+        except Exception as e:
+            log(f"Warning: could not configure chrome-sandbox: {e}")
 
 def setup_binaries_and_symlinks():
     possible_bins = ["brave", "brave-browser", "brave-origin"]

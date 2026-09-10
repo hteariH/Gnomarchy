@@ -140,6 +140,35 @@ else
   no "${#uncompiled[@]} extension(s) have uncompiled schemas" "${uncompiled[*]}"
 fi
 
+# --- Regression: Brave binaries extracted without the executable bit -------
+#
+# zipfile.extractall() drops Unix modes, and only the main binary was chmodded,
+# so Brave aborted at startup:
+#   FATAL spawn /opt/brave-origin/chrome_crashpad_handler: Permission denied
+BRAVE_DIR="$ROOT/opt/brave-origin"
+if [[ -d "$BRAVE_DIR" ]]; then
+  non_exec=()
+  for helper in brave chrome_crashpad_handler chrome-sandbox; do
+    bin="$BRAVE_DIR/$helper"
+    [[ -f "$bin" ]] || continue
+    [[ -x "$bin" ]] || non_exec+=("$helper")
+  done
+  if ((${#non_exec[@]} == 0)); then
+    ok "Brave binaries carry the executable bit"
+  else
+    no "${#non_exec[@]} Brave binary/binaries not executable" "${non_exec[*]}"
+  fi
+
+  if [[ -f "$BRAVE_DIR/chrome-sandbox" ]]; then
+    perms="$(stat -c '%a' "$BRAVE_DIR/chrome-sandbox" 2>/dev/null)"
+    [[ "$perms" == "4755" ]] &&
+      ok "chrome-sandbox is setuid root" ||
+      no "chrome-sandbox has mode $perms" "expected 4755"
+  fi
+else
+  no "Brave Origin not installed" "expected $BRAVE_DIR"
+fi
+
 # --- Regression: autostart Exec depended on a PATH the session lacks -------
 AUTOSTART="$HOME_DIR/.config/autostart/gnomarchy-first-run.desktop"
 if [[ -f "$AUTOSTART" ]]; then
