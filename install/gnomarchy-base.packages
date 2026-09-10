@@ -99,6 +99,13 @@ python-pipx
 python-gobject
 libyaml
 
+# JavaScript & Node.js Runtime
+nodejs
+npm
+
+# Java Development Kit (OpenJDK)
+jdk-openjdk
+
 # Fonts & Typography
 noto-fonts
 noto-fonts-cjk
