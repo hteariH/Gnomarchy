@@ -33,19 +33,26 @@ rm -rf "$WORK_DIR" "$PROFILE_DIR"
 mkdir -p "$WORK_DIR" "$PROFILE_DIR"
 
 # 1. Base our profile on official archiso releng config if available
+TEMP_PKGS="/tmp/releng-packages.list"
+rm -f "$TEMP_PKGS"
 if [ -d /usr/share/archiso/configs/releng ]; then
   echo "Copying baseline releng profile..."
   cp -r /usr/share/archiso/configs/releng/* "$PROFILE_DIR/"
+  if [ -f "$PROFILE_DIR/packages.x86_64" ]; then
+    cp "$PROFILE_DIR/packages.x86_64" "$TEMP_PKGS"
+  fi
 fi
 
 # 2. Overlay Gnomarchy custom configurations
 echo "Overlaying Gnomarchy custom configurations..."
 cp -r "$CONFIGS_DIR/"* "$PROFILE_DIR/"
 
-# 3. Append custom packages to packages.x86_64 and deduplicate
-if [ -f "$CONFIGS_DIR/packages.x86_64" ]; then
-  cat "$CONFIGS_DIR/packages.x86_64" >> "$PROFILE_DIR/packages.x86_64"
-  sort -u "$PROFILE_DIR/packages.x86_64" -o "$PROFILE_DIR/packages.x86_64"
+# 3. Merge releng packages + custom packages and deduplicate
+echo "Merging package manifests..."
+if [ -f "$TEMP_PKGS" ] && [ -f "$CONFIGS_DIR/packages.x86_64" ]; then
+  cat "$TEMP_PKGS" "$CONFIGS_DIR/packages.x86_64" | grep -v '^#' | grep -v '^[[:space:]]*$' | tr -d '\r' | sort -u > "$PROFILE_DIR/packages.x86_64"
+elif [ -f "$CONFIGS_DIR/packages.x86_64" ]; then
+  grep -v '^#' "$CONFIGS_DIR/packages.x86_64" | grep -v '^[[:space:]]*$' | tr -d '\r' | sort -u > "$PROFILE_DIR/packages.x86_64"
 fi
 
 # 4. Synchronize current repository into ISO root for offline/local install
