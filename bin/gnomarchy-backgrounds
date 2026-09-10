@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Gnomarchy background fetcher
+#
+# Gnomarchy does not redistribute Omarchy's wallpapers: it downloads them onto
+# the user's machine at install time, from a pinned upstream commit, verifying
+# each file against the git blob SHA-1 recorded in install/backgrounds.manifest.
+# Every theme also ships a generated SVG in-repo, which remains the offline
+# fallback when a download is unavailable.
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+MANIFEST="$GNOMARCHY_PATH/install/backgrounds.manifest"
+TARGET_ROOT="${GNOMARCHY_BACKGROUNDS_DIR:-/usr/share/backgrounds/gnomarchy}"
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "Background manifest not found at $MANIFEST" >&2
+  exit 1
+fi
+
+REPO="$(awk '$1=="REPO"{print $2; exit}' "$MANIFEST")"
+COMMIT="$(awk '$1=="COMMIT"{print $2; exit}' "$MANIFEST")"
+
+if [[ -z "$REPO" || -z "$COMMIT" ]]; then
+  echo "Manifest is missing REPO/COMMIT headers." >&2
+  exit 1
+fi
+
+# Compute a file's git blob SHA-1: sha1("blob <bytes>\0" + content).
+blob_sha() {
+  local file="$1"
+  local size
+  size="$(stat -c %s "$file" 2>/dev/null || wc -c < "$file")"
+  { printf 'blob %d\0' "$size"; cat "$file"; } | sha1sum | awk '{print $1}'
+}
+
+# Write to the target root, using sudo only when we do not own it.
+as_owner() {
+  if [[ -w "$TARGET_ROOT" || ! -e "$TARGET_ROOT" && -w "$(dirname "$TARGET_ROOT")" ]]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+mapfile -t entries < <(grep -vE '^#|^$|^REPO |^COMMIT ' "$MANIFEST")
+
+case "${1:-fetch}" in
+  --list | list)
+    echo "Upstream: $REPO @ ${COMMIT:0:12}"
+    echo "Manifest entries: ${#entries[@]}"
+    echo "Target: $TARGET_ROOT"
+    installed=0
+    for entry in "${entries[@]}"; do
+      read -r relpath _ _ <<<"$entry"
+      [[ -f "$TARGET_ROOT/$relpath" ]] && ((installed++)) || true
+    done
+    echo "Installed: $installed / ${#entries[@]}"
+    exit 0
+    ;;
+  --verify | verify)
+    bad=0
+    for entry in "${entries[@]}"; do
+      read -r relpath expected_sha _ <<<"$entry"
+      target="$TARGET_ROOT/$relpath"
+      [[ -f "$target" ]] || continue
+      if [[ "$(blob_sha "$target")" != "$expected_sha" ]]; then
+        echo "CORRUPT: $relpath"
+        bad=$((bad + 1))
+      fi
+    done
+    if ((bad == 0)); then
+      echo "All installed backgrounds verify against the manifest."
+    else
+      echo "$bad file(s) failed verification; re-run 'gnomarchy backgrounds' to repair." >&2
+      exit 1
+    fi
+    exit 0
+    ;;
+esac
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl is required to fetch backgrounds." >&2
+  exit 1
+fi
+
+echo -e "\033[1;36m==> Fetching theme backgrounds from $REPO @ ${COMMIT:0:12}\033[0m"
+echo "    (Gnomarchy does not redistribute these; they are downloaded to this machine.)"
+
+as_owner mkdir -p "$TARGET_ROOT"
+
+downloaded=0
+skipped=0
+failed=0
+TMPFILE="$(mktemp)"
+trap 'rm -f "$TMPFILE"' EXIT
+
+for entry in "${entries[@]}"; do
+  read -r relpath expected_sha _ <<<"$entry"
+  theme="${relpath%%/*}"
+  target="$TARGET_ROOT/$relpath"
+
+  # Already present and intact: leave it alone. This is what makes re-running
+  # the fetch cheap and makes it usable as a repair pass.
+  if [[ -f "$target" ]] && [[ "$(blob_sha "$target")" == "$expected_sha" ]]; then
+    skipped=$((skipped + 1))
+    continue
+  fi
+
+  url="https://raw.githubusercontent.com/$REPO/$COMMIT/themes/$theme/backgrounds/${relpath#*/}"
+  if ! curl -fsSL --max-time 60 "$url" -o "$TMPFILE" 2>/dev/null; then
+    echo -e "  \033[0;33m! download failed: $relpath\033[0m"
+    failed=$((failed + 1))
+    continue
+  fi
+
+  # Never install a file that does not match the manifest.
+  if [[ "$(blob_sha "$TMPFILE")" != "$expected_sha" ]]; then
+    echo -e "  \033[1;31m! checksum mismatch, discarding: $relpath\033[0m"
+    failed=$((failed + 1))
+    continue
+  fi
+
+  as_owner mkdir -p "$TARGET_ROOT/$theme"
+  as_owner cp -f "$TMPFILE" "$target"
+  as_owner chmod 644 "$target"
+  downloaded=$((downloaded + 1))
+done
+
+as_owner chmod 755 "$TARGET_ROOT" 2>/dev/null || true
+
+echo -e "\033[1;32m✓ Backgrounds: $downloaded downloaded, $skipped already current, $failed failed\033[0m"
+
+if ((failed > 0)); then
+  echo "  Themes without a downloaded background fall back to the bundled SVG."
+fi
