@@ -22,7 +22,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 
 ## Highlights & Features
 
-- **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME Libadwaita accent color, dark/light mode, wallpapers, Alacritty terminal, Neovim, btop, and VS Code—with a single command (`gnomarchy theme set <name>`).
+- **⌨️ Command Center (`Super + Alt + Space`)**: One keystroke to themes, web apps, screen capture, snapshots, updates and power actions—the whole system layer behind a single searchable menu.
+- **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Alacritty, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
 - **🧩 Tactile Grid Tiling (`Super + T`)**: Avoid the rigid complexity of automatic tiling window managers while keeping lightning-fast keyboard window positioning inspired by DHH's Omakub.
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
 - **🌐 Web App Generator (`gnomarchy webapp`)**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles, auto-fetched favicons, and Dash to Dock pinning.
@@ -34,7 +35,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **⚡ Fast Shutdown Tuning**: Systemd timeout stop limits tuned from 90s down to 10s for instantaneous power-offs and reboots.
 - **👾 Retro Terminal Screensaver (`gnomarchy screensaver`)**: Fullscreen matrix rain screensaver triggered via `<Super>Escape`.
 - **🛡️ Default Privacy Browser (Brave Origin)**: **Brave Origin** pre-configured as the default system browser—completely debloated of crypto, AI (Leo), rewards, and telemetry, delivering uncompromising speed and ad-blocking out of the box.
-- **🖥️ Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (Terminal, Brave Origin, Files, Micro, Bazaar App Store).
+- **🖥️ Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (GNOME Terminal, Brave Origin, Files, Micro, Bazaar App Store).
 - **📝 Modern Text Editing (Micro)**: Micro pre-installed and configured as the default system and CLI text editor (`$EDITOR`, `$VISUAL`, Git, and desktop MIME types).
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
 - **💻 Curated Hardware Profiles**: Out-of-the-box fixes for Apple T2 Macs, Asus ROG laptops, Framework 13/16, Intel Panther Lake, and Nvidia hybrid graphics.
@@ -45,8 +46,9 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 
 | Shortcut | Action |
 | :--- | :--- |
+| <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>Space</kbd> | **Command Center**: Themes, web apps, capture, snapshots, updates, power |
 | <kbd>Super</kbd> + <kbd>T</kbd> | **Tactile Grid Tiling**: Launch interactive grid overlay to snap windows |
-| <kbd>Super</kbd> + <kbd>Return</kbd> | Launch **Alacritty** GPU-accelerated terminal |
+| <kbd>Super</kbd> + <kbd>Return</kbd> | Launch **GNOME Terminal** (themed Gnomarchy profile) |
 | <kbd>Super</kbd> + <kbd>B</kbd> | Launch default web browser (**Brave Origin**) |
 | <kbd>Super</kbd> + <kbd>E</kbd> | Open **Nautilus** file manager |
 | <kbd>Super</kbd> | Open **GNOME Overview** & Instant App Search |
@@ -58,7 +60,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | <kbd>Super</kbd> + <kbd>D</kbd> | **Voxtype**: Toggle AI Speech-to-Text Dictation |
 | <kbd>Super</kbd> + <kbd>Escape</kbd> | **Screensaver**: Fullscreen Retro Matrix terminal screensaver |
 | <kbd>Print</kbd> | Native GNOME interactive screenshot & recording grabber |
-| <kbd>Ctrl</kbd> + <kbd>Print</kbd> | Area screenshot with **Satty** annotation editor |
+| <kbd>Ctrl</kbd> + <kbd>Print</kbd> | Region capture (grim + slurp) straight into the **Satty** annotation editor |
 
 ---
 
@@ -90,7 +92,9 @@ Control the desktop and OS layer using the `gnomarchy` CLI:
 
 ### Unified Theme Engine (22 Built-in Themes)
 
-Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every single theme comes bundled with a dedicated 4K vector wallpaper (installed to `/usr/share/backgrounds/gnomarchy/`), Libadwaita accent color, Alacritty palette, Neovim styling, and btop system monitor theme.
+Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every theme carries a Libadwaita accent color, generated GTK3/GTK4 window colors, a 16-color ANSI palette applied to both GNOME Terminal and Alacritty, a Neovim colorscheme, and a btop system monitor theme.
+
+Wallpapers are **downloaded at install time** from the upstream Omarchy repository (pinned commit, every file checksum-verified) into `/usr/share/backgrounds/gnomarchy/<theme>/`. Gnomarchy does not redistribute them — see [BACKGROUNDS.md](BACKGROUNDS.md) for the provenance and licensing reasoning. Each theme also ships a small generated SVG wallpaper as an offline fallback, and you can override either with your own images in `~/.config/gnomarchy/backgrounds/<theme>/`.
 
 | Theme | Type | Accent | Aesthetic / Palette Style |
 | :--- | :--- | :--- | :--- |
@@ -128,6 +132,11 @@ gnomarchy theme set "flexoki-light"
 
 # Check active theme
 gnomarchy theme current
+
+# Wallpapers: fetch, inspect or re-verify
+gnomarchy backgrounds
+gnomarchy backgrounds --list
+gnomarchy backgrounds --verify
 ```
 
 ### Web Applications
@@ -193,14 +202,37 @@ gnomarchy snapshot create "Before system refactor"
 gnomarchy snapshot list
 ```
 
-### System Updates & Lifecycle Hooks
+### Command Center
 ```bash
-# Synchronize Arch packages, AUR packages, and Gnomarchy configuration
+# Open the menu (or press Super+Alt+Space)
+gnomarchy menu
+```
+
+### Screen Capture
+```bash
+gnomarchy capture annotate   # region -> Satty annotation editor (Ctrl+Print)
+gnomarchy capture region     # region -> ~/Pictures/Screenshots + clipboard
+gnomarchy capture screen     # full screen
+```
+
+### System Updates, Migrations & Lifecycle Hooks
+```bash
+# Synchronize Arch packages, AUR packages, Gnomarchy config, and run any
+# pending migrations against this machine
 gnomarchy update
+
+# Inspect or apply migrations on their own
+gnomarchy migrate --list
+gnomarchy migrate
 
 # Trigger or inspect lifecycle event hooks (~/.config/gnomarchy/hooks/)
 gnomarchy hook on-theme-change "tokyo-night"
 ```
+
+Gnomarchy config changes reach **already-installed** machines through
+`migrations/` — timestamped, idempotent scripts applied exactly once per
+machine and recorded in `~/.local/state/gnomarchy/migrations.log`. A `git pull`
+alone changes files; `gnomarchy update` is what applies them.
 
 ---
 

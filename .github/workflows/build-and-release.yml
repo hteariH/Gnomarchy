@@ -83,15 +83,20 @@ jobs:
             PRERELEASE_FLAG="--prerelease"
           fi
 
-          NOTES="## Gnomarchy Linux Release \${TAG_NAME}
+          NOTES="## Gnomarchy Linux \${TAG_NAME}
 
-          **Gnomarchy** is an opinionated, developer-first Arch Linux distribution featuring the GNOME desktop environment, Btrfs/Snapper rollbacks, and turnkey developer tooling.
+          **Gnomarchy** is an opinionated, developer-first Arch Linux distribution: Omarchy's tooling and rolling base, with a tuned GNOME desktop instead of Hyprland.
 
-          ### Key Features
-          - **Pure Arch Linux Base**: Rolling-release packages with GDM & GNOME 47/48.
-          - **Tactile Grid Tiling**: Instant window management with \`<Super>T\`.
-          - **Unified Theme Engine**: 7 curated themes (Tokyo Night, Catppuccin, Gruvbox, Everforest, Nord, Rose Pine, Matte Black) syncing GNOME, terminal, and editor.
-          - **Snapper Rollbacks**: Automated boot snapshots integrated with Limine.
+          ### Highlights
+          - **Command Center** (\`Super + Alt + Space\`): themes, web apps, capture, snapshots, updates and power in one menu.
+          - **Unified Theme Engine**: 22 themes (18 dark, 4 light) syncing GNOME dark/light mode, Libadwaita accent, GTK3/GTK4 colors, GNOME Terminal, Alacritty, Neovim (LazyVim), btop and the GDM greeter.
+          - **GNOME Terminal by default**, themed through a dedicated Gnomarchy dconf profile.
+          - **Tactile Grid Tiling**: instant keyboard window management with \`Super + T\`.
+          - **Btrfs + Snapper Rollbacks**: automated boot snapshots integrated with Limine.
+          - **Migrations**: \`gnomarchy update\` applies configuration changes to machines that are already installed.
+
+          ### Wallpapers
+          Theme wallpapers are downloaded at install time from the upstream Omarchy repository (pinned commit, every file checksum-verified). Gnomarchy does not redistribute them; each theme ships a generated SVG as an offline fallback. See BACKGROUNDS.md.
 
           ### Verification & Flashing
           Verify your download with \`sha256sum -c SHA256SUMS\`.
