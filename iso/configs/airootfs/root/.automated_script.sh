@@ -184,7 +184,7 @@ mkdir -p "/mnt/home/$USERNAME/.local/share/gnomarchy"
 if [ -d /root/gnomarchy ]; then
   cp -r /root/gnomarchy/* "/mnt/home/$USERNAME/.local/share/gnomarchy/"
 else
-  git clone https://github.com/Gnomarchy/Gnomarchy.git "/mnt/home/$USERNAME/.local/share/gnomarchy"
+  git clone https://github.com/hteariH/Gnomarchy.git "/mnt/home/$USERNAME/.local/share/gnomarchy"
 fi
 
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"

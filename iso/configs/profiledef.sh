@@ -3,7 +3,7 @@
 
 iso_name="gnomarchy-linux"
 iso_label="GNOMARCHY_$(date +%Y%m)"
-iso_publisher="Gnomarchy Linux Project <https://github.com/Gnomarchy/Gnomarchy>"
+iso_publisher="Gnomarchy Linux Project <https://github.com/hteariH/Gnomarchy>"
 iso_application="Gnomarchy Linux Live/Installation Media"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"

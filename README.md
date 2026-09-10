@@ -53,7 +53,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 If you have already installed a minimal base Arch Linux system:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gnomarchy/Gnomarchy/main/boot.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | bash
 ```
 
 ---

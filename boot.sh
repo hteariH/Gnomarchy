@@ -21,7 +21,7 @@ echo -e "\e[36m$ansi_art\e[0m\n"
 
 # Use custom branch/repo if instructed
 GNOMARCHY_REF="${GNOMARCHY_REF:-main}"
-GNOMARCHY_REPO="${GNOMARCHY_REPO:-Gnomarchy/Gnomarchy}"
+GNOMARCHY_REPO="${GNOMARCHY_REPO:-hteariH/Gnomarchy}"
 
 echo -e "Installing base prerequisites..."
 sudo pacman -Syu --noconfirm --needed git curl base-devel
