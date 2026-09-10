@@ -44,16 +44,22 @@ fi
 # 3. Apply Wallpaper
 WALLPAPER=""
 if [[ -d "$THEME_DIR/backgrounds" ]]; then
-  WALLPAPER=$(find "$THEME_DIR/backgrounds" -type f \( -name "*.jpg" -o -name "*.png" \) | head -n 1)
+  WALLPAPER=$(find "$THEME_DIR/backgrounds" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.svg" \) | head -n 1)
 elif [[ -f "$THEME_DIR/background.jpg" ]]; then
   WALLPAPER="$THEME_DIR/background.jpg"
 elif [[ -f "$THEME_DIR/background.png" ]]; then
   WALLPAPER="$THEME_DIR/background.png"
+elif [[ -f "$THEME_DIR/background.svg" ]]; then
+  WALLPAPER="$THEME_DIR/background.svg"
 fi
 
 if [[ -n "$WALLPAPER" ]]; then
-  gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null || true
-  gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null || true
+  REAL_WALLPAPER="$(readlink -f "$WALLPAPER" 2>/dev/null || realpath "$WALLPAPER" 2>/dev/null || echo "$WALLPAPER")"
+  gsettings set org.gnome.desktop.background picture-uri "file://$REAL_WALLPAPER" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-uri-dark "file://$REAL_WALLPAPER" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
+  gsettings set org.gnome.desktop.screensaver picture-uri "file://$REAL_WALLPAPER" 2>/dev/null || true
+  gsettings set org.gnome.desktop.screensaver picture-uri-dark "file://$REAL_WALLPAPER" 2>/dev/null || true
 fi
 
 # 4. Apply Alacritty Terminal Theme

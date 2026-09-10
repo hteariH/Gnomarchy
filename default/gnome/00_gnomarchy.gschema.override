@@ -72,6 +72,17 @@ font-name='Noto Sans 10'
 clock-show-weekday=true
 clock-show-date=true
 color-scheme='prefer-dark'
+accent-color='blue'
+
+[org.gnome.desktop.background]
+picture-uri='file:///usr/share/backgrounds/gnomarchy/tokyo-night.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gnomarchy/tokyo-night.svg'
+picture-options='zoom'
+
+[org.gnome.desktop.screensaver]
+picture-uri='file:///usr/share/backgrounds/gnomarchy/tokyo-night.svg'
+picture-uri-dark='file:///usr/share/backgrounds/gnomarchy/tokyo-night.svg'
+picture-options='zoom'
 
 [org.gnome.desktop.calendar]
 show-weekdate=true
