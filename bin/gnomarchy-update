@@ -1,61 +1,108 @@
 #!/bin/bash
 
-# Update Arch system and sync Gnomarchy updates
-set -e
+# Update the Arch system and sync Gnomarchy itself.
+#
+# Deliberately does NOT use `set -e`: each stage is allowed to fail on its own
+# and is recorded, so the run reports what actually happened. This script used
+# to swallow every failure behind `|| true` and print "System up to date!"
+# regardless, which hid a broken `git pull` for as long as it kept failing.
 
-echo -e "\033[1;36m==> Updating Gnomarchy System Packages\033[0m"
-
-if command -v gnomarchy-hook-run >/dev/null 2>&1; then
-  gnomarchy-hook-run on-update "pre" || true
-fi
-
-# Update Pacman packages
-sudo pacman -Syu --noconfirm
-
-# Update AUR packages if yay is present
-if command -v yay >/dev/null 2>&1; then
-  echo -e "\n\033[1;36m==> Updating AUR Packages\033[0m"
-  yay -Sua --noconfirm
-fi
-
-# Update Gnomarchy git repo if tracking git
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
-# The ISO installer deploys Gnomarchy with rsync --exclude=.git, so an
-# ISO-installed machine has no repository and could never pull an update.
-# Bootstrap one in place the first time, pointing at the upstream remote.
 GNOMARCHY_REPO_URL="${GNOMARCHY_REPO_URL:-https://github.com/hteariH/Gnomarchy.git}"
 
+failures=()
+note_failure() { failures+=("$1"); }
+
+step() { echo -e "\n\033[1;36m==> $1\033[0m"; }
+warn() { echo -e "\033[1;33m    $1\033[0m"; }
+good() { echo -e "\033[1;32m    $1\033[0m"; }
+
+command -v gnomarchy-hook-run >/dev/null 2>&1 && gnomarchy-hook-run on-update "pre"
+
+# --- System packages -------------------------------------------------------
+step "Updating Gnomarchy System Packages"
+sudo pacman -Syu --noconfirm || note_failure "pacman system upgrade"
+
+for helper in paru yay; do
+  if command -v "$helper" >/dev/null 2>&1; then
+    step "Updating AUR Packages ($helper)"
+    "$helper" -Sua --noconfirm || note_failure "$helper AUR upgrade"
+    break
+  fi
+done
+
+# --- Gnomarchy checkout ----------------------------------------------------
+# The ISO deploys Gnomarchy with rsync --exclude=.git, so an ISO-installed
+# machine has no repository and could never pull. Bootstrap one in place.
 if [[ ! -d "$GNOMARCHY_PATH/.git" ]] && command -v git >/dev/null 2>&1; then
-  echo -e "\n\033[1;36m==> Initializing Gnomarchy Repository\033[0m"
+  step "Initializing Gnomarchy Repository"
   echo "    (this install was deployed without one, so updates were impossible)"
-  if git -C "$GNOMARCHY_PATH" init -q 2>/dev/null &&
-    git -C "$GNOMARCHY_PATH" remote add origin "$GNOMARCHY_REPO_URL" 2>/dev/null &&
-    git -C "$GNOMARCHY_PATH" fetch -q --depth=1 origin main 2>/dev/null; then
-    git -C "$GNOMARCHY_PATH" reset -q --hard FETCH_HEAD 2>/dev/null || true
-    git -C "$GNOMARCHY_PATH" branch -q -M main 2>/dev/null || true
-    git -C "$GNOMARCHY_PATH" branch -q --set-upstream-to=origin/main main 2>/dev/null || true
-    chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null || true
-    echo -e "\033[1;32m    Repository initialized\033[0m"
+  if git -C "$GNOMARCHY_PATH" init -q &&
+    git -C "$GNOMARCHY_PATH" remote add origin "$GNOMARCHY_REPO_URL" &&
+    git -C "$GNOMARCHY_PATH" fetch -q --depth=1 origin main; then
+    git -C "$GNOMARCHY_PATH" reset -q --hard FETCH_HEAD
+    git -C "$GNOMARCHY_PATH" branch -q -M main
+    git -C "$GNOMARCHY_PATH" branch -q --set-upstream-to=origin/main main 2>/dev/null
+    good "Repository initialized"
   else
-    echo -e "\033[1;33m    Could not initialize repository; skipping config update\033[0m"
-    rm -rf "$GNOMARCHY_PATH/.git" 2>/dev/null || true
+    warn "Could not initialize the repository; skipping configuration update"
+    rm -rf "$GNOMARCHY_PATH/.git"
+    note_failure "repository initialization"
   fi
 fi
 
 if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
-  echo -e "\n\033[1;36m==> Updating Gnomarchy Configurations\033[0m"
-  git -C "$GNOMARCHY_PATH" pull --rebase origin main || true
-  chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null || true
+  step "Updating Gnomarchy Configurations"
+
+  # This tree is managed, not authored. The installer chmods bin/ on every run,
+  # and git tracks the executable bit, so permission-only differences used to
+  # dirty the tree and then block the very pull that would fix it.
+  git -C "$GNOMARCHY_PATH" config core.fileMode false
+
+  stashed=0
+  if [[ -n "$(git -C "$GNOMARCHY_PATH" status --porcelain 2>/dev/null)" ]]; then
+    warn "Local changes found in $GNOMARCHY_PATH:"
+    git -C "$GNOMARCHY_PATH" status --short | sed 's/^/      /'
+    if git -C "$GNOMARCHY_PATH" stash push -u -q -m "gnomarchy-update $(date -Iseconds)"; then
+      stashed=1
+      warn "Stashed them; recover with: git -C $GNOMARCHY_PATH stash pop"
+    else
+      warn "Could not stash; the update will likely fail"
+    fi
+  fi
+
+  if git -C "$GNOMARCHY_PATH" pull --rebase origin main; then
+    good "Configuration updated"
+  else
+    warn "Configuration update FAILED"
+    note_failure "git pull"
+    # Leave the tree as we found it rather than half-rebased.
+    git -C "$GNOMARCHY_PATH" rebase --abort 2>/dev/null
+    if ((stashed)); then
+      git -C "$GNOMARCHY_PATH" stash pop -q 2>/dev/null &&
+        warn "Restored your local changes"
+    fi
+  fi
+
+  chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null
 fi
 
-# Apply any migrations the pull just brought in. This is what carries config
-# changes onto machines that are already installed.
+# --- Migrations ------------------------------------------------------------
+# This is what carries configuration changes onto an already-installed machine.
 if command -v gnomarchy-migrate >/dev/null 2>&1; then
-  gnomarchy-migrate || true
+  gnomarchy-migrate || note_failure "migrations"
 fi
 
-if command -v gnomarchy-hook-run >/dev/null 2>&1; then
-  gnomarchy-hook-run on-update "post" || true
+command -v gnomarchy-hook-run >/dev/null 2>&1 && gnomarchy-hook-run on-update "post"
+
+# --- Report ----------------------------------------------------------------
+echo
+if ((${#failures[@]} == 0)); then
+  echo -e "\033[1;32m✓ System up to date!\033[0m"
+  exit 0
 fi
 
-echo -e "\n\033[1;32m✓ System up to date!\033[0m"
+echo -e "\033[1;31m✗ Update finished with ${#failures[@]} failure(s):\033[0m"
+printf '    - %s\n' "${failures[@]}"
+echo -e "\033[1;33m  Some parts of Gnomarchy may be out of date.\033[0m"
+exit 1
