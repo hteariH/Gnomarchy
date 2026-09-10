@@ -42,7 +42,7 @@ Use the high-level `gnomarchy` CLI dispatcher whenever available:
 | **List GNOME extensions** | `gnomarchy gnome extensions list` |
 | **Enable/disable extension** | `gnomarchy gnome extensions <enable|disable> <uuid>` |
 | **Reset extensions** | `gnomarchy gnome extensions reset` |
-| **Inspect shortcuts** | `gnomarchy gnome hotkeys` |
+| **Inspect shortcuts** | `gnomarchy keybindings [--list]` (derived from dconf, never hand-written) |
 | **Enable fractional scaling**| `gnomarchy gnome scaling enable` |
 | **Text scaling factor** | `gnomarchy gnome scaling text 1.25` |
 | **Refresh desktop** | `gnomarchy gnome restart` |

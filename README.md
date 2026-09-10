@@ -157,6 +157,18 @@ gnomarchy tiling disable
 gnomarchy tiling status
 ```
 
+### Keybindings Manual & Search
+
+```bash
+gnomarchy keybindings          # searchable list (also Super+K, or from the menu)
+gnomarchy keybindings --list   # plain text, for grepping
+```
+
+The list is **derived from dconf**, not hand-maintained, so it always shows the
+bindings that are actually in effect - including whichever keymap profile and
+tiling mode are active. Descriptions come from each GSettings schema's own
+summary. Unbound actions are omitted rather than listed as available.
+
 ### Omarchy Keyboard Layout
 
 The Hyprland bindings from upstream Omarchy, transcribed to GNOME:

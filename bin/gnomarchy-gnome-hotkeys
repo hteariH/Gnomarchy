@@ -1,39 +1,19 @@
 #!/bin/bash
 
-# Display or reset developer hotkeys
-if [[ "$1" == "reset" ]]; then
-  echo "Re-applying default Gnomarchy developer hotkeys..."
-  bash "$GNOMARCHY_PATH/install/desktop/set-gnome-hotkeys.sh"
-  exit 0
-fi
+# Compatibility shim for `gnomarchy gnome hotkeys`.
+#
+# This used to print a hand-written list of keybindings. It drifted from
+# reality almost immediately -- it still advertised Alacritty, Super+B and six
+# workspaces long after those changed -- and it could not represent the Omarchy
+# layout at all. The real list is derived from dconf by gnomarchy-keybindings.
 
-cat <<'EOF'
-Gnomarchy Developer Keybindings:
-================================
-Window Management:
-  Super + W                 Close active window
-  Super + Up                Maximize active window
-  Super + BackSpace         Interactive resize window
-  Shift + F11               Toggle fullscreen window
-
-Tiling (Tactile Grid):
-  Super + T                 Trigger Tactile tiling grid overlay
-                            (press highlighted letter to snap window)
-
-Workspaces:
-  Super + 1 - 6             Switch directly to workspace 1 - 6
-  Super + Shift + 1 - 6     Move focused window to workspace 1 - 6
-
-Applications & Search:
-  Super                     GNOME Overview & instant app search
-  Super + Return            Open Alacritty Terminal
-  Super + B                 Open Web Browser
-  Super + E                 Open Nautilus Files
-
-Screenshots & Annotations:
-  Print                     GNOME native interactive screenshot tool
-  Ctrl + Print              Annotate area screenshot via Satty
-
-System:
-  gnomarchy gnome hotkeys reset   Reset all shortcuts to defaults
-EOF
+case "${1:-}" in
+  reset)
+    # Re-apply whichever layout profile is active rather than replaying one
+    # fixed set of bindings.
+    exec gnomarchy-keymap "$(cat "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || echo gnome)"
+    ;;
+  *)
+    exec gnomarchy-keybindings "$@"
+    ;;
+esac

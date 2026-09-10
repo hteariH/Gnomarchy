@@ -131,10 +131,11 @@ menu_power() {
 while true; do
   header
   choice="$(choose "What do you need?" \
-    "Theme" "Web App" "Capture" "Snapshot" "System" "Power" "Exit")" || exit 0
+    "Theme" "Keybindings" "Web App" "Capture" "Snapshot" "System" "Power" "Exit")" || exit 0
 
   case "$choice" in
     Theme) menu_theme ;;
+    Keybindings) gnomarchy-keybindings ;;
     "Web App") menu_webapp ;;
     Capture) menu_capture ;;
     Snapshot) menu_snapshot ;;

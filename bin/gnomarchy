@@ -28,6 +28,7 @@ Commands:
                                Dynamic auto-tiling (Hyprland-style) or manual grid
   keymap <omarchy|gnome|status>
                                Switch between Omarchy and Gnomarchy key layouts
+  keybindings [--list]         Search the keybindings that are actually active
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
@@ -73,6 +74,10 @@ case "$command_group" in
   keymap)
     shift
     exec gnomarchy-keymap "$@"
+    ;;
+  keybindings | keys)
+    shift
+    exec gnomarchy-keybindings "$@"
     ;;
   theme)
     case "$subcommand" in

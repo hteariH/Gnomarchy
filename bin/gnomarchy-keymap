@@ -120,7 +120,7 @@ apply_omarchy() {
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
   set_custom custom5 'System Menu' 'gnomarchy-menu' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
-  set_custom custom7 'Keybindings' 'gnomarchy gnome hotkeys' '<Super>k'
+  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
   set_custom custom8 'Editor' 'gnome-terminal -- nvim' '<Super><Shift>n'
 
   # Omarchy puts its apps menu on Super+Alt+Space, but that is the Gnomarchy
@@ -157,7 +157,7 @@ apply_gnome() {
   gsettings set "$WM" switch-applications "['<Super>Tab', '<Alt>Tab']"
   gsettings reset "$WM" switch-input-source 2>/dev/null || true
 
-  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6
+  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7
   set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
   set_custom custom1 'Browser' "$BROWSER_CMD" '<Super>b'
   set_custom custom2 'Files' 'nautilus' '<Super>e'
@@ -165,6 +165,7 @@ apply_gnome() {
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
   set_custom custom5 'Retro Screensaver' 'gnomarchy screensaver' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
+  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
 
   if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
     gsettings set "$TS" focus-window-left "['<Super>h']"
@@ -230,6 +231,7 @@ EOF
   Super + E                 file manager
   Super + Alt + Space       Gnomarchy menu
   Super + Escape            screensaver
+  Super + K                 searchable keybindings
   Super + T                 Tactile grid (manual tiling)
 
   Super + W                 close window

@@ -1,0 +1,203 @@
+#!/bin/bash
+
+# Gnomarchy keybindings browser
+#
+# Reads the bindings that are actually in effect out of dconf, rather than
+# printing a hand-maintained list. A static list drifts the moment anything
+# changes -- the previous one still advertised Alacritty, Super+B and six
+# workspaces -- and could never reflect `gnomarchy keymap omarchy` at all.
+#
+#   gnomarchy keybindings          searchable list (Super+K)
+#   gnomarchy keybindings --list   plain list, for piping or grepping
+set -eEo pipefail
+
+MK="org.gnome.settings-daemon.plugins.media-keys"
+BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+TS="org.gnome.shell.extensions.tilingshell"
+
+# Re-exec into a terminal when launched from a keybinding, which has no tty.
+if [[ -z "${GNOMARCHY_KEYS_TTY:-}" ]] && ! [[ -t 1 ]]; then
+  export GNOMARCHY_KEYS_TTY=1
+  if command -v gnome-terminal >/dev/null 2>&1; then
+    exec gnome-terminal --title="Gnomarchy Keybindings" --geometry=88x32 -- "$0" "$@"
+  elif command -v alacritty >/dev/null 2>&1; then
+    exec alacritty --title "Gnomarchy Keybindings" -e "$0" "$@"
+  fi
+fi
+
+command -v gsettings >/dev/null 2>&1 || {
+  echo "gsettings is unavailable." >&2
+  exit 1
+}
+
+# "['<Super><Shift>h']" -> "Super + Shift + H"
+prettify_key() {
+  local raw="$1"
+
+  # Reject the empty forms first: "@as []" survives bracket-stripping as
+  # "@as [" and would otherwise be printed as though it were a key.
+  [[ -z "$raw" || "$raw" == "@as"* || "$raw" == "[]" ]] && return 1
+
+  raw="${raw#[}"
+  raw="${raw%]}"
+  raw="${raw//\'/}"
+  raw="${raw%%,*}"                 # first binding only; alternates are noise
+  raw="${raw## }"
+  raw="${raw%% }"
+  [[ -z "$raw" ]] && return 1
+
+  raw="${raw//<Super>/Super + }"
+  raw="${raw//<Shift>/Shift + }"
+  raw="${raw//<Control>/Ctrl + }"
+  raw="${raw//<Primary>/Ctrl + }"
+  raw="${raw//<Alt>/Alt + }"
+  raw="${raw//</}"; raw="${raw//>/ + }"
+
+  # The trailing key name reads better capitalised: "Super + h" -> "Super + H",
+  # "Super + Alt + space" -> "Super + Alt + Space".
+  if [[ "$raw" =~ ^(.*[+][ ])([a-z][a-zA-Z0-9_]*)$ ]]; then
+    local head="${BASH_REMATCH[1]}" tail="${BASH_REMATCH[2]}"
+    raw="${head}$(tr '[:lower:]' '[:upper:]' <<<"${tail:0:1}")${tail:1}"
+  fi
+  printf '%s' "$raw"
+}
+
+emit() { printf '%-28s  %s\n' "$1" "$2"; }
+
+# Descriptions come from each schema's own summary, so they stay correct
+# without being duplicated here.
+describe_key() {
+  local schema="$1" key="$2" text
+  text="$(gsettings describe "$schema" "$key" 2>/dev/null || true)"
+  [[ -z "$text" ]] && text="$key"
+  printf '%s' "$text"
+}
+
+dump_schema() {
+  local schema="$1" section="$2" key value pretty
+  gsettings list-schemas 2>/dev/null | grep -qx "$schema" || return 0
+
+  local rows=""
+  while read -r key; do
+    [[ -z "$key" ]] && continue
+    value="$(gsettings get "$schema" "$key" 2>/dev/null || true)"
+    [[ "$value" == "@as []" || "$value" == "[]" || -z "$value" ]] && continue
+    pretty="$(prettify_key "$value")" || continue
+    [[ -z "$pretty" ]] && continue
+    rows+="$(emit "$pretty" "$(describe_key "$schema" "$key")")"$'\n'
+  done < <(gsettings list-keys "$schema" 2>/dev/null | sort)
+
+  if [[ -n "$rows" ]]; then
+    printf '\n%s\n' "$section"
+    printf '%s' "$rows"
+  fi
+}
+
+dump_custom() {
+  local list slot path name command binding pretty rows=""
+  list="$(gsettings get "$MK" custom-keybindings 2>/dev/null || echo '')"
+  [[ "$list" == *custom* ]] || return 0
+
+  while read -r slot; do
+    [[ -z "$slot" ]] && continue
+    path="$MK.custom-keybinding:$BINDINGS/$slot/"
+    binding="$(gsettings get "$path" binding 2>/dev/null || true)"
+    name="$(gsettings get "$path" name 2>/dev/null | tr -d "'" || true)"
+    command="$(gsettings get "$path" command 2>/dev/null | tr -d "'" || true)"
+    pretty="$(prettify_key "$binding")" || continue
+    [[ -z "$pretty" ]] && continue
+    rows+="$(emit "$pretty" "${name:-$command}")"$'\n'
+  done < <(grep -o 'custom[0-9]\+' <<<"$list" | sort -u)
+
+  if [[ -n "$rows" ]]; then
+    printf '\nGnomarchy Commands\n'
+    printf '%s' "$rows"
+  fi
+}
+
+# Tiling Shell's directional bindings only apply in dynamic tiling mode.
+dump_tiling() {
+  gsettings list-schemas 2>/dev/null | grep -qx "$TS" || return 0
+
+  local enabled
+  enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo '')"
+  [[ "$enabled" == *tilingshell* ]] || return 0
+
+  local rows="" key label value pretty
+  for key in focus-window-left focus-window-down focus-window-up focus-window-right \
+    move-window-left move-window-down move-window-up move-window-right move-window-center; do
+    value="$(gsettings get "$TS" "$key" 2>/dev/null || true)"
+    pretty="$(prettify_key "$value")" || continue
+    [[ -z "$pretty" ]] && continue
+    case "$key" in
+      focus-window-*) label="Focus window ${key##*-}" ;;
+      move-window-center) label="Centre window" ;;
+      move-window-*) label="Move window ${key##*-}" ;;
+    esac
+    rows+="$(emit "$pretty" "$label")"$'\n'
+  done
+
+  if [[ -n "$rows" ]]; then
+    printf '\nDynamic Tiling\n'
+    printf '%s' "$rows"
+  fi
+}
+
+collect() {
+  local keymap="gnome"
+  [[ -f "$HOME/.config/gnomarchy/current/keymap" ]] &&
+    keymap="$(<"$HOME/.config/gnomarchy/current/keymap")"
+
+  printf 'Gnomarchy Keybindings  (layout: %s)\n' "$keymap"
+
+  dump_custom
+  dump_tiling
+  dump_schema org.gnome.desktop.wm.keybindings "Windows & Workspaces"
+  dump_schema org.gnome.shell.keybindings "Shell"
+  dump_schema org.gnome.mutter.keybindings "Mutter"
+
+  if gsettings list-schemas 2>/dev/null | grep -qx org.gnome.shell.extensions.tactile; then
+    local tiles
+    tiles="$(prettify_key "$(gsettings get org.gnome.shell.extensions.tactile show-tiles 2>/dev/null || echo '')" || true)"
+    if [[ -n "$tiles" ]]; then
+      printf '\nManual Tiling (Tactile)\n'
+      emit "$tiles" "Open the tiling grid overlay"
+    fi
+  fi
+
+  printf '\nSwitch layouts with: gnomarchy keymap <omarchy|gnome>\n'
+}
+
+case "${1:-search}" in
+  --list | list | -l)
+    collect
+    ;;
+
+  search | "")
+    output="$(collect)"
+    if command -v gum >/dev/null 2>&1 && [[ -t 0 ]]; then
+      # Blank lines and headers are kept out of the filter so only real
+      # bindings are selectable.
+      selection="$(grep -E '^[A-Za-z]' <<<"$output" | grep -E '  +' |
+        gum filter --header "Search keybindings" --height 20 --placeholder "type to filter..." || true)"
+      [[ -n "$selection" ]] && {
+        echo
+        echo "  $selection"
+        echo
+      }
+    else
+      echo "$output"
+      [[ -t 0 ]] && read -rp "Press Enter to close..." _
+    fi
+    ;;
+
+  reset)
+    echo "Re-applying the current Gnomarchy keyboard layout..."
+    exec gnomarchy-keymap "$(cat "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || echo gnome)"
+    ;;
+
+  *)
+    echo "Usage: gnomarchy keybindings [--list|reset]"
+    exit 1
+    ;;
+esac
