@@ -12,6 +12,9 @@ gnome-shell-extension-appindicator
 extension-manager
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
+gtk3
+nss
+libxss
 xdg-user-dirs
 polkit-gnome
 mutter

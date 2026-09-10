@@ -2,23 +2,28 @@
 
 gnomarchy_header "Installing Brave Origin (Debloated Privacy Browser)"
 
-# 1. Attempt installation via yay (AUR brave-origin-bin) if yay is available
-if command -v yay >/dev/null 2>&1; then
-  echo "Installing brave-origin-bin from AUR..."
-  yay -S --needed --noconfirm brave-origin-bin 2>/dev/null || true
-fi
-
-# 2. If not installed via AUR, use official Brave Origin Linux installer
-if ! command -v brave-origin >/dev/null 2>&1; then
-  echo "Installing Brave Origin via official distribution script..."
-  curl -fsS https://dl.brave.com/install.sh | FLAVOR=origin bash 2>/dev/null || true
-fi
-
-# 3. Fallback: If brave-origin package is unavailable, fallback to brave-bin
+# 1. Primary: Install official Brave Origin binary via GitHub Release installer
 if ! command -v brave-origin >/dev/null 2>&1 && ! command -v brave >/dev/null 2>&1; then
-  if command -v yay >/dev/null 2>&1; then
-    echo "Fallback: Installing brave-bin from AUR..."
+  echo "Installing official Brave Origin release binary..."
+  sudo python3 "$GNOMARCHY_INSTALL/packaging/install-brave.py" 2>/dev/null || true
+fi
+
+# 2. Secondary Fallback: Install via Paru AUR helper if available
+if ! command -v brave-origin >/dev/null 2>&1 && ! command -v brave >/dev/null 2>&1; then
+  if command -v paru >/dev/null 2>&1; then
+    echo "Fallback: Installing brave-bin from AUR via paru..."
+    paru -S --needed --noconfirm brave-bin 2>/dev/null || true
+  elif command -v yay >/dev/null 2>&1; then
+    echo "Fallback: Installing brave-bin from AUR via yay..."
     yay -S --needed --noconfirm brave-bin 2>/dev/null || true
+  fi
+fi
+
+# 3. Tertiary Fallback: Install via Flatpak
+if ! command -v brave-origin >/dev/null 2>&1 && ! command -v brave >/dev/null 2>&1; then
+  if command -v flatpak >/dev/null 2>&1; then
+    echo "Fallback: Installing Brave Browser via Flatpak..."
+    flatpak install -y --noninteractive flathub com.brave.Browser 2>/dev/null || true
   fi
 fi
 
