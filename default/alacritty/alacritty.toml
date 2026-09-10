@@ -1,0 +1,28 @@
+# Gnomarchy default Alacritty configuration
+#
+# Colors live in colors.toml, which `gnomarchy theme set` rewrites on every
+# theme switch. Keep that import first so a theme can never be overridden by
+# the settings below.
+general.import = ["~/.config/alacritty/colors.toml"]
+
+[env]
+TERM = "xterm-256color"
+
+[font]
+size = 10
+normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
+bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
+italic = { family = "JetBrainsMono Nerd Font", style = "Italic" }
+
+[window]
+padding = { x = 14, y = 14 }
+decorations = "None"
+opacity = 0.96
+blur = true
+dynamic_padding = true
+
+[scrolling]
+history = 10000
+
+[cursor]
+style = { shape = "Block", blinking = "On" }

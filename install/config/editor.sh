@@ -10,7 +10,7 @@ if [ ! -f /usr/share/applications/micro.desktop ]; then
 Type=Application
 Name=Micro
 Comment=A modern and intuitive terminal-based text editor
-Exec=alacritty -e micro %F
+Exec=gnome-terminal -- micro %F
 Icon=text-editor
 Terminal=false
 Categories=Utility;TextEditor;Development;

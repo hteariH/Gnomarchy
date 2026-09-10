@@ -42,17 +42,53 @@ if [[ -f "$THEME_DIR/accent.txt" ]]; then
 fi
 
 # 3. Apply Wallpaper
+#
+# Resolution order, most specific first:
+#   1. the user's own drop-in folder for this theme
+#   2. the Omarchy wallpapers downloaded by gnomarchy-backgrounds
+#   3. the SVG bundled with the theme in-repo (the offline fallback)
+# Within a folder, prefer Omarchy's numbered wallpapers over the small
+# `omarchy.*` tile.
+pick_wallpaper() {
+  local dir="$1"
+  [[ -d "$dir" ]] || return 1
+
+  local files=() f
+  for f in "$dir"/*; do
+    [[ -f "$f" ]] || continue
+    case "${f,,}" in
+      *.jpg | *.jpeg | *.png | *.webp | *.svg) files+=("$f") ;;
+    esac
+  done
+  ((${#files[@]})) || return 1
+
+  # A numbered name (0-..., 1-...) is one of Omarchy's real wallpapers;
+  # anything else (notably the tiny omarchy.webp tile) is a last resort.
+  for f in "${files[@]}"; do
+    if [[ "$(basename "$f")" =~ ^[0-9]+- ]]; then
+      printf "%s" "$f"
+      return 0
+    fi
+  done
+
+  printf "%s" "${files[0]}"
+}
+
 WALLPAPER=""
-if [[ -d "$THEME_DIR/backgrounds" ]]; then
-  WALLPAPER=$(find "$THEME_DIR/backgrounds" -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.svg" \) | head -n 1)
-elif [[ -f "$THEME_DIR/background.jpg" ]]; then
-  WALLPAPER="$THEME_DIR/background.jpg"
-elif [[ -f "$THEME_DIR/background.png" ]]; then
-  WALLPAPER="$THEME_DIR/background.png"
-elif [[ -f "$THEME_DIR/background.svg" ]]; then
-  WALLPAPER="$THEME_DIR/background.svg"
-elif [[ -d "/usr/share/backgrounds/gnomarchy" ]]; then
-  WALLPAPER=$(find "/usr/share/backgrounds/gnomarchy" -type f \( -name "$THEME_NAME.jpg" -o -name "$THEME_NAME.png" -o -name "$THEME_NAME.svg" \) | head -n 1)
+REAL_WALLPAPER=""
+for candidate_dir in   "$HOME/.config/gnomarchy/backgrounds/$THEME_NAME"   "/usr/share/backgrounds/gnomarchy/$THEME_NAME"   "$THEME_DIR/backgrounds"; do
+  WALLPAPER="$(pick_wallpaper "$candidate_dir" || true)"
+  [[ -n "$WALLPAPER" ]] && break
+done
+
+# Legacy single-file layouts, kept so hand-made themes keep working.
+if [[ -z "$WALLPAPER" ]]; then
+  for ext in jpg png svg webp; do
+    if [[ -f "$THEME_DIR/background.$ext" ]]; then
+      WALLPAPER="$THEME_DIR/background.$ext"
+      break
+    fi
+  done
 fi
 
 if [[ -n "$WALLPAPER" ]]; then
@@ -68,27 +104,215 @@ fi
 if [[ -f "$THEME_DIR/alacritty.toml" ]]; then
   mkdir -p "$HOME/.config/alacritty"
   cp "$THEME_DIR/alacritty.toml" "$HOME/.config/alacritty/colors.toml"
-  
-  # Ensure alacritty.toml imports colors.toml
-  if [[ -f "$HOME/.config/alacritty/alacritty.toml" ]]; then
-    if ! grep -q "colors.toml" "$HOME/.config/alacritty/alacritty.toml"; then
-      echo 'import = ["~/.config/alacritty/colors.toml"]' >> "$HOME/.config/alacritty/alacritty.toml"
-    fi
+
+  # Ensure alacritty.toml imports colors.toml. Gnomarchy ships a base config
+  # that already does; this only covers a hand-rolled or missing one.
+  # `general.import` is the current Alacritty key (bare `import` is deprecated).
+  ALACRITTY_CONF="$HOME/.config/alacritty/alacritty.toml"
+  IMPORT_LINE='general.import = ["~/.config/alacritty/colors.toml"]'
+  if [[ -f "$ALACRITTY_CONF" ]]; then
+    # Match an actual import directive, not merely a mention in a comment.
+    grep -qE '^[[:space:]]*(general\.)?import' "$ALACRITTY_CONF"       || sed -i "1i $IMPORT_LINE" "$ALACRITTY_CONF"
   else
-    echo 'import = ["~/.config/alacritty/colors.toml"]' > "$HOME/.config/alacritty/alacritty.toml"
+    echo "$IMPORT_LINE" > "$ALACRITTY_CONF"
   fi
 fi
 
-# 5. Apply Neovim Theme
+# 5. Apply GNOME Terminal Theme
+#
+# GNOME Terminal keeps colors in dconf, not a config file, so the palette is
+# pushed into the Gnomarchy profile created by the installer. The 16 ANSI
+# colors are read from the theme's alacritty.toml, which stays the canonical
+# palette definition for every terminal Gnomarchy themes.
+if [[ -f "$THEME_DIR/alacritty.toml" ]] && command -v gsettings >/dev/null 2>&1; then
+  toml_color() {
+    awk -v section="$1" -v key="$2" '
+      /^\[/ { in_section = ($0 == "[" section "]") }
+      in_section && $1 == key { gsub(/[",]/, "", $3); print $3; exit }
+    ' "$THEME_DIR/alacritty.toml"
+  }
+
+  # Prefer whichever profile GNOME Terminal actually defaults to; fall back to
+  # the fixed Gnomarchy profile id the installer registers.
+  TERM_UUID="$(gsettings get org.gnome.Terminal.ProfilesList default 2>/dev/null | tr -d "'" || true)"
+  [[ -z "$TERM_UUID" || "$TERM_UUID" == "@ms nothing" ]] && TERM_UUID="b1dcc9dd-5262-4d8d-a863-c897e6d979b9"
+  TERM_PROFILE="org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$TERM_UUID/"
+
+  TERM_BG="$(toml_color "colors.primary" "background")"
+  TERM_FG="$(toml_color "colors.primary" "foreground")"
+
+  PALETTE=()
+  for shade in normal bright; do
+    for color in black red green yellow blue magenta cyan white; do
+      value="$(toml_color "colors.$shade" "$color")"
+      [[ -n "$value" ]] && PALETTE+=("'$value'")
+    done
+  done
+
+  # Only write a complete 16-color palette; a partial one renders badly.
+  if [[ ${#PALETTE[@]} -eq 16 && -n "$TERM_BG" && -n "$TERM_FG" ]]; then
+    PALETTE_LIST="$(IFS=,; echo "${PALETTE[*]}")"
+    gsettings set "$TERM_PROFILE" use-theme-colors false 2>/dev/null || true
+    gsettings set "$TERM_PROFILE" background-color "'$TERM_BG'" 2>/dev/null || true
+    gsettings set "$TERM_PROFILE" foreground-color "'$TERM_FG'" 2>/dev/null || true
+    gsettings set "$TERM_PROFILE" palette "[$PALETTE_LIST]" 2>/dev/null || true
+    gsettings set "$TERM_PROFILE" bold-color-same-as-fg true 2>/dev/null || true
+    gsettings set "$TERM_PROFILE" cursor-colors-set false 2>/dev/null || true
+  fi
+fi
+
+
+# 6. Apply Neovim Theme
+#
+# The per-theme neovim.lua is a lazy.nvim plugin spec. Alongside it we pin
+# LazyVim's own `colorscheme` option, otherwise LazyVim applies its default
+# scheme after our spec has run and the theme switch is silently undone.
 if [[ -f "$THEME_DIR/neovim.lua" ]]; then
   mkdir -p "$HOME/.config/nvim/lua/plugins"
   cp "$THEME_DIR/neovim.lua" "$HOME/.config/nvim/lua/plugins/theme.lua" 2>/dev/null || true
+
+  COLORSCHEME="$(grep -oE 'colorscheme [a-zA-Z0-9_-]+' "$THEME_DIR/neovim.lua" | head -n1 | awk '{print $2}')"
+  if [[ -n "$COLORSCHEME" ]]; then
+    cat > "$HOME/.config/nvim/lua/plugins/gnomarchy-colorscheme.lua" <<EOF
+-- Generated by \`gnomarchy theme set\`. Do not edit; it is overwritten on
+-- every theme switch.
+return {
+  { "LazyVim/LazyVim", opts = { colorscheme = "$COLORSCHEME" } },
+}
+EOF
+  fi
 fi
 
-# 6. Apply btop Theme
+# 7. Apply btop Theme
 if [[ -f "$THEME_DIR/btop.theme" ]]; then
   mkdir -p "$HOME/.config/btop/themes"
   cp "$THEME_DIR/btop.theme" "$HOME/.config/btop/themes/current.theme" 2>/dev/null || true
+
+  # btop only reads themes/current.theme if btop.conf selects it.
+  BTOP_CONF="$HOME/.config/btop/btop.conf"
+  if [[ -f "$BTOP_CONF" ]]; then
+    if grep -q '^color_theme' "$BTOP_CONF"; then
+      sed -i 's|^color_theme.*|color_theme = "current"|' "$BTOP_CONF"
+    else
+      echo 'color_theme = "current"' >> "$BTOP_CONF"
+    fi
+  else
+    mkdir -p "$HOME/.config/btop"
+    cat > "$BTOP_CONF" <<'BTOPEOF'
+color_theme = "current"
+theme_background = False
+truecolor = True
+BTOPEOF
+  fi
+fi
+
+# 8. Apply GTK / libadwaita colors
+#
+# GNOME's accent-color setting only offers six stock hues, so the terminal
+# palette is projected onto libadwaita's named colors to carry the theme into
+# GTK3 and GTK4 applications.
+if [[ -f "$THEME_DIR/alacritty.toml" ]]; then
+  read_color() {
+    # $1 = toml section, $2 = key
+    awk -v section="$1" -v key="$2" '
+      /^\[/ { in_section = ($0 == "[" section "]") }
+      in_section && $1 == key { gsub(/[",]/, "", $3); print $3; exit }
+    ' "$THEME_DIR/alacritty.toml"
+  }
+
+  # Nudge a #rrggbb color toward white (positive delta) or black (negative).
+  # Used to derive card/sidebar surfaces that sit just off the window
+  # background, which is what libadwaita expects; borrowing a palette color
+  # here produces far too much contrast.
+  shade_color() {
+    local hex="${1#\#}" delta="$2"
+    local r=$((16#${hex:0:2})) g=$((16#${hex:2:2})) b=$((16#${hex:4:2}))
+    r=$((r + delta)); g=$((g + delta)); b=$((b + delta))
+    ((r < 0)) && r=0; ((r > 255)) && r=255
+    ((g < 0)) && g=0; ((g > 255)) && g=255
+    ((b < 0)) && b=0; ((b > 255)) && b=255
+    printf "#%02x%02x%02x" "$r" "$g" "$b"
+  }
+
+  BG="$(read_color "colors.primary" "background")"
+  FG="$(read_color "colors.primary" "foreground")"
+  BORDER="$(read_color "colors.bright" "black")"
+
+  # Light themes get a slightly darker card; dark themes a slightly lighter one.
+  if [[ -f "$THEME_DIR/light.mode" ]]; then
+    CARD="$(shade_color "$BG" -12)"
+  else
+    CARD="$(shade_color "$BG" 14)"
+  fi
+
+  if [[ -n "$BG" && -n "$FG" ]]; then
+    for gtkver in gtk-3.0 gtk-4.0; do
+      mkdir -p "$HOME/.config/$gtkver"
+      cat > "$HOME/.config/$gtkver/gnomarchy-theme.css" <<EOF
+/* Generated by \`gnomarchy theme set\` ($THEME_NAME). Do not edit. */
+@define-color window_bg_color $BG;
+@define-color view_bg_color $BG;
+@define-color headerbar_bg_color $BG;
+@define-color popover_bg_color $BG;
+@define-color dialog_bg_color $BG;
+@define-color card_bg_color ${CARD:-$BG};
+@define-color sidebar_bg_color ${CARD:-$BG};
+@define-color headerbar_border_color ${BORDER:-$BG};
+@define-color window_fg_color $FG;
+@define-color view_fg_color $FG;
+@define-color headerbar_fg_color $FG;
+@define-color popover_fg_color $FG;
+@define-color dialog_fg_color $FG;
+@define-color card_fg_color $FG;
+@define-color sidebar_fg_color $FG;
+EOF
+      # Ensure the user's gtk.css imports the generated file exactly once.
+      GTK_CSS="$HOME/.config/$gtkver/gtk.css"
+      IMPORT_LINE='@import url("gnomarchy-theme.css");'
+      if [[ -f "$GTK_CSS" ]]; then
+        grep -q "gnomarchy-theme.css" "$GTK_CSS" || sed -i "1i $IMPORT_LINE" "$GTK_CSS"
+      else
+        echo "$IMPORT_LINE" > "$GTK_CSS"
+      fi
+    done
+  fi
+fi
+
+# 9. Apply the theme to the GDM login screen
+#
+# GDM has its own dconf profile; this is the supported way to style the greeter.
+# Patching GNOME's gresource bundles would also work but breaks on every shell
+# update, so only the dconf-backed settings are touched here.
+#
+# sudo -n keeps this non-interactive: a theme switch must never block on a
+# password prompt. If sudo needs one, the greeter is simply left as-is and
+# picks up the change at the next `gnomarchy update`.
+if [[ -d /etc/dconf/db ]] && sudo -n true 2>/dev/null; then
+  GDM_MODE="prefer-dark"
+  [[ -f "$THEME_DIR/light.mode" ]] && GDM_MODE="prefer-light"
+
+  # A user-supplied theme may carry no wallpaper; omit the stanza rather than
+  # writing an empty file:// URI that the greeter would fail to load.
+  GDM_BACKGROUND=""
+  if [[ -n "$REAL_WALLPAPER" ]]; then
+    GDM_BACKGROUND="
+[org/gnome/desktop/background]
+picture-uri='file://$REAL_WALLPAPER'
+picture-uri-dark='file://$REAL_WALLPAPER'
+picture-options='zoom'"
+  fi
+
+  sudo mkdir -p /etc/dconf/db/gdm.d 2>/dev/null || true
+  sudo tee /etc/dconf/db/gdm.d/10-gnomarchy-theme >/dev/null <<EOF
+# Generated by \`gnomarchy theme set\` ($THEME_NAME). Do not edit.
+[org/gnome/desktop/interface]
+color-scheme='$GDM_MODE'
+${ACCENT:+accent-color='$ACCENT'}
+font-name='Noto Sans 10'
+monospace-font-name='JetBrainsMono Nerd Font 10'
+$GDM_BACKGROUND
+EOF
+  sudo dconf update 2>/dev/null || true
 fi
 
 echo "Applied theme: $THEME_NAME"
@@ -98,7 +322,7 @@ if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
   notify-send -i preferences-desktop-theme "Gnomarchy Theme" "Active theme switched to $THEME_NAME" 2>/dev/null || true
 fi
 
-# 7. Run on-theme-change Hook if defined
+# 10. Run on-theme-change Hook if defined
 if command -v gnomarchy-hook-run >/dev/null 2>&1; then
   gnomarchy-hook-run on-theme-change "$THEME_NAME" || true
 fi

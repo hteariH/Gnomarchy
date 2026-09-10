@@ -4,7 +4,7 @@
 [org.gnome.shell]
 disable-user-extensions=false
 enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'tactile@lundal.io', 'just-perfection-desktop@just-perfection', 'blur-my-shell@aunetx', 'space-bar@luchrioh', 'tophat@fflewddur.github.io', 'AlphabeticalAppGrid@stuarthayhurst', 'appindicatorsupport@rgcjonas.gmail.com']
-favorite-apps=['brave-browser-origin.desktop', 'brave-origin.desktop', 'brave-browser.desktop', 'alacritty.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']
+favorite-apps=['brave-browser-origin.desktop', 'brave-origin.desktop', 'brave-browser.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']
 
 [org.gnome.shell.extensions.dash-to-dock]
 dock-position='LEFT'

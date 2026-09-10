@@ -106,7 +106,7 @@ fi
 
 gsettings set org.gnome.shell favorite-apps "[ \
   '$BROWSER_DESKTOP', \
-  'alacritty.desktop', \
+  'org.gnome.Terminal.desktop', \
   'org.gnome.Nautilus.desktop', \
   'micro.desktop', \
   'io.github.kolunmi.Bazaar.desktop', \

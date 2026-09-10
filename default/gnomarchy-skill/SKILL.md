@@ -107,7 +107,7 @@ gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT'
 
 # Pin or reorder favorite applications in the dock
 gsettings get org.gnome.shell favorite-apps
-gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'alacritty.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
+gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
 ```
 
 ---
@@ -165,7 +165,7 @@ BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/c
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
   "$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings | sed "s/]/, '$BINDING_PATH\/']/ \")"
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ name 'Micro Editor'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ command 'alacritty -e micro'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ command 'gnome-terminal -- micro'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ binding '<Super>n'
 ```
 

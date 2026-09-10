@@ -110,7 +110,7 @@ class GnomarchyMenuProvider(GObject.GObject, Nautilus.MenuProvider):
     def _cb_edit_micro(self, menu, files):
         paths = [self._get_path(f) for f in files if self._get_path(f)]
         if paths:
-            subprocess.Popen(["alacritty", "-e", "micro"] + paths)
+            subprocess.Popen(["gnome-terminal", "--", "micro"] + paths)
 
     def get_file_items(self, files):
         if not files:
