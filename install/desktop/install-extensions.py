@@ -18,6 +18,8 @@ EXTENSIONS = [
     "tophat@fflewddur.github.io",
     "AlphabeticalAppGrid@stuarthayhurst",
     "appindicatorsupport@rgcjonas.gmail.com",
+    # Deployed but left disabled; `gnomarchy tiling enable` turns it on.
+    "tilingshell@ferrarodomenico.com",
 ]
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

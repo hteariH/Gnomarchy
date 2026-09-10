@@ -26,6 +26,7 @@ Use the high-level `gnomarchy` CLI dispatcher whenever available:
 | **List themes** | `gnomarchy theme list` |
 | **Check active theme** | `gnomarchy theme current` |
 | **Fetch wallpapers** | `gnomarchy backgrounds` (downloaded, not shipped - see BACKGROUNDS.md) |
+| **Switch tiling mode** | `gnomarchy tiling <enable\|disable\|status>` (dynamic vs manual) |
 | **Set theme** | `gnomarchy theme set <name>` (22 built-in themes, e.g. `tokyo-night`, `catppuccin`, `kanagawa`, `hackerman`, `flexoki-light`) |
 | **Create Web App** | `gnomarchy webapp add "<Name>" "<URL>"` |
 | **List Web Apps** | `gnomarchy webapp list` |
@@ -63,7 +64,19 @@ All desktop settings are managed via GSettings.
 - Tactile Tiling: `org.gnome.shell.extensions.tactile`
 - Workspaces: `org.gnome.desktop.wm.preferences`
 
-### 2. Tiling Window Management (Tactile)
+### 2. Tiling Window Management
+
+Two mutually exclusive modes; never enable both, they fight over placement.
+
+- **Dynamic** (opt-in): Tiling Shell, `org.gnome.shell.extensions.tilingshell`.
+  The switch that matters is `enable-autotiling`; without it new windows still
+  open floating. Focus/move bindings are `focus-window-*` / `move-window-*`.
+- **Manual** (default): Tactile, below.
+
+Switch with `gnomarchy tiling <enable|disable>` rather than toggling the
+extensions by hand.
+
+#### Tactile (manual)
 - Trigger key: `<Super>T`
 - Gap size: `gsettings set org.gnome.shell.extensions.tactile gap-size <pixels>`
 - Grid layout: `gsettings set org.gnome.shell.extensions.tactile col-0 <span-ratio>`

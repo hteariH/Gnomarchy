@@ -24,6 +24,8 @@ Commands:
   menu                         Open the Gnomarchy command center (Super+Alt+Space)
   first-run                    Re-apply desktop settings, shortcuts and favorites
   theme <set|list|current>     Manage system and desktop color themes
+  tiling <enable|disable|status>
+                               Dynamic auto-tiling (Hyprland-style) or manual grid
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
@@ -61,6 +63,10 @@ case "$command_group" in
   backgrounds)
     shift
     exec gnomarchy-backgrounds "$@"
+    ;;
+  tiling)
+    shift
+    exec gnomarchy-tiling "$@"
     ;;
   theme)
     case "$subcommand" in

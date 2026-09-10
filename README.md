@@ -24,7 +24,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 
 - **⌨️ Command Center (`Super + Alt + Space`)**: One keystroke to themes, web apps, screen capture, snapshots, updates and power actions—the whole system layer behind a single searchable menu.
 - **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Alacritty, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
-- **🧩 Tactile Grid Tiling (`Super + T`)**: Avoid the rigid complexity of automatic tiling window managers while keeping lightning-fast keyboard window positioning inspired by DHH's Omakub.
+- **🧩 Two Tiling Models**: Manual grid tiling with Tactile (`Super + T`) by default, or Hyprland-style **dynamic auto-tiling** where new windows place themselves and neighbours resize to fit — one command apart (`gnomarchy tiling enable`).
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
 - **🌐 Web App Generator (`gnomarchy webapp`)**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles, auto-fetched favicons, and Dash to Dock pinning.
 - **📁 Nautilus Context Superpowers**: Native right-click file actions for fast video compression for Discord/Slack (25MB), GIF creation, MP3 extraction, WebP conversion, EXIF stripping, and LocalSend sharing.
@@ -47,7 +47,9 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | Shortcut | Action |
 | :--- | :--- |
 | <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>Space</kbd> | **Command Center**: Themes, web apps, capture, snapshots, updates, power |
-| <kbd>Super</kbd> + <kbd>T</kbd> | **Tactile Grid Tiling**: Launch interactive grid overlay to snap windows |
+| <kbd>Super</kbd> + <kbd>T</kbd> | **Tactile Grid Tiling**: Launch interactive grid overlay to snap windows (manual mode) |
+| <kbd>Super</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Focus window left/down/up/right (dynamic mode) |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Move window in that direction (dynamic mode) |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Launch **GNOME Terminal** (themed Gnomarchy profile) |
 | <kbd>Super</kbd> + <kbd>B</kbd> | Launch default web browser (**Brave Origin**) |
 | <kbd>Super</kbd> + <kbd>E</kbd> | Open **Nautilus** file manager |
@@ -138,6 +140,30 @@ gnomarchy backgrounds
 gnomarchy backgrounds --list
 gnomarchy backgrounds --verify
 ```
+
+### Window Tiling
+
+Gnomarchy ships both tiling models and lets you pick:
+
+```bash
+# Hyprland-style dynamic auto-tiling: windows place themselves,
+# neighbours resize to fit, navigation on hjkl
+gnomarchy tiling enable
+
+# Back to manual grid tiling with Tactile (the default)
+gnomarchy tiling disable
+
+# Which mode is active?
+gnomarchy tiling status
+```
+
+**Dynamic** uses Tiling Shell with auto-tiling on: a new window is placed into
+the layout automatically rather than opening floating. **Manual** uses Tactile:
+`Super+T` opens a grid overlay and you choose the zone; nothing moves on its
+own. Only one is active at a time - enabled together they fight over placement.
+
+Switching takes effect after the shell reloads. Under Wayland that means
+logging out and back in.
 
 ### Web Applications
 ```bash

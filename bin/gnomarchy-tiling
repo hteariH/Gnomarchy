@@ -1,0 +1,204 @@
+#!/bin/bash
+
+# Gnomarchy dynamic tiling
+#
+# Switches between two window management models:
+#
+#   dynamic  Tiling Shell with auto-tiling. New windows are placed into the
+#            layout automatically and neighbours resize to fit, which is the
+#            Hyprland-style behaviour. Navigation and movement are on hjkl.
+#
+#   manual   Tactile. Super+T opens a grid overlay and you pick the zone.
+#            Nothing moves unless you move it. This is the default.
+#
+# Only one is active at a time: with both enabled they fight over placement.
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+
+DYNAMIC_UUID="tilingshell@ferrarodomenico.com"
+MANUAL_UUID="tactile@lundal.io"
+TS="org.gnome.shell.extensions.tilingshell"
+
+info() { echo -e "\033[1;36m$1\033[0m"; }
+good() { echo -e "\033[1;32m  $1\033[0m"; }
+warn() { echo -e "\033[1;33m  $1\033[0m"; }
+
+require_session() {
+  if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && ! -S "/run/user/$(id -u)/bus" ]]; then
+    echo "No D-Bus session bus; run this from inside your desktop session." >&2
+    exit 1
+  fi
+}
+
+extension_installed() {
+  [[ -d "$HOME/.local/share/gnome-shell/extensions/$1" ]] ||
+    [[ -d "/usr/share/gnome-shell/extensions/$1" ]]
+}
+
+# Extensions whose zip ships no compiled schema fail to load with GLib.FileError,
+# so make sure the schema is compiled before enabling anything.
+ensure_schema_compiled() {
+  local uuid="$1" dir
+  for dir in "$HOME/.local/share/gnome-shell/extensions/$uuid" \
+    "/usr/share/gnome-shell/extensions/$uuid"; do
+    [[ -d "$dir/schemas" ]] || continue
+    compgen -G "$dir/schemas/*.gschema.xml" >/dev/null 2>&1 || continue
+    [[ -f "$dir/schemas/gschemas.compiled" ]] && continue
+    if [[ -w "$dir/schemas" ]]; then
+      glib-compile-schemas "$dir/schemas" 2>/dev/null || true
+    else
+      sudo glib-compile-schemas "$dir/schemas" 2>/dev/null || true
+    fi
+  done
+}
+
+install_dynamic() {
+  extension_installed "$DYNAMIC_UUID" && return 0
+
+  info "Installing Tiling Shell..."
+  local zip="$GNOMARCHY_PATH/default/gnome/extensions/$DYNAMIC_UUID.zip"
+  local dest="$HOME/.local/share/gnome-shell/extensions/$DYNAMIC_UUID"
+  mkdir -p "$dest"
+
+  if [[ -f "$zip" ]]; then
+    unzip -oq "$zip" -d "$dest"
+  elif command -v gnome-extensions >/dev/null 2>&1; then
+    warn "Bundled copy missing; fetching from extensions.gnome.org"
+    local tmp
+    tmp="$(mktemp --suffix=.zip)"
+    curl -fsSL -o "$tmp" \
+      "https://extensions.gnome.org/download-extension/$DYNAMIC_UUID.shell-extension.zip?version_tag=latest" ||
+      { echo "Could not download Tiling Shell." >&2; rm -f "$tmp"; exit 1; }
+    unzip -oq "$tmp" -d "$dest"
+    rm -f "$tmp"
+  else
+    echo "Tiling Shell is not available and cannot be fetched." >&2
+    exit 1
+  fi
+}
+
+configure_dynamic() {
+  # Auto-tiling is the whole point: without it this is just another
+  # snap-assistant and new windows still open floating.
+  gsettings set "$TS" enable-autotiling true
+  gsettings set "$TS" enable-tiling-system true
+  gsettings set "$TS" enable-snap-assist true
+  gsettings set "$TS" enable-wraparound-focus true
+  gsettings set "$TS" resize-complementing-windows true
+  gsettings set "$TS" enable-move-keybindings true
+  gsettings set "$TS" restore-window-original-size true
+
+  gsettings set "$TS" inner-gaps 8
+  gsettings set "$TS" outer-gaps 8
+
+  # hjkl for focus, Shift+hjkl to move, the way a tiling WM works.
+  gsettings set "$TS" focus-window-left "['<Super>h']"
+  gsettings set "$TS" focus-window-down "['<Super>j']"
+  gsettings set "$TS" focus-window-up "['<Super>k']"
+  gsettings set "$TS" focus-window-right "['<Super>l']"
+
+  gsettings set "$TS" move-window-left "['<Super><Shift>h']"
+  gsettings set "$TS" move-window-down "['<Super><Shift>j']"
+  gsettings set "$TS" move-window-up "['<Super><Shift>k']"
+  gsettings set "$TS" move-window-right "['<Super><Shift>l']"
+  gsettings set "$TS" move-window-center "['<Super><Shift>c']"
+
+  # Tiling Shell binds the arrow keys to window movement by default, which
+  # would take over Super+Up (maximize) and GNOME's edge tiling. hjkl covers
+  # movement, so leave the arrows to GNOME.
+  gsettings set org.gnome.mutter edge-tiling true
+}
+
+set_extension() {
+  local uuid="$1" action="$2"
+  command -v gnome-extensions >/dev/null 2>&1 || return 0
+  gnome-extensions "$action" "$uuid" 2>/dev/null || true
+}
+
+restart_hint() {
+  if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+    warn "Log out and back in to load the change (Wayland cannot restart the shell in place)."
+    command -v notify-send >/dev/null 2>&1 &&
+      notify-send -i preferences-desktop "Gnomarchy Tiling" \
+        "Log out and back in to apply the change." 2>/dev/null || true
+  else
+    warn "Press Alt+F2, type r, and press Enter to reload the shell."
+  fi
+}
+
+current_mode() {
+  local enabled
+  enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo '')"
+  if [[ "$enabled" == *"$DYNAMIC_UUID"* ]]; then
+    echo dynamic
+  elif [[ "$enabled" == *"$MANUAL_UUID"* ]]; then
+    echo manual
+  else
+    echo none
+  fi
+}
+
+case "${1:-status}" in
+  enable | dynamic | on)
+    require_session
+    install_dynamic
+    ensure_schema_compiled "$DYNAMIC_UUID"
+
+    info "Enabling dynamic tiling (Tiling Shell)"
+    set_extension "$MANUAL_UUID" disable
+    set_extension "$DYNAMIC_UUID" enable
+    configure_dynamic
+
+    good "Dynamic tiling enabled"
+    echo
+    echo "  Super + h/j/k/l           focus window left/down/up/right"
+    echo "  Super + Shift + h/j/k/l   move window in that direction"
+    echo "  Super + Shift + c         centre the window"
+    echo "  Super + Ctrl (hold)       temporarily suspend tiling while dragging"
+    echo
+    restart_hint
+    ;;
+
+  disable | manual | off)
+    require_session
+    info "Returning to manual tiling (Tactile)"
+    gsettings set "$TS" enable-autotiling false 2>/dev/null || true
+    set_extension "$DYNAMIC_UUID" disable
+    set_extension "$MANUAL_UUID" enable
+    good "Manual tiling restored - Super+T opens the grid overlay"
+    echo
+    restart_hint
+    ;;
+
+  status)
+    mode="$(current_mode)"
+    case "$mode" in
+      dynamic)
+        auto="$(gsettings get "$TS" enable-autotiling 2>/dev/null || echo unknown)"
+        echo "Tiling mode: dynamic (Tiling Shell)"
+        echo "  auto-tiling: $auto"
+        echo "  focus:  Super + h/j/k/l"
+        echo "  move:   Super + Shift + h/j/k/l"
+        ;;
+      manual)
+        echo "Tiling mode: manual (Tactile)"
+        echo "  Super+T opens the grid overlay"
+        ;;
+      *)
+        echo "Tiling mode: none - no tiling extension is enabled"
+        ;;
+    esac
+    echo
+    echo "Switch with: gnomarchy tiling <enable|disable>"
+    ;;
+
+  *)
+    echo "Usage: gnomarchy tiling <enable|disable|status>"
+    echo
+    echo "  enable    dynamic auto-tiling (Tiling Shell), Hyprland-style"
+    echo "  disable   manual grid tiling (Tactile), the default"
+    echo "  status    show which mode is active"
+    exit 1
+    ;;
+esac
