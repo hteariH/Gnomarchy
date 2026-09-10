@@ -13,6 +13,12 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME Libadwaita accent color, dark/light mode, wallpapers, Alacritty terminal, Neovim, btop, and VS Code—with a single command (`gnomarchy theme set <name>`).
 - **Bulletproof Btrfs & Snapper Rollbacks**: Automated boot snapshots integrated with the Limine bootloader let you roll back kernel or package updates directly from the boot menu.
 - **Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (Terminal, Browser, Files, Micro, Bazaar App Store).
+- **Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models.
+- **Web App Generator**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles and Dash to Dock pinning.
+- **Nautilus Context Superpowers**: Native right-click actions for media compression (Discord/Slack), GIF generation, MP3 audio extraction, WebP conversion, and EXIF stripping.
+- **Windows 11 VM Automation**: One-command creation and execution of hardware-accelerated Windows 11 KVM VMs with VirtIO and TPM 2.0.
+- **Desktop Reminders & Timers**: Instant notification alarms with chime audio alerts (`gnomarchy reminder 25m "Break"`).
+- **Fast Shutdown**: Systemd timeout stop limits tuned from 90s down to 10s for instantaneous shutdowns and reboots.
 - **Modern Text Editing (Micro)**: Micro pre-installed and configured as the default system and CLI text editor (`$EDITOR`, `$VISUAL`, Git, and desktop MIME types).
 - **Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
 - **Turnkey Developer Stack**: Pre-configured with Micro, Neovim, Alacritty, Starship, Docker, Lazygit, Lazydocker, Mise (multi-language version management), and AI agent tooling.
@@ -34,6 +40,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | <kbd>Super</kbd> + <kbd>Backspace</kbd> | Interactive window resize mode |
 | <kbd>Super</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Switch directly to workspace 1 through 6 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Move focused window to workspace 1 through 6 |
+| <kbd>Super</kbd> + <kbd>D</kbd> | **Voxtype**: Toggle AI Speech-to-Text Dictation |
+| <kbd>Super</kbd> + <kbd>Escape</kbd> | **Screensaver**: Fullscreen Retro Matrix terminal screensaver |
 | <kbd>Print</kbd> | Native GNOME interactive screenshot & recording grabber |
 | <kbd>Ctrl</kbd> + <kbd>Print</kbd> | Area screenshot with **Satty** annotation editor |
 
@@ -103,10 +111,46 @@ gnomarchy snapshot create "Before system refactor"
 gnomarchy snapshot list
 ```
 
-### System Updates
+### Web Applications
+```bash
+# Add a dedicated web application launcher
+gnomarchy webapp add "Claude" "https://claude.ai"
+gnomarchy webapp add "Linear" "https://linear.app"
+
+# List and remove web apps
+gnomarchy webapp list
+gnomarchy webapp remove "Claude"
+```
+
+### Desktop Reminders
+```bash
+# Set relative timers or exact time reminders with sound alerts
+gnomarchy reminder 25m "Pomodoro break"
+gnomarchy reminder 17:30 "Team Standup"
+gnomarchy reminder list
+```
+
+### Voxtype AI Speech-to-Text
+```bash
+# Toggle audio capture and transcription (or press Super+D)
+gnomarchy voxtype toggle
+```
+
+### Windows 11 VM Automation
+```bash
+# Setup and launch hardware-accelerated Windows 11 KVM VM
+gnomarchy windows setup
+gnomarchy windows start
+gnomarchy windows status
+```
+
+### System Updates & Hooks
 ```bash
 # Synchronize Arch packages, AUR packages, and Gnomarchy configuration
 gnomarchy update
+
+# Trigger or inspect lifecycle event hooks (~/.config/gnomarchy/hooks/)
+gnomarchy hook on-theme-change "tokyo-night"
 ```
 
 ---

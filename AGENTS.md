@@ -25,6 +25,16 @@ Use the high-level `gnomarchy` CLI dispatcher whenever available:
 | **List themes** | `gnomarchy theme list` |
 | **Check active theme** | `gnomarchy theme current` |
 | **Set theme** | `gnomarchy theme set <tokyo-night|catppuccin|gruvbox|everforest|nord|rose-pine|matte-black>` |
+| **Create Web App** | `gnomarchy webapp add "<Name>" "<URL>"` |
+| **List Web Apps** | `gnomarchy webapp list` |
+| **Remove Web App** | `gnomarchy webapp remove "<Name>"` |
+| **Set Reminder** | `gnomarchy reminder <25m|1h|17:30> "<Message>"` |
+| **List Reminders** | `gnomarchy reminder list` |
+| **Cancel Reminder** | `gnomarchy reminder cancel <id>` |
+| **Toggle AI Dictation** | `gnomarchy voxtype toggle` (or `<Super>d`) |
+| **Windows 11 VM** | `gnomarchy windows <setup|start|stop|status>` |
+| **Screensaver** | `gnomarchy screensaver` (or `<Super>Escape`) |
+| **Trigger Hook** | `gnomarchy hook <hook-name> [args...]` |
 | **List GNOME extensions** | `gnomarchy gnome extensions list` |
 | **Enable/disable extension** | `gnomarchy gnome extensions <enable|disable> <uuid>` |
 | **Reset extensions** | `gnomarchy gnome extensions reset` |

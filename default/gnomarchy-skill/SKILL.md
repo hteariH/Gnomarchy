@@ -197,3 +197,85 @@ gnomarchy snapshot list
 # Create a snapshot before making system modifications
 gnomarchy snapshot create "Pre-refactor snapshot"
 ```
+
+---
+
+## 9. Web Applications (`gnomarchy webapp`)
+
+Turn any web URL into an isolated desktop application launcher with its own profile and Dash to Dock support:
+
+```bash
+# Add a web application
+gnomarchy webapp add "Claude" "https://claude.ai"
+gnomarchy webapp add "ChatGPT" "https://chatgpt.com"
+gnomarchy webapp add "Linear" "https://linear.app"
+
+# List web apps
+gnomarchy webapp list
+
+# Remove a web app
+gnomarchy webapp remove "Claude"
+```
+
+---
+
+## 10. Desktop Reminders (`gnomarchy reminder`)
+
+Schedule desktop notifications with chime alerts:
+
+```bash
+# Duration-based reminders
+gnomarchy reminder 25m "Pomodoro break"
+gnomarchy reminder 1h30m "Review deployment logs"
+
+# Clock-based reminders
+gnomarchy reminder 17:30 "Team Standup"
+
+# List or cancel active reminders
+gnomarchy reminder list
+gnomarchy reminder cancel <reminder-id>
+```
+
+---
+
+## 11. Voxtype AI Speech-to-Text (`gnomarchy voxtype`)
+
+System-wide speech-to-text powered by local offline Whisper models:
+
+```bash
+# Toggle recording (also bound to Super+D)
+gnomarchy voxtype toggle
+
+# Manual controls
+gnomarchy voxtype start
+gnomarchy voxtype stop
+gnomarchy voxtype status
+```
+
+---
+
+## 12. Windows 11 VM (`gnomarchy windows`)
+
+Hardware-accelerated Windows 11 virtual machine using KVM, VirtIO, and TPM 2.0:
+
+```bash
+gnomarchy windows setup     # Provision VM storage & environment
+gnomarchy windows start     # Boot Windows 11 VM
+gnomarchy windows stop      # Cleanly stop VM
+gnomarchy windows status    # Check VM state and disk usage
+```
+
+---
+
+## 13. Event Hooks (`~/.config/gnomarchy/hooks/`)
+
+Subscribe to Gnomarchy system events:
+- `on-theme-change <theme-name>`: Triggered when theme is switched.
+- `on-snapshot <description>`: Triggered after Btrfs snapshot creation.
+- `on-update <pre|post>`: Triggered before/after system updates.
+- `on-webapp-add <name> <url>`: Triggered when a new web app is added.
+
+Trigger hooks manually:
+```bash
+gnomarchy hook on-theme-change "tokyo-night"
+```

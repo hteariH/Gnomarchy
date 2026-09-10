@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Gnomarchy Retro Terminal Screensaver
+# Launch hotkey: <Super>Escape
+
+set -e
+
+# Determine terminal emulator
+TERM_CMD="alacritty"
+if ! command -v alacritty >/dev/null 2>&1; then
+  TERM_CMD="gnome-terminal"
+fi
+
+# Determine screensaver effect command
+EFFECT_CMD="cmatrix -abs"
+if ! command -v cmatrix >/dev/null 2>&1; then
+  # Fallback ASCII clock or matrix simulation
+  EFFECT_CMD="bash -c 'clear; while true; do echo -ne \"\033[32m\"; head -n 40 /dev/urandom | tr -dc \"a-zA-Z0-9@#%&*+=\" | fold -w \$COLUMNS | head -n \$LINES; sleep 0.05; done'"
+fi
+
+if [[ "$TERM_CMD" == "alacritty" ]]; then
+  exec alacritty \
+    --class gnomarchy-screensaver,GnomarchyScreensaver \
+    --title "Gnomarchy Screensaver" \
+    --option "window.startup_mode=Fullscreen" \
+    --option "window.decorations=None" \
+    -e bash -c "$EFFECT_CMD"
+else
+  exec "$TERM_CMD" --full-screen -- bash -c "$EFFECT_CMD"
+fi

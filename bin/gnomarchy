@@ -20,6 +20,12 @@ Commands:
   snapshot <create|list>       Manage Btrfs Snapper rollback snapshots
   agent <list|claude|opencode|pi|aider>
                                Launch or inspect AI coding agents & skills
+  webapp <add|list|remove>     Turn websites into isolated desktop applications
+  voxtype [toggle|start|stop]  Speech-to-text AI dictation (Super+D)
+  windows <setup|start|stop>   Manage accelerated Windows 11 KVM VM
+  reminder <time|dur> <msg>    Schedule desktop notification reminders
+  screensaver                  Launch retro fullscreen Matrix terminal screensaver
+  hook <run|list>              Trigger or inspect Gnomarchy lifecycle hooks
   update                       Perform system & Gnomarchy configuration updates
   version                      Display Gnomarchy version
   help                         Show this help message
@@ -90,6 +96,29 @@ case "$command_group" in
   agent)
     shift
     exec gnomarchy-agent "$@"
+    ;;
+  webapp)
+    shift
+    exec gnomarchy-webapp "$@"
+    ;;
+  voxtype)
+    shift
+    exec gnomarchy-voxtype "$@"
+    ;;
+  windows)
+    shift
+    exec gnomarchy-windows "$@"
+    ;;
+  reminder)
+    shift
+    exec gnomarchy-reminder "$@"
+    ;;
+  screensaver)
+    exec gnomarchy-screensaver
+    ;;
+  hook)
+    shift
+    exec gnomarchy-hook-run "$@"
     ;;
   update)
     exec gnomarchy-update

@@ -1,0 +1,11 @@
+#!/bin/bash
+# Triggered when Gnomarchy theme changes
+# Arguments: $1 = Theme name (e.g. "tokyo-night")
+
+theme="$1"
+
+# Example: Echo to terminal or send custom notification
+# notify-send "Hook: Theme Changed" "Switched to $theme"
+
+# Example: Re-color custom web or terminal tools
+# ~/.config/my-app/update-theme.sh "$theme"

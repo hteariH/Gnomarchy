@@ -5,6 +5,10 @@ set -e
 
 echo -e "\033[1;36m==> Updating Gnomarchy System Packages\033[0m"
 
+if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+  gnomarchy-hook-run on-update "pre" || true
+fi
+
 # Update Pacman packages
 sudo pacman -Syu --noconfirm
 
@@ -19,6 +23,10 @@ GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
 if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
   echo -e "\n\033[1;36m==> Updating Gnomarchy Configurations\033[0m"
   git -C "$GNOMARCHY_PATH" pull --rebase origin main || true
+fi
+
+if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+  gnomarchy-hook-run on-update "post" || true
 fi
 
 echo -e "\n\033[1;32m✓ System up to date!\033[0m"

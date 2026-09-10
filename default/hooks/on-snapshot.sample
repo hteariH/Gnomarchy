@@ -1,0 +1,8 @@
+#!/bin/bash
+# Triggered after creating a Btrfs Snapper snapshot
+# Arguments: $1 = Snapshot description
+
+description="$1"
+
+# Example: Push notification or audit log
+# logger -t gnomarchy-snapshot "Snapshot created: $description"

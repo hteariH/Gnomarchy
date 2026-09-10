@@ -89,3 +89,8 @@ echo "Applied theme: $THEME_NAME"
 if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
   notify-send -i preferences-desktop-theme "Gnomarchy Theme" "Active theme switched to $THEME_NAME" 2>/dev/null || true
 fi
+
+# 7. Run on-theme-change Hook if defined
+if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+  gnomarchy-hook-run on-theme-change "$THEME_NAME" || true
+fi

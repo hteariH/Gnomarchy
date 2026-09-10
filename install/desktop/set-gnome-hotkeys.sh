@@ -30,7 +30,7 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys next "['<Shift>AudioP
 # Custom Keybindings Slot Setup
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
-  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/']"
+  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/', '$BINDING_PATH/custom4/', '$BINDING_PATH/custom5/']"
 
 # 1. Terminal (Super + Return)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ name 'Terminal'
@@ -51,5 +51,15 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BI
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ name 'Annotate Screenshot'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ command 'gnome-screenshot -a -f /tmp/satty-shot.png && satty -f /tmp/satty-shot.png'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom3/ binding '<Control>Print'
+
+# 5. Voxtype AI Speech-to-Text Dictation (Super + D)
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom4/ name 'Voxtype AI Dictation'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom4/ command 'gnomarchy voxtype toggle'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom4/ binding '<Super>d'
+
+# 6. Retro Terminal Screensaver (Super + Escape)
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ name 'Retro Screensaver'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ command 'gnomarchy screensaver'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ binding '<Super>Escape'
 
 gnomarchy_step "Developer hotkeys established"

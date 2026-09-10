@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# Gnomarchy Desktop Reminders & Timers
+# Usage: gnomarchy reminder <duration_or_time> <message>
+# Examples:
+#   gnomarchy reminder 25m "Pomodoro break"
+#   gnomarchy reminder 1h30m "Review PR"
+#   gnomarchy reminder 17:00 "Team standup"
+#   gnomarchy reminder list
+#   gnomarchy reminder cancel <id>
+
+set -e
+
+REMINDERS_DIR="/tmp/gnomarchy-reminders"
+mkdir -p "$REMINDERS_DIR"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy reminder <time-or-duration> <message>
+       gnomarchy reminder list
+       gnomarchy reminder cancel <id>
+
+Examples:
+  gnomarchy reminder 20m "Stand up and stretch"
+  gnomarchy reminder 1h "Check build status"
+  gnomarchy reminder 17:30 "Daily wrap-up meeting"
+EOF
+}
+
+cmd="$1"
+
+if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+case "$cmd" in
+  list)
+    echo "Active Gnomarchy Reminders:"
+    found=0
+    for f in "$REMINDERS_DIR"/*.info; do
+      if [[ -f "$f" ]]; then
+        id=$(basename "$f" .info)
+        pid=$(cat "$REMINDERS_DIR/$id.pid" 2>/dev/null || echo "")
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+          msg=$(head -n 1 "$f")
+          target_time=$(sed -n '2p' "$f")
+          printf "  [%s] Target: %s | Message: \"%s\" (PID: %s)\n" "$id" "$target_time" "$msg" "$pid"
+          found=1
+        else
+          rm -f "$REMINDERS_DIR/$id".* 2>/dev/null || true
+        fi
+      fi
+    done
+    if (( found == 0 )); then
+      echo "  (No active reminders)"
+    fi
+    exit 0
+    ;;
+
+  cancel)
+    id="$2"
+    if [[ -z "$id" ]]; then
+      echo "Error: Reminder ID required." >&2
+      exit 1
+    fi
+    pid=$(cat "$REMINDERS_DIR/$id.pid" 2>/dev/null || echo "")
+    if [[ -n "$pid" ]]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+    rm -f "$REMINDERS_DIR/$id".*
+    echo "✓ Reminder [$id] cancelled."
+    exit 0
+    ;;
+esac
+
+time_spec="$1"
+shift
+message="$*"
+
+if [[ -z "$message" ]]; then
+  echo "Error: Reminder message is required." >&2
+  usage
+  exit 1
+fi
+
+seconds=0
+
+# Check if exact time format (HH:MM)
+if [[ "$time_spec" =~ ^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
+  target_epoch=$(date -d "$time_spec" +%s 2>/dev/null || date -v+0d -v"${time_spec%%:*}"H -v"${time_spec##*:}"M +%s 2>/dev/null || true)
+  now_epoch=$(date +%s)
+  if [[ -n "$target_epoch" ]]; then
+    seconds=$(( target_epoch - now_epoch ))
+    if (( seconds < 0 )); then
+      # If time already passed today, assume tomorrow
+      seconds=$(( seconds + 86400 ))
+    fi
+  else
+    echo "Error: Failed to parse time '$time_spec'." >&2
+    exit 1
+  fi
+else
+  # Parse relative duration (e.g. 20m, 1h, 30s, 1h20m)
+  dur="$time_spec"
+  while [[ -n "$dur" ]]; do
+    if [[ "$dur" =~ ^([0-9]+)h(.*) ]]; then
+      hours="${BASH_REMATCH[1]}"
+      seconds=$(( seconds + hours * 3600 ))
+      dur="${BASH_REMATCH[2]}"
+    elif [[ "$dur" =~ ^([0-9]+)m(.*) ]]; then
+      mins="${BASH_REMATCH[1]}"
+      seconds=$(( seconds + mins * 60 ))
+      dur="${BASH_REMATCH[2]}"
+    elif [[ "$dur" =~ ^([0-9]+)s(.*) ]]; then
+      secs="${BASH_REMATCH[1]}"
+      seconds=$(( seconds + secs ))
+      dur="${BASH_REMATCH[2]}"
+    elif [[ "$dur" =~ ^([0-9]+)$ ]]; then
+      secs="${BASH_REMATCH[1]}"
+      seconds=$(( seconds + secs ))
+      dur=""
+    else
+      echo "Error: Unrecognized time or duration '$time_spec'." >&2
+      exit 1
+    fi
+  done
+fi
+
+if (( seconds <= 0 )); then
+  echo "Error: Duration must be greater than zero." >&2
+  exit 1
+fi
+
+rem_id="rem_$(date +%s)_$RANDOM"
+target_formatted=$(date -d "+${seconds} seconds" '+%H:%M:%S' 2>/dev/null || echo "+${seconds}s")
+
+# Spawn background watcher
+(
+  sleep "$seconds"
+  # Play alarm chime
+  for sound in /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga \
+               /usr/share/sounds/freedesktop/stereo/complete.oga; do
+    if [[ -f "$sound" ]]; then
+      pw-play "$sound" 2>/dev/null || paplay "$sound" 2>/dev/null || true
+      break
+    fi
+  done
+
+  # Send notification
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send --urgency=critical --icon=alarm-symbolic "⏰ Gnomarchy Reminder" "$message" 2>/dev/null || true
+  fi
+
+  rm -f "$REMINDERS_DIR/$rem_id".* 2>/dev/null || true
+) >/dev/null 2>&1 &
+
+pid=$!
+echo "$pid" > "$REMINDERS_DIR/$rem_id.pid"
+printf "%s\n%s\n" "$message" "$target_formatted" > "$REMINDERS_DIR/$rem_id.info"
+
+echo "✓ Reminder set for $target_formatted (in $(( seconds / 60 ))m $(( seconds % 60 ))s): \"$message\" [ID: $rem_id]"

@@ -1,0 +1,193 @@
+#!/bin/bash
+
+# Gnomarchy Web App Generator
+# Turns websites into isolated, desktop-integrated web applications
+set -e
+
+action="$1"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy webapp <action> [options]
+
+Actions:
+  add <Name> <URL> [--icon <icon>]   Create a new isolated web application
+  list                               List all installed Gnomarchy webapps
+  remove <Name>                      Remove an installed webapp
+
+Examples:
+  gnomarchy webapp add "Claude" "https://claude.ai"
+  gnomarchy webapp add "ChatGPT" "https://chatgpt.com"
+  gnomarchy webapp add "Linear" "https://linear.app"
+  gnomarchy webapp remove "Claude"
+EOF
+}
+
+APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/webapps"
+mkdir -p "$APPS_DIR" "$DATA_DIR"
+
+sanitize_id() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g'
+}
+
+case "$action" in
+  add)
+    shift
+    name="$1"
+    url="$2"
+    shift 2 || true
+
+    icon_arg=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --icon)
+          icon_arg="$2"
+          shift 2
+          ;;
+        *)
+          shift
+          ;;
+      esac
+    done
+
+    if [[ -z "$name" || -z "$url" ]]; then
+      echo "Error: Name and URL are required." >&2
+      usage
+      exit 1
+    fi
+
+    app_id="$(sanitize_id "$name")"
+    app_profile="$DATA_DIR/$app_id/profile"
+    app_icon="$DATA_DIR/$app_id/icon.png"
+    desktop_file="$APPS_DIR/gnomarchy-webapp-$app_id.desktop"
+
+    mkdir -p "$app_profile"
+
+    # Determine domain for favicon retrieval
+    domain=$(echo "$url" | sed -E 's#^https?://([^/]+).*#\1#')
+
+    # Resolve Icon
+    final_icon="web-browser"
+    if [[ -n "$icon_arg" ]]; then
+      if [[ -f "$icon_arg" ]]; then
+        cp "$icon_arg" "$app_icon"
+        final_icon="$app_icon"
+      elif [[ "$icon_arg" =~ ^https?:// ]]; then
+        echo "Fetching custom icon from $icon_arg..."
+        if curl -fsSL "$icon_arg" -o "$app_icon" 2>/dev/null; then
+          final_icon="$app_icon"
+        fi
+      else
+        final_icon="$icon_arg"
+      fi
+    else
+      # Fetch high-res favicon via Google favicon proxy
+      echo "Fetching icon for $domain..."
+      if curl -fsSL "https://www.google.com/s2/favicons?domain=${domain}&sz=128" -o "$app_icon" 2>/dev/null; then
+        if [[ -s "$app_icon" ]]; then
+          final_icon="$app_icon"
+        fi
+      fi
+    fi
+
+    # Create .desktop launcher
+    cat > "$desktop_file" <<EOF
+[Desktop Entry]
+Type=Application
+Name=$name
+GenericName=Web Application
+Comment=Gnomarchy Web App for $name
+Exec=chromium --app="$url" --user-data-dir="$app_profile" --class=gnomarchy-webapp-$app_id %U
+Icon=$final_icon
+StartupWMClass=gnomarchy-webapp-$app_id
+Terminal=false
+Categories=Network;WebBrowser;
+EOF
+    chmod +x "$desktop_file"
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+      update-desktop-database "$APPS_DIR" 2>/dev/null || true
+    fi
+
+    # Add to GNOME favorite-apps (Dash to Dock) if gsettings is available
+    if command -v gsettings >/dev/null 2>&1 && [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
+      current_favs=$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "[]")
+      entry="gnomarchy-webapp-$app_id.desktop"
+      if [[ "$current_favs" != *"$entry"* ]]; then
+        new_favs=$(echo "$current_favs" | sed "s/]/, '$entry']/" | sed "s/\[, /[/")
+        gsettings set org.gnome.shell favorite-apps "$new_favs" 2>/dev/null || true
+      fi
+    fi
+
+    # Trigger hook if present
+    if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+      gnomarchy-hook-run on-webapp-add "$name" "$url" || true
+    fi
+
+    echo "✓ Web application '$name' created successfully!"
+    echo "  Location: $desktop_file"
+    echo "  URL:      $url"
+    ;;
+
+  list)
+    echo "Installed Gnomarchy Web Applications:"
+    found=0
+    for f in "$APPS_DIR"/gnomarchy-webapp-*.desktop; do
+      if [[ -f "$f" ]]; then
+        app_name=$(grep "^Name=" "$f" | head -n1 | cut -d'=' -f2)
+        app_url=$(grep "^Exec=" "$f" | sed -E 's/.*--app="?([^" ]+)"?.*/\1/')
+        printf "  • %-20s (%s)\n" "$app_name" "$app_url"
+        found=1
+      fi
+    done
+    if (( found == 0 )); then
+      echo "  (None installed yet. Use 'gnomarchy webapp add <Name> <URL>')"
+    fi
+    ;;
+
+  remove)
+    shift
+    name="$1"
+    if [[ -z "$name" ]]; then
+      echo "Error: Name is required." >&2
+      exit 1
+    fi
+    app_id="$(sanitize_id "$name")"
+    desktop_file="$APPS_DIR/gnomarchy-webapp-$app_id.desktop"
+    app_dir="$DATA_DIR/$app_id"
+
+    if [[ ! -f "$desktop_file" && ! -d "$app_dir" ]]; then
+      echo "Error: Web app '$name' not found." >&2
+      exit 1
+    fi
+
+    rm -f "$desktop_file"
+    rm -rf "$app_dir"
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+      update-desktop-database "$APPS_DIR" 2>/dev/null || true
+    fi
+
+    # Remove from GNOME favorites if present
+    if command -v gsettings >/dev/null 2>&1 && [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
+      current_favs=$(gsettings get org.gnome.shell favorite-apps 2>/dev/null || echo "[]")
+      entry="gnomarchy-webapp-$app_id.desktop"
+      if [[ "$current_favs" == *"$entry"* ]]; then
+        new_favs=$(echo "$current_favs" | sed "s/'$entry', //" | sed "s/, '$entry'//" | sed "s/'$entry'//")
+        gsettings set org.gnome.shell favorite-apps "$new_favs" 2>/dev/null || true
+      fi
+    fi
+
+    if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+      gnomarchy-hook-run on-webapp-remove "$name" || true
+    fi
+
+    echo "✓ Web application '$name' removed."
+    ;;
+
+  *)
+    usage
+    exit 0
+    ;;
+esac

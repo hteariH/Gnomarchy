@@ -9,3 +9,7 @@ fi
 echo "Creating Snapper root snapshot: $description"
 sudo snapper -c root create -d "$description"
 echo "Snapshot created successfully."
+
+if command -v gnomarchy-hook-run >/dev/null 2>&1; then
+  gnomarchy-hook-run on-snapshot "$description" || true
+fi

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Triggered before ("pre") or after ("post") system update
+# Arguments: $1 = "pre" or "post"
+
+phase="$1"
+
+if [[ "$phase" == "pre" ]]; then
+  # Action before updating
+  :
+elif [[ "$phase" == "post" ]]; then
+  # Action after updating
+  :
+fi

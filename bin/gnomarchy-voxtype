@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# Gnomarchy Voxtype: System-Wide Speech-to-Text AI Dictation
+# Toggle hotkey: <Super>D
+set -e
+
+PID_FILE="/tmp/gnomarchy-voxtype.pid"
+AUDIO_FILE="/tmp/gnomarchy-voxtype.wav"
+MODEL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/models"
+MODEL_FILE="$MODEL_DIR/ggml-base.en.bin"
+
+play_sound() {
+  local sound="$1"
+  local sound_path="/usr/share/sounds/freedesktop/stereo/$sound.oga"
+  if [[ -f "$sound_path" ]]; then
+    if command -v pw-play >/dev/null 2>&1; then
+      pw-play "$sound_path" 2>/dev/null &
+    elif command -v paplay >/dev/null 2>&1; then
+      paplay "$sound_path" 2>/dev/null &
+    fi
+  fi
+}
+
+send_notify() {
+  local title="$1"
+  local msg="$2"
+  local icon="${3:-audio-input-microphone}"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -t 3000 -i "$icon" "$title" "$msg" 2>/dev/null || true
+  fi
+}
+
+ensure_model() {
+  mkdir -p "$MODEL_DIR"
+  if [[ ! -f "$MODEL_FILE" ]]; then
+    send_notify "Voxtype Setup" "Downloading Whisper base.en AI model (140MB)..."
+    echo "Downloading Whisper base.en model into $MODEL_FILE..."
+    curl -L "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin" -o "$MODEL_FILE"
+    send_notify "Voxtype Setup" "Model ready!"
+  fi
+}
+
+start_recording() {
+  if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "Voxtype is already recording."
+    exit 0
+  fi
+
+  rm -f "$AUDIO_FILE"
+  play_sound "service-login"
+  send_notify "🎙️ Voxtype" "Listening... Speak naturally (Super+D to finish)"
+
+  # Record 16kHz mono audio (ideal for Whisper)
+  if command -v sox >/dev/null 2>&1; then
+    sox -d -c 1 -r 16000 -b 16 "$AUDIO_FILE" >/dev/null 2>&1 &
+    echo $! > "$PID_FILE"
+  elif command -v pw-record >/dev/null 2>&1; then
+    pw-record --channels 1 --rate 16000 "$AUDIO_FILE" >/dev/null 2>&1 &
+    echo $! > "$PID_FILE"
+  elif command -v ffmpeg >/dev/null 2>&1; then
+    ffmpeg -y -f pulse -i default -ar 16000 -ac 1 "$AUDIO_FILE" >/dev/null 2>&1 &
+    echo $! > "$PID_FILE"
+  else
+    send_notify "Voxtype Error" "No audio recording utility (sox/pw-record/ffmpeg) found." "dialog-error"
+    exit 1
+  fi
+
+  echo "Voxtype recording started (PID: $(cat "$PID_FILE"))"
+}
+
+stop_recording_and_transcribe() {
+  if [[ ! -f "$PID_FILE" ]] || ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "Voxtype is not currently recording."
+    rm -f "$PID_FILE"
+    exit 0
+  fi
+
+  pid=$(cat "$PID_FILE")
+  kill "$pid" 2>/dev/null || true
+  rm -f "$PID_FILE"
+
+  play_sound "message-new-instant"
+  send_notify "⚡ Voxtype" "Transcribing..."
+
+  if [[ ! -f "$AUDIO_FILE" ]] || [[ ! -s "$AUDIO_FILE" ]]; then
+    send_notify "Voxtype" "No audio captured." "dialog-warning"
+    exit 0
+  fi
+
+  # Transcribe using whisper-cli / whisper.cpp or python fallback
+  transcribed_text=""
+  if command -v whisper-cli >/dev/null 2>&1; then
+    ensure_model
+    transcribed_text=$(whisper-cli -m "$MODEL_FILE" -f "$AUDIO_FILE" -nt -otxt /dev/stdout 2>/dev/null | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+  elif command -v whisper-cpp >/dev/null 2>&1; then
+    ensure_model
+    transcribed_text=$(whisper-cpp -m "$MODEL_FILE" -f "$AUDIO_FILE" -nt -otxt /dev/stdout 2>/dev/null | tr -d '\r\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+  elif python3 -c "import faster_whisper" 2>/dev/null; then
+    transcribed_text=$(python3 -c "
+from faster_whisper import WhisperModel
+model = WhisperModel('base.en', device='cpu', compute_type='int8')
+segments, _ = model.transcribe('$AUDIO_FILE')
+print(' '.join(s.text.strip() for s in segments))
+" 2>/dev/null)
+  else
+    # Compile or invoke standalone whisper-cli if available, or lightweight mock for environments without model
+    ensure_model
+    if command -v whisper >/dev/null 2>&1; then
+      transcribed_text=$(whisper "$AUDIO_FILE" --model base.en --output_format txt 2>/dev/null | tr -d '\r\n')
+    fi
+  fi
+
+  if [[ -z "$transcribed_text" ]]; then
+    send_notify "Voxtype" "Could not transcribe audio (empty or whisper unavailable)." "dialog-warning"
+    exit 0
+  fi
+
+  # Copy to clipboard
+  if command -v wl-copy >/dev/null 2>&1; then
+    echo -n "$transcribed_text" | wl-copy
+  fi
+
+  # Type or paste into active window
+  if command -v ydotool >/dev/null 2>&1; then
+    # Paste clipboard: Ctrl+V
+    ydotool key 29:1 47:1 47:0 29:0 2>/dev/null || ydotool type "$transcribed_text" 2>/dev/null || true
+  elif command -v wtype >/dev/null 2>&1; then
+    wtype "$transcribed_text" 2>/dev/null || true
+  fi
+
+  play_sound "audio-volume-change"
+  send_notify "Voxtype Dictation" "$transcribed_text"
+  echo "Transcribed: $transcribed_text"
+}
+
+action="${1:-toggle}"
+
+case "$action" in
+  toggle)
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      stop_recording_and_transcribe
+    else
+      start_recording
+    fi
+    ;;
+  start)
+    start_recording
+    ;;
+  stop)
+    stop_recording_and_transcribe
+    ;;
+  status)
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "Voxtype: Recording (PID: $(cat "$PID_FILE"))"
+    else
+      echo "Voxtype: Idle"
+    fi
+    ;;
+  *)
+    echo "Usage: gnomarchy voxtype <toggle|start|stop|status>"
+    exit 1
+    ;;
+esac

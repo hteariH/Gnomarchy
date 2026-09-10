@@ -1,0 +1,182 @@
+#!/bin/bash
+
+# Gnomarchy Windows: One-Command Hardware-Accelerated Windows 11 VM
+# Uses KVM, VirtIO, and TPM 2.0 (swtpm)
+set -e
+
+VM_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/vms/windows-11"
+DISK_IMG="$VM_DIR/windows-11.qcow2"
+TPM_DIR="$VM_DIR/tpm"
+PID_FILE="$VM_DIR/qemu.pid"
+CONFIG_FILE="$VM_DIR/vm.conf"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy windows <action>
+
+Actions:
+  setup     Download / initialize Windows 11 VM environment
+  start     Launch Windows 11 with hardware acceleration
+  stop      Gracefully shut down running VM
+  status    Show VM status and disk utilization
+  info      Display connection details and VirtIO specs
+EOF
+}
+
+action="$1"
+
+check_kvm() {
+  if [[ ! -e /dev/kvm ]]; then
+    echo "Warning: /dev/kvm not found. Hardware virtualization (VT-x/AMD-V) may be disabled in BIOS." >&2
+  elif [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+    echo "Notice: Current user cannot access /dev/kvm. Ensure you are in the 'kvm' group." >&2
+  fi
+}
+
+case "$action" in
+  setup)
+    mkdir -p "$VM_DIR" "$TPM_DIR"
+    echo "==> Setting up Gnomarchy Windows 11 VM Environment"
+    check_kvm
+
+    # If quickget is available, use it
+    if command -v quickget >/dev/null 2>&1; then
+      cd "$VM_DIR"
+      quickget windows 11
+    else
+      # Provision sparse 64GB QCOW2 disk image if not present
+      if [[ ! -f "$DISK_IMG" ]]; then
+        echo "Creating 64GB dynamic disk image at $DISK_IMG..."
+        qemu-img create -f qcow2 "$DISK_IMG" 64G
+      fi
+
+      cat > "$CONFIG_FILE" <<'EOF'
+# Gnomarchy Windows 11 VM Configuration
+RAM="8G"
+CORES="4"
+DISK="windows-11.qcow2"
+ISO="windows-11.iso"
+EOF
+      echo "✓ VM directory configured at: $VM_DIR"
+      echo "  Place your Windows 11 installation ISO at: $VM_DIR/windows-11.iso"
+      echo "  Run 'gnomarchy windows start' to boot the VM."
+    fi
+    ;;
+
+  start)
+    check_kvm
+    if [[ ! -d "$VM_DIR" ]]; then
+      echo "VM environment not found. Running setup first..."
+      exec "$0" setup
+    fi
+
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "Windows 11 VM is already running (PID: $(cat "$PID_FILE"))."
+      exit 0
+    fi
+
+    # Check if quickemu is available
+    if command -v quickemu >/dev/null 2>&1 && [[ -f "$VM_DIR/windows-11.conf" ]]; then
+      cd "$VM_DIR"
+      exec quickemu --vm windows-11.conf
+    fi
+
+    echo "==> Starting Windows 11 VM..."
+
+    # Launch swtpm (TPM 2.0 emulator required for Win11)
+    if command -v swtpm >/dev/null 2>&1; then
+      swtpm socket --tpmstate dir="$TPM_DIR" \
+        --ctrl type=unixio,path="$TPM_DIR/swtpm-sock" \
+        --tpm2 -d 2>/dev/null || true
+      TPM_ARGS="-chardev socket,id=chrtpm,path=$TPM_DIR/swtpm-sock -tpmdev emulator,id=tpm0,chardev=chrtpm -device tpm-tis,tpmdev=tpm0"
+    else
+      TPM_ARGS=""
+    fi
+
+    # Find OVMF UEFI firmware
+    OVMF_CODE=""
+    OVMF_VARS=""
+    for p in /usr/share/edk2-ovmf/x64/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE.fd; do
+      if [[ -f "$p" ]]; then OVMF_CODE="$p"; break; fi
+    done
+
+    # QEMU parameters
+    ISO_ARG=""
+    if [[ -f "$VM_DIR/windows-11.iso" ]]; then
+      ISO_ARG="-cdrom $VM_DIR/windows-11.iso"
+    fi
+
+    qemu_cmd=(
+      qemu-system-x86_64
+      -enable-kvm
+      -m 8192
+      -smp cores=4,threads=2
+      -cpu host
+      -drive file="$DISK_IMG",format=qcow2,if=virtio
+      -netdev user,id=net0 -device virtio-net-pci,netdev=net0
+      -device virtio-vga
+      -display gtk,gl=on
+      -device intel-hda -device hda-duplex
+      -usb -device usb-tablet
+    )
+
+    if [[ -n "$OVMF_CODE" ]]; then
+      qemu_cmd+=(-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE")
+    fi
+
+    if [[ -n "$TPM_ARGS" ]]; then
+      qemu_cmd+=($TPM_ARGS)
+    fi
+
+    if [[ -n "$ISO_ARG" ]]; then
+      qemu_cmd+=($ISO_ARG)
+    fi
+
+    nohup "${qemu_cmd[@]}" >/dev/null 2>&1 &
+    echo $! > "$PID_FILE"
+    echo "✓ Windows 11 VM started in background (PID: $(cat "$PID_FILE"))."
+    ;;
+
+  stop)
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      pid=$(cat "$PID_FILE")
+      echo "Stopping Windows 11 VM (PID: $pid)..."
+      kill "$pid" 2>/dev/null || true
+      rm -f "$PID_FILE"
+      echo "✓ VM stopped."
+    else
+      echo "Windows 11 VM is not running."
+      rm -f "$PID_FILE"
+    fi
+    ;;
+
+  status)
+    echo "Windows 11 VM Status:"
+    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+      echo "  State:   Running (PID: $(cat "$PID_FILE"))"
+    else
+      echo "  State:   Stopped"
+    fi
+    if [[ -f "$DISK_IMG" ]]; then
+      disk_size=$(du -h "$DISK_IMG" 2>/dev/null | awk '{print $1}')
+      echo "  Disk:    $DISK_IMG (Allocated: $disk_size)"
+    else
+      echo "  Disk:    Not initialized (Run 'gnomarchy windows setup')"
+    fi
+    ;;
+
+  info)
+    echo "Windows 11 VM Configuration:"
+    echo "  Location: $VM_DIR"
+    echo "  RAM:      8 GB"
+    echo "  CPUs:     4 Cores (Host Passthrough)"
+    echo "  Disk:     VirtIO SCSI / QCOW2"
+    echo "  Graphics: VirtIO GPU (OpenGL Accelerated)"
+    echo "  TPM:      Software TPM 2.0 (swtpm)"
+    ;;
+
+  *)
+    usage
+    exit 0
+    ;;
+esac
