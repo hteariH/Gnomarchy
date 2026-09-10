@@ -35,6 +35,53 @@ else
   echo -e "\033[1;32m[OK]\033[0m Booted in modern UEFI mode.\n"
 fi
 
+# ---------------------------------------------------------------------------
+# Unattended answers (optional)
+#
+# If a block device labeled GNOMARCHY_AUTO is attached, or the boot medium
+# carries gnomarchy-unattended.conf, read the installation answers from it and
+# skip the prompts. This is what CI drives, so the released ISO is byte for
+# byte the ISO that gets tested -- the answers arrive on a separate disk
+# rather than being baked into the image.
+#
+# Format (shell assignments):
+#   GNOMARCHY_DISK=/dev/vda
+#   GNOMARCHY_FULLNAME="Test User"
+#   GNOMARCHY_USERNAME=test
+#   GNOMARCHY_PASSWORD=secret
+#   GNOMARCHY_ENCRYPT=n
+# ---------------------------------------------------------------------------
+UNATTENDED=0
+find_unattended_conf() {
+  local dev mnt="/run/gnomarchy-auto"
+
+  if [ -f /run/archiso/bootmnt/gnomarchy-unattended.conf ]; then
+    echo /run/archiso/bootmnt/gnomarchy-unattended.conf
+    return 0
+  fi
+
+  dev="$(blkid -L GNOMARCHY_AUTO 2>/dev/null || true)"
+  if [ -n "$dev" ]; then
+    mkdir -p "$mnt"
+    if mount -o ro "$dev" "$mnt" 2>/dev/null; then
+      if [ -f "$mnt/gnomarchy-unattended.conf" ]; then
+        echo "$mnt/gnomarchy-unattended.conf"
+        return 0
+      fi
+      umount "$mnt" 2>/dev/null || true
+    fi
+  fi
+
+  return 1
+}
+
+if conf="$(find_unattended_conf)"; then
+  echo -e "[1;33m[UNATTENDED][0m Reading answers from $conf"
+  # shellcheck source=/dev/null
+  . "$conf"
+  UNATTENDED=1
+fi
+
 # Detect available hard disks (excluding read-only optical drives like sr0 and loop devices)
 available_disks=($(lsblk -d -n -o NAME,TYPE | awk '$2=="disk"{print $1}'))
 default_disk=""
@@ -47,6 +94,16 @@ lsblk -d -n -o NAME,SIZE,MODEL,TYPE | grep -v "loop" | grep -v "airootfs"
 echo ""
 
 while true; do
+  if [ "$UNATTENDED" = "1" ] && [ -n "$GNOMARCHY_DISK" ]; then
+    TARGET_DISK="$GNOMARCHY_DISK"
+    if [ -b "$TARGET_DISK" ]; then
+      echo "Unattended target disk: $TARGET_DISK"
+      break
+    fi
+    echo "[ERROR] Unattended disk '$TARGET_DISK' is not a block device."
+    exit 1
+  fi
+
   echo "Select disk to install Gnomarchy onto (WARNING: THIS DISK WILL BE WIPED):"
   prompt="Target disk (e.g. sda, /dev/sda, nvme0n1)"
   if [ -n "$default_disk" ]; then
@@ -74,12 +131,20 @@ while true; do
 done
 
 while true; do
+  if [ "$UNATTENDED" = "1" ] && [ -n "$GNOMARCHY_FULLNAME" ]; then
+    USER_FULLNAME="$GNOMARCHY_FULLNAME"
+    break
+  fi
   read -rp "Full Name: " USER_FULLNAME
   if [ -n "$USER_FULLNAME" ]; then break; fi
   echo "Full name cannot be empty."
 done
 
 while true; do
+  if [ "$UNATTENDED" = "1" ] && [ -n "$GNOMARCHY_USERNAME" ]; then
+    USERNAME="$GNOMARCHY_USERNAME"
+    break
+  fi
   read -rp "Username: " USERNAME
   USERNAME=$(echo "$USERNAME" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
   if [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then break; fi
@@ -87,6 +152,10 @@ while true; do
 done
 
 while true; do
+  if [ "$UNATTENDED" = "1" ] && [ -n "$GNOMARCHY_PASSWORD" ]; then
+    PASSWORD="$GNOMARCHY_PASSWORD"
+    break
+  fi
   read -rsp "Password: " PASSWORD
   echo ""
   read -rsp "Confirm Password: " PASSWORD_CONFIRM
@@ -97,7 +166,12 @@ while true; do
   echo -e "\033[1;31mPasswords do not match or empty. Please try again.\033[0m\n"
 done
 
-read -rp "Encrypt system with LUKS? (Y/n): " ENCRYPT_OPT
+if [ "$UNATTENDED" = "1" ] && [ -n "$GNOMARCHY_ENCRYPT" ]; then
+  ENCRYPT_OPT="$GNOMARCHY_ENCRYPT"
+  echo "Unattended encryption choice: $ENCRYPT_OPT"
+else
+  read -rp "Encrypt system with LUKS? (Y/n): " ENCRYPT_OPT
+fi
 ENCRYPT_OPT="${ENCRYPT_OPT:-Y}"
 
 echo -e "\n\033[1;33mPreparing installation on $TARGET_DISK...\033[0m"

@@ -1,0 +1,288 @@
+name: Install Smoke Test
+
+# Builds the ISO and actually installs from it in QEMU, then verifies the
+# resulting system. The release workflow only proves the ISO *builds*; every
+# installation defect so far shipped through a green build, so this is the job
+# that has to be green before cutting a release.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'iso/**'
+      - 'install/**'
+      - 'bin/**'
+      - 'default/**'
+      - '.github/workflows/install-smoke-test.yml'
+  pull_request:
+    paths:
+      - 'iso/**'
+      - 'install/**'
+      - 'bin/**'
+      - 'default/**'
+      - '.github/workflows/install-smoke-test.yml'
+  workflow_dispatch:
+    inputs:
+      keep_image:
+        description: 'Upload the installed disk image as an artifact'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  install-test:
+    name: Install in QEMU and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+          df -h
+
+      - name: Install QEMU and image tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf dosfstools mtools
+
+      - name: Check for KVM acceleration
+        id: kvm
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "KVM available - install runs at near-native speed."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No KVM; falling back to TCG emulation, which is much slower."
+          fi
+
+      - name: Locate OVMF firmware
+        id: ovmf
+        run: |
+          # Package layout differs between Ubuntu releases.
+          for c in /usr/share/OVMF/OVMF_CODE_4M.fd /usr/share/OVMF/OVMF_CODE.fd; do
+            [ -f "$c" ] && { echo "code=$c" >> "$GITHUB_OUTPUT"; break; }
+          done
+          for v in /usr/share/OVMF/OVMF_VARS_4M.fd /usr/share/OVMF/OVMF_VARS.fd; do
+            [ -f "$v" ] && { cp "$v" ./OVMF_VARS.fd; break; }
+          done
+          ls -l ./OVMF_VARS.fd
+          cat "$GITHUB_OUTPUT"
+
+      - name: Build ISO
+        run: |
+          docker run --rm --privileged \
+            -v "${{ github.workspace }}:/workspace" -w /workspace \
+            archlinux:latest \
+            bash -c "
+              pacman -Syu --noconfirm archlinux-keyring &&
+              pacman -S --noconfirm --needed archiso git rsync base-devel &&
+              chmod +x iso/builder/build-iso.sh &&
+              ./iso/builder/build-iso.sh /workspace/out
+            "
+          sudo chown -R "$USER:$USER" out
+          ls -lh out/
+
+      - name: Create unattended answers disk
+        run: |
+          # The answers travel on a separate labeled disk so the ISO under test
+          # stays byte for byte identical to the ISO that ships.
+          mkdir -p answers
+          {
+            echo 'GNOMARCHY_DISK=/dev/vda'
+            echo 'GNOMARCHY_FULLNAME="CI Test User"'
+            echo 'GNOMARCHY_USERNAME=citest'
+            echo 'GNOMARCHY_PASSWORD=ci-test-password-123'
+            echo 'GNOMARCHY_ENCRYPT=n'
+          } > answers/gnomarchy-unattended.conf
+          cat answers/gnomarchy-unattended.conf
+
+          truncate -s 8M answers.img
+          mkfs.vfat -n GNOMARCHY_AUTO answers.img
+          mcopy -i answers.img answers/gnomarchy-unattended.conf ::/
+          mdir -i answers.img ::/
+
+      - name: Run the installer in QEMU
+        run: |
+          qemu-img create -f qcow2 disk.qcow2 30G
+
+          ACCEL="-accel tcg"
+          MEM=4096
+          if [ "${{ steps.kvm.outputs.available }}" = "true" ]; then
+            ACCEL="-accel kvm -cpu host"
+            MEM=8192
+          fi
+
+          set +e
+          sudo timeout 100m qemu-system-x86_64 \
+            $ACCEL -smp 4 -m $MEM \
+            -drive if=pflash,format=raw,readonly=on,file=${{ steps.ovmf.outputs.code }} \
+            -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
+            -drive file=disk.qcow2,if=virtio,format=qcow2 \
+            -drive file=answers.img,if=virtio,format=raw \
+            -cdrom out/*.iso \
+            -boot d \
+            -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
+            -display none -serial file:installer-serial.log \
+            -no-reboot
+          echo "qemu exit: $?"
+          set -e
+
+          sudo chown "$USER:$USER" disk.qcow2 installer-serial.log 2>/dev/null || true
+          echo "--- installer serial tail ---"
+          tail -80 installer-serial.log 2>/dev/null || echo "(no serial output captured)"
+
+      - name: Mount the installed system
+        id: mount
+        run: |
+          sudo modprobe nbd max_part=16
+          sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
+          sleep 5
+          sudo partprobe /dev/nbd0 || true
+          lsblk /dev/nbd0
+
+          sudo mkdir -p /mnt/gnomarchy
+          # Root lives on the @ btrfs subvolume on the third partition.
+          if sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy; then
+            echo "mounted=true" >> "$GITHUB_OUTPUT"
+            sudo ls /mnt/gnomarchy
+          else
+            echo "mounted=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Could not mount the installed root - the install never completed."
+            exit 1
+          fi
+
+      - name: Verify installed system (offline)
+        env:
+          GNOMARCHY_TEST_USER: citest
+        run: sudo -E bash iso/tests/verify-install.sh /mnt/gnomarchy
+
+      - name: Prepare the image for the session test
+        if: always() && steps.mount.outputs.mounted == 'true'
+        run: |
+          sudo umount /mnt/gnomarchy
+          sudo mount -o subvol=@ /dev/nbd0p3 /mnt/gnomarchy
+
+          # Autologin, so a real graphical session starts and the first-run
+          # autostart entry fires. That is the only path by which the dconf
+          # state under test ever gets written.
+          sudo mkdir -p /mnt/gnomarchy/etc/gdm
+          printf '%s\n' \
+            '[daemon]' \
+            'AutomaticLoginEnable=True' \
+            'AutomaticLogin=citest' \
+            'WaylandEnable=True' \
+            | sudo tee /mnt/gnomarchy/etc/gdm/custom.conf > /dev/null
+
+          sudo install -m 755 iso/tests/verify-session.sh \
+            /mnt/gnomarchy/usr/local/bin/gnomarchy-verify-session
+
+          # Ordered last by filename so it runs after gnomarchy-first-run.
+          sudo mkdir -p /mnt/gnomarchy/home/citest/.config/autostart
+          printf '%s\n' \
+            '[Desktop Entry]' \
+            'Type=Application' \
+            'Name=Gnomarchy CI Session Verification' \
+            'Exec=/usr/local/bin/gnomarchy-verify-session' \
+            'Terminal=false' \
+            'X-GNOME-Autostart-enabled=true' \
+            'X-GNOME-Autostart-Phase=Applications' \
+            'NoDisplay=true' \
+            | sudo tee /mnt/gnomarchy/home/citest/.config/autostart/zz-verify.desktop > /dev/null
+          sudo chown -R 1000:1000 /mnt/gnomarchy/home/citest/.config
+
+          # Let the verification script end the run.
+          echo 'citest ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff' \
+            | sudo tee /mnt/gnomarchy/etc/sudoers.d/99-ci-verify > /dev/null
+          sudo chmod 440 /mnt/gnomarchy/etc/sudoers.d/99-ci-verify
+
+          sudo umount /mnt/gnomarchy
+          sudo qemu-nbd --disconnect /dev/nbd0
+          sleep 3
+
+      - name: Boot the installed system and verify the session
+        if: always() && steps.mount.outputs.mounted == 'true'
+        run: |
+          ACCEL="-accel tcg"
+          MEM=4096
+          if [ "${{ steps.kvm.outputs.available }}" = "true" ]; then
+            ACCEL="-accel kvm -cpu host"
+            MEM=8192
+          fi
+
+          set +e
+          sudo timeout 30m qemu-system-x86_64 \
+            $ACCEL -smp 4 -m $MEM \
+            -drive if=pflash,format=raw,readonly=on,file=${{ steps.ovmf.outputs.code }} \
+            -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
+            -drive file=disk.qcow2,if=virtio,format=qcow2 \
+            -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
+            -display none -serial file:session-serial.log \
+            -no-reboot
+          echo "qemu exit: $?"
+          set -e
+          sudo chown "$USER:$USER" disk.qcow2 session-serial.log 2>/dev/null || true
+
+      - name: Read session verification results
+        if: always() && steps.mount.outputs.mounted == 'true'
+        run: |
+          sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
+          sleep 5
+          sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
+
+          REPORT=/mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt
+          if sudo test -f "$REPORT"; then
+            echo "=== session verification report ==="
+            sudo cat "$REPORT"
+            if sudo grep -q "RESULT: SUCCESS" "$REPORT"; then
+              echo "Session verification passed."
+            else
+              echo "::error::Session verification failed."
+              exit 1
+            fi
+          else
+            echo "::error::No session report - the desktop never reached the verification step."
+            echo "--- session serial tail ---"
+            tail -100 session-serial.log 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp installer-serial.log artifacts/ 2>/dev/null || true
+          cp session-serial.log artifacts/ 2>/dev/null || true
+          sudo cp /mnt/gnomarchy/var/log/gnomarchy-install.log artifacts/ 2>/dev/null || true
+          sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt artifacts/ 2>/dev/null || true
+          sudo chown -R "$USER:$USER" artifacts 2>/dev/null || true
+          ls -la artifacts/ || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-smoke-test-logs
+          path: artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload installed image
+        if: always() && inputs.keep_image
+        uses: actions/upload-artifact@v4
+        with:
+          name: installed-disk-image
+          path: disk.qcow2
+          retention-days: 3
+
+      - name: Clean up
+        if: always()
+        run: |
+          sudo umount /mnt/gnomarchy 2>/dev/null || true
+          sudo qemu-nbd --disconnect /dev/nbd0 2>/dev/null || true

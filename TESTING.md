@@ -4,6 +4,51 @@ This guide details the procedure for testing Gnomarchy scripts, the live ISO bui
 
 ---
 
+## 0. Automated Install Smoke Test (CI)
+
+`.github/workflows/install-smoke-test.yml` builds the ISO, **installs from it in
+QEMU**, and verifies the result. It runs on pushes to `main`, on pull requests
+touching `iso/`, `install/`, `bin/` or `default/`, and on demand via
+`workflow_dispatch`.
+
+This exists because the release workflow only proves the ISO *builds*. Every
+installation defect so far shipped through a green build: a package name that
+aborted pacman, keyboard shortcuts silently discarded in a chroot, duplicate
+dock entries, a deployed tree with no `.git`, helper commands missing from the
+session PATH, and a wallpaper path pointing at a layout that no longer existed.
+
+The installer is driven by an answers file on a separate disk labeled
+`GNOMARCHY_AUTO`, so **the ISO under test is byte for byte the ISO that ships**.
+To reproduce locally:
+
+```bash
+printf '%s
+'   'GNOMARCHY_DISK=/dev/vda'   'GNOMARCHY_FULLNAME="Test User"'   'GNOMARCHY_USERNAME=citest'   'GNOMARCHY_PASSWORD=test-password'   'GNOMARCHY_ENCRYPT=n' > gnomarchy-unattended.conf
+
+truncate -s 8M answers.img
+mkfs.vfat -n GNOMARCHY_AUTO answers.img
+mcopy -i answers.img gnomarchy-unattended.conf ::/
+```
+
+Attach `answers.img` as a second drive and the installer runs without prompts.
+
+The job checks two layers:
+
+- **Offline** (`iso/tests/verify-install.sh`, run against the mounted image):
+  GDM enabled, whisper backend installed, every `gnomarchy-*` command in
+  `/usr/local/bin`, a real git checkout, per-theme wallpaper layout with the
+  upstream images downloaded, exactly one visible Brave entry, an autostart
+  entry with an absolute `Exec`, and the Alacritty/btop/LazyVim configs.
+- **In session** (`iso/tests/verify-session.sh`, run inside a real autologin
+  session): `gnomarchy-first-run` completed, the custom keybindings are in
+  dconf, `Super+W` and `Super+1` work, the dock is on the left, exactly one
+  Brave in favorites, the wallpaper is not the SVG placeholder, and GNOME
+  Terminal carries a full 16-colour palette.
+
+Cut a release only from a commit where this job is green.
+
+---
+
 ## 1. Syntax & Static Analysis Verification
 
 To ensure all bash scripts and package manifests are syntactically sound:
