@@ -11,7 +11,7 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Desktop**: GNOME 50 (Wayland) + GDM
 - **Dock**: Dash to Dock (Ubuntu-style left edge panel)
 - **Tiling**: Tactile Grid Tiling (`<Super>T`)
-- **Theme Engine**: Unified themes (7+ palettes: Tokyo Night, Catppuccin, Gruvbox, Everforest, Nord, Rose Pine, Matte Black)
+- **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
 - **Default Editor**: Micro (`$EDITOR`, `$VISUAL`, Git, and text/plain)
 - **Default Browser**: Brave Origin (`brave-origin` / `brave`, debloated, privacy-first)
@@ -36,20 +36,18 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 Gnomarchy syncs desktop themes across GNOME (accent color, dark/light mode, wallpaper), Alacritty terminal, Neovim, and btop.
 
 ```bash
-# List available themes
+# List all 22 available themes
 gnomarchy theme list
 
 # Check active theme
 gnomarchy theme current
 
-# Apply a theme
+# Apply any theme (18 Dark, 4 Light)
 gnomarchy theme set "tokyo-night"
-gnomarchy theme set "catppuccin"
-gnomarchy theme set "gruvbox"
-gnomarchy theme set "everforest"
-gnomarchy theme set "nord"
-gnomarchy theme set "rose-pine"
-gnomarchy theme set "matte-black"
+gnomarchy theme set "kanagawa"
+gnomarchy theme set "hackerman"
+gnomarchy theme set "flexoki-light"
+gnomarchy theme set "catppuccin-latte"
 ```
 
 To create a custom user theme:

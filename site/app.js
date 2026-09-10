@@ -10,11 +10,26 @@
   const THEMES = [
     { id: 'tokyo-night', name: 'Tokyo Night' },
     { id: 'catppuccin', name: 'Catppuccin' },
-    { id: 'gruvbox', name: 'Gruvbox' },
+    { id: 'catppuccin-latte', name: 'Catppuccin Latte' },
+    { id: 'ethereal', name: 'Ethereal' },
     { id: 'everforest', name: 'Everforest' },
+    { id: 'flexoki-light', name: 'Flexoki Light' },
+    { id: 'gruvbox', name: 'Gruvbox' },
+    { id: 'hackerman', name: 'Hackerman' },
+    { id: 'kanagawa', name: 'Kanagawa' },
+    { id: 'last-horizon', name: 'Last Horizon' },
+    { id: 'lumon', name: 'Lumon' },
+    { id: 'lupine', name: 'Lupine' },
+    { id: 'matte-black', name: 'Matte Black' },
+    { id: 'miasma', name: 'Miasma' },
     { id: 'nord', name: 'Nord' },
+    { id: 'osaka-jade', name: 'Osaka Jade' },
+    { id: 'retro-82', name: 'Retro 82' },
+    { id: 'ristretto', name: 'Ristretto' },
     { id: 'rose-pine', name: 'Rosé Pine' },
-    { id: 'matte-black', name: 'Matte Black' }
+    { id: 'solitude', name: 'Solitude' },
+    { id: 'vantablack', name: 'Vantablack' },
+    { id: 'white', name: 'White' }
   ];
 
   let currentThemeIndex = 0;

@@ -51,6 +51,8 @@ elif [[ -f "$THEME_DIR/background.png" ]]; then
   WALLPAPER="$THEME_DIR/background.png"
 elif [[ -f "$THEME_DIR/background.svg" ]]; then
   WALLPAPER="$THEME_DIR/background.svg"
+elif [[ -d "/usr/share/backgrounds/gnomarchy" ]]; then
+  WALLPAPER=$(find "/usr/share/backgrounds/gnomarchy" -type f \( -name "$THEME_NAME.jpg" -o -name "$THEME_NAME.png" -o -name "$THEME_NAME.svg" \) | head -n 1)
 fi
 
 if [[ -n "$WALLPAPER" ]]; then

@@ -65,6 +65,17 @@ chmod 755 "$PROFILE_DIR/airootfs/root/.automated_script.sh" 2>/dev/null || true
 chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/bin"/* 2>/dev/null || true
 chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/install.sh" 2>/dev/null || true
 
+# Pre-populate bundled wallpapers into ISO live filesystem
+echo "Installing bundled wallpapers to ISO rootfs..."
+mkdir -p "$PROFILE_DIR/airootfs/usr/share/backgrounds/gnomarchy"
+for bg in "$REPO_ROOT"/themes/*/backgrounds/*; do
+  if [ -f "$bg" ]; then
+    cp -f "$bg" "$PROFILE_DIR/airootfs/usr/share/backgrounds/gnomarchy/" 2>/dev/null || true
+  fi
+done
+chmod 755 "$PROFILE_DIR/airootfs/usr/share/backgrounds/gnomarchy" 2>/dev/null || true
+chmod 644 "$PROFILE_DIR/airootfs/usr/share/backgrounds/gnomarchy"/* 2>/dev/null || true
+
 # 5. Run mkarchiso
 echo -e "\n\033[1;36m==> Running mkarchiso to build Gnomarchy ISO...\033[0m"
 mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"

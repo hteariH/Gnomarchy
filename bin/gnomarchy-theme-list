@@ -10,20 +10,36 @@ if [[ -f "$HOME/.config/gnomarchy/current/theme.name" ]]; then
   CURRENT_THEME="$(<"$HOME/.config/gnomarchy/current/theme.name")"
 fi
 
-echo "Available Gnomarchy Themes:"
-echo "=========================="
+echo -e "\033[1;36mGnomarchy Curated Themes (22 Built-in)\033[0m"
+echo "========================================"
+
+format_theme_item() {
+  local theme_path="$1"
+  local name="$(basename "$theme_path")"
+  local mode="dark"
+  local accent=""
+  
+  if [[ -f "$theme_path/light.mode" ]]; then
+    mode="light"
+  fi
+  if [[ -f "$theme_path/accent.txt" ]]; then
+    accent="$(<"$theme_path/accent.txt")"
+  fi
+
+  local info="[${mode}${accent:+, accent: $accent}]"
+  if [[ "$name" == "$CURRENT_THEME" ]]; then
+    printf "  * \033[1;32m%-18s\033[0m \033[0;33m%-24s\033[0m \033[1;32m(active)\033[0m\n" "$name" "$info"
+  else
+    printf "    %-18s \033[0;90m%-24s\033[0m\n" "$name" "$info"
+  fi
+}
 
 list_dir_themes() {
   local dir="$1"
   if [[ -d "$dir" ]]; then
     for theme in "$dir"/*; do
       if [[ -d "$theme" ]]; then
-        name="$(basename "$theme")"
-        if [[ "$name" == "$CURRENT_THEME" ]]; then
-          echo -e "  * \033[1;32m$name\033[0m (active)"
-        else
-          echo "    $name"
-        fi
+        format_theme_item "$theme"
       fi
     done
   fi
@@ -31,6 +47,6 @@ list_dir_themes() {
 
 list_dir_themes "$SYSTEM_THEMES_DIR"
 if [[ -d "$USER_THEMES_DIR" ]]; then
-  echo -e "\nUser Custom Themes:"
+  echo -e "\n\033[1;36mUser Custom Themes:\033[0m"
   list_dir_themes "$USER_THEMES_DIR"
 fi

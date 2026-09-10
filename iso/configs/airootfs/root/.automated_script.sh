@@ -246,6 +246,17 @@ chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
 ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
 
+# Pre-populate all 22 bundled wallpapers into target system
+echo "Installing bundled wallpapers to target system..."
+mkdir -p /mnt/usr/share/backgrounds/gnomarchy
+for bg in "/mnt/home/$USERNAME/.local/share/gnomarchy"/themes/*/backgrounds/*; do
+  if [ -f "$bg" ]; then
+    cp -f "$bg" /mnt/usr/share/backgrounds/gnomarchy/ 2>/dev/null || true
+  fi
+done
+chmod 755 /mnt/usr/share/backgrounds/gnomarchy 2>/dev/null || true
+chmod 644 /mnt/usr/share/backgrounds/gnomarchy/* 2>/dev/null || true
+
 # Run Gnomarchy desktop installer inside chroot
 echo -e "\n\033[1;36m==> Executing Gnomarchy Desktop & Environment Installer\033[0m"
 arch-chroot -u "$USERNAME" /mnt /bin/bash -c "

@@ -12,6 +12,8 @@ for bg in "$GNOMARCHY_PATH"/themes/*/backgrounds/*; do
     sudo cp -f "$bg" /usr/share/backgrounds/gnomarchy/ 2>/dev/null || true
   fi
 done
+sudo chmod 755 /usr/share/backgrounds/gnomarchy 2>/dev/null || true
+sudo chmod 644 /usr/share/backgrounds/gnomarchy/* 2>/dev/null || true
 
 # 2. Initialize default theme (Tokyo Night)
 if command -v gnomarchy-theme-set >/dev/null 2>&1; then

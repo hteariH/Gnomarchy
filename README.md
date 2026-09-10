@@ -88,16 +88,45 @@ curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | ba
 
 Control the desktop and OS layer using the `gnomarchy` CLI:
 
-### Theme Management
+### Unified Theme Engine (22 Built-in Themes)
+
+Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every single theme comes bundled with a dedicated 4K vector wallpaper (installed to `/usr/share/backgrounds/gnomarchy/`), Libadwaita accent color, Alacritty palette, Neovim styling, and btop system monitor theme.
+
+| Theme | Type | Accent | Aesthetic / Palette Style |
+| :--- | :--- | :--- | :--- |
+| **Tokyo Night** | Dark | `blue` | Deep indigo Tokyo city lights |
+| **Catppuccin** | Dark | `purple` | Soothing pastel Mocha dark |
+| **Catppuccin Latte** | Light | `blue` | Warm soft pastel daylight paper |
+| **Ethereal** | Dark | `purple` | Mystical cosmic violet & nebula glow |
+| **Everforest** | Dark | `green` | Natural soothing moss & pine green |
+| **Flexoki Light** | Light | `orange` | Kepano's warm inky paper for deep reading |
+| **Gruvbox** | Dark | `orange` | Classic warm retro groove & amber |
+| **Hackerman** | Dark | `green` | Phosphor cyber green Matrix CRT void |
+| **Kanagawa** | Dark | `teal` | Hokusai Great Wave wave-blue & sumi ink |
+| **Last Horizon** | Dark | `orange` | Dusky twilight violet & sunset orange |
+| **Lumon** | Dark | `teal` | Severance Kier Eagan corporate CRT teal |
+| **Lupine** | Light | `purple` | Wildflower lavender & gentle daylight |
+| **Matte Black** | Dark | `slate` | Industrial stealth dark & minimal zinc |
+| **Miasma** | Dark | `green` | Deep decaying forest lichen & moss |
+| **Nord** | Dark | `teal` | Arctic ice blue & Nordic slate |
+| **Osaka Jade** | Dark | `green` | Imperial Japanese bamboo & deep jade |
+| **Retro 82** | Dark | `pink` | 1982 arcade synthwave magenta & neon cyan |
+| **Ristretto** | Dark | `orange` | Roasted espresso crema & cinnamon dark |
+| **Rosé Pine** | Dark | `pink` | Warm rose petal, pine, and gold |
+| **Solitude** | Dark | `slate` | Calm introspective midnight slate blue |
+| **Vantablack** | Dark | `slate` | Ultra-minimal pure OLED true black |
+| **White** | Light | `blue` | Pristine minimalist high-key paper light |
+
 ```bash
-# List available color schemes
+# List all 22 available themes with mode and accent details
 gnomarchy theme list
 
-# Switch theme (tokyo-night, catppuccin, gruvbox, everforest, nord, rose-pine, matte-black)
-gnomarchy theme set "tokyo-night"
-gnomarchy theme set "catppuccin"
+# Switch to any theme instantly
+gnomarchy theme set "kanagawa"
+gnomarchy theme set "hackerman"
+gnomarchy theme set "flexoki-light"
 
-# Show current theme
+# Check active theme
 gnomarchy theme current
 ```
 

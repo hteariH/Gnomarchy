@@ -24,7 +24,7 @@ Use the high-level `gnomarchy` CLI dispatcher whenever available:
 | :--- | :--- |
 | **List themes** | `gnomarchy theme list` |
 | **Check active theme** | `gnomarchy theme current` |
-| **Set theme** | `gnomarchy theme set <tokyo-night|catppuccin|gruvbox|everforest|nord|rose-pine|matte-black>` |
+| **Set theme** | `gnomarchy theme set <name>` (22 built-in themes, e.g. `tokyo-night`, `catppuccin`, `kanagawa`, `hackerman`, `flexoki-light`) |
 | **Create Web App** | `gnomarchy webapp add "<Name>" "<URL>"` |
 | **List Web Apps** | `gnomarchy webapp list` |
 | **Remove Web App** | `gnomarchy webapp remove "<Name>"` |
