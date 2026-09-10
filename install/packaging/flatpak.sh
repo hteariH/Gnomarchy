@@ -8,11 +8,14 @@ if command -v flatpak >/dev/null 2>&1; then
   sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
   flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
-  # 2. Install Bazaar Flatpak App Store
+  # 2. Install Bazaar Flatpak App Store & LocalSend
   echo "Installing Bazaar (Flatpak App Store)..."
   flatpak install -y --noninteractive flathub io.github.kolunmi.Bazaar 2>/dev/null || true
 
-  gnomarchy_step "Flatpak and Bazaar successfully installed"
+  echo "Installing LocalSend..."
+  flatpak install -y --noninteractive flathub org.localsend.localsend_app 2>/dev/null || true
+
+  gnomarchy_step "Flatpak, Bazaar, and LocalSend successfully installed"
 else
   gnomarchy_warn "Flatpak is not installed. Skipping Flatpak and Bazaar configuration."
 fi

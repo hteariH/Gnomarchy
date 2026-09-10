@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gnomarchy — Beautiful, Polished & Agentic Linux</title>
+  <meta name="description" content="The malleable GNOME workstation for the age of agents. The rolling power of Arch Linux and Omarchy tooling meets the polish of GNOME 50.">
+
+  <!-- OpenGraph / Twitter Metadata -->
+  <meta property="og:site_name" content="Gnomarchy">
+  <meta property="og:title" content="Gnomarchy — Beautiful, Polished & Agentic Linux">
+  <meta property="og:description" content="The malleable GNOME workstation for the age of agents. Arch Linux, Btrfs atomic rollbacks, Tactile grid tiling, and Voxtype AI.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gnomarchy.pages.dev/">
+  <meta property="og:image" content="assets/banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gnomarchy — Beautiful, Polished & Agentic Linux">
+  <meta name="twitter:description" content="The rolling power of Arch Linux and Omarchy developer tooling meets the polish of GNOME 50.">
+  <meta name="twitter:image" content="assets/banner.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" type="image/png" href="assets/gnomarchy-icon.svg">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Theme pre-initialization script to prevent FOUC -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('gnomarchy-theme');
+        if (saved && saved !== 'tokyo-night') {
+          document.documentElement.dataset.theme = saved;
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <div class="announcement-bar">
+    <span class="announcement-badge">NEW RELEASE</span>
+    <span>Gnomarchy is officially released with GNOME 50, Tactile Tiling & Snapper Rollbacks!</span>
+    <a href="https://github.com/hteariH/Gnomarchy/releases" target="_blank" rel="noopener noreferrer" class="announcement-link">
+      Get the ISO & Changelog &rarr;
+    </a>
+  </div>
+
+  <!-- Header / Navigation -->
+  <header class="site-header">
+    <div class="container container-wide">
+      <div class="nav-wrapper">
+        <a href="#home" class="brand-group">
+          <div class="brand-logo-badge">
+            <img src="assets/gnomarchy-icon.svg" alt="Gnomarchy Logo" width="28" height="28">
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">Gnomarchy <span class="window-badge">ARCH · GNOME</span></span>
+            <span class="brand-sub">The Agentic Workstation</span>
+          </div>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#philosophy">Why GNOME?</a></li>
+            <li><a href="#themes">Themes</a></li>
+            <li><a href="#cli">CLI Playground</a></li>
+            <li><a href="#hotkeys">Shortcuts</a></li>
+            <li><a href="#hardware">Hardware</a></li>
+            <li><a href="#install">Install</a></li>
+          </ul>
+        </nav>
+
+        <div class="nav-actions">
+          <button type="button" class="theme-selector-compact" id="themeCycleBtn" title="Click or press 'T' to cycle themes">
+            <span class="theme-dot"></span>
+            <span id="currentThemeCompact">Tokyo Night</span>
+            <span class="kbd-shortcut">T</span>
+          </button>
+
+          <a href="https://github.com/hteariH/Gnomarchy" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section" id="home">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span>🐧</span> The Power of Arch Meets the Polish of GNOME
+      </div>
+
+      <h1 class="hero-title">
+        The malleable GNOME workstation for the <span class="hero-title-highlight">age of agents</span>.
+      </h1>
+
+      <p class="hero-description">
+        Vibe your way through every alteration, tweak, or troubleshooting session.
+        Gnomarchy combines the rolling release power of <strong>Arch Linux</strong>, atomic <strong>Btrfs + Snapper</strong> rollbacks,
+        and agentic AI developer tooling—with the rock-solid, fluid beauty of <strong>GNOME 50</strong> and <strong>Wayland</strong>.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#install" class="btn btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download ISO 1.0
+        </a>
+        <a href="#cli" class="btn btn-secondary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Interactive Playground
+        </a>
+        <a href="https://github.com/hteariH/Gnomarchy" target="_blank" rel="noopener noreferrer" class="btn btn-outline">
+          Star on GitHub ★
+        </a>
+      </div>
+
+      <!-- Quick Curl Command -->
+      <div>
+        <div class="hero-quick-command" data-copy-text="curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | bash" title="Click to copy quick install command">
+          <span class="cmd-prompt">$</span>
+          <span>curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | bash</span>
+          <span class="copy-icon">📋</span>
+        </div>
+      </div>
+
+      <!-- Desktop Preview Window Frame -->
+      <div class="desktop-preview-window">
+        <div class="window-titlebar">
+          <div class="window-dots">
+            <span class="window-dot dot-red"></span>
+            <span class="window-dot dot-yellow"></span>
+            <span class="window-dot dot-green"></span>
+          </div>
+          <div class="window-title">gnomarchy-desktop — GNOME 50 · Wayland · GDM · Btrfs</div>
+          <div class="window-badge">Super + T: Tactile Grid</div>
+        </div>
+        <div class="desktop-mockup-body">
+          <img src="assets/banner.png" alt="Gnomarchy Linux GNOME Desktop Interface" loading="eager">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Philosophy / Comparison ("Why GNOME?") -->
+  <section id="philosophy">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Philosophy & Architecture</span>
+        <h2 class="section-title">Omarchy's Agentic Soul.<br>GNOME's World-Class Polish.</h2>
+        <p class="section-subtitle">
+          Omarchy proved how exhilarating an agent-driven Linux operating system can be.
+          Gnomarchy brings that exact developer freedom to GNOME, giving you rock-solid hardware stability, effortless display scaling, and a tactile workflow.
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon-box">🪟</div>
+          <h3 class="card-title">Tactile Grid Tiling</h3>
+          <p class="card-text">
+            Avoid the rigid traps and cognitive overload of automatic tiling window managers. Press <kbd>Super + T</kbd> to summon an instant keyboard grid overlay and snap windows exactly where you want them.
+          </p>
+          <div class="card-footer-pill">
+            <span>Shortcut:</span> <kbd>Super</kbd> + <kbd>T</kbd>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🛡️</div>
+          <h3 class="card-title">Atomic Snapper Rollbacks</h3>
+          <p class="card-text">
+            Experiment fearlessly. Gnomarchy runs on structured Btrfs subvolumes with automated Snapper snapshots before every pacman upgrade or agent refactor. Roll back instantly right from the Limine boot menu.
+          </p>
+          <div class="card-footer-pill">
+            <span>Command:</span> <code>gnomarchy snapshot create</code>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🎙️</div>
+          <h3 class="card-title">Voxtype AI Dictation</h3>
+          <p class="card-text">
+            Tap <kbd>Super + D</kbd> to speak anywhere. Powered by local, offline Whisper AI models with PipeWire audio capture. Zero cloud fees, zero latency, and zero telemetry—your voice never leaves your machine.
+          </p>
+          <div class="card-footer-pill">
+            <span>Shortcut:</span> <kbd>Super</kbd> + <kbd>D</kbd>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🌐</div>
+          <h3 class="card-title">Web App Factory</h3>
+          <p class="card-text">
+            Turn web tools into first-class desktop citizens with isolated profiles, auto-fetched high-res favicons, and GNOME Dash to Dock pinning: Claude, Linear, ChatGPT, Notion, and Basecamp.
+          </p>
+          <div class="card-footer-pill">
+            <span>Command:</span> <code>gnomarchy webapp add</code>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">📁</div>
+          <h3 class="card-title">Nautilus Superpowers</h3>
+          <p class="card-text">
+            Contextual right-click actions built right into GNOME Files: instant video compression down to 25MB for Discord/Slack, animated GIF creation, MP3 extraction, WebP conversion, and EXIF wiping.
+          </p>
+          <div class="card-footer-pill">
+            <span>Integration:</span> Native GNOME Actions
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🤖</div>
+          <h3 class="card-title">Agent Control & Hooks</h3>
+          <p class="card-text">
+            An operating system designed for Claude Code, Antigravity, and OpenCode. Comes with pre-installed <code>AGENTS.md</code> protocol rules and lifecycle event hooks in <code>~/.config/gnomarchy/hooks/</code>.
+          </p>
+          <div class="card-footer-pill">
+            <span>Standard:</span> AGENTS.md Protocol
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Live Theme Switcher (Omarchy style) -->
+  <section id="themes">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Cross-Desktop Theming</span>
+        <h2 class="section-title">Pick a theme, change everything.</h2>
+        <p class="section-subtitle">
+          A single command restyles the entire operating system: GNOME Libadwaita accent color, dark/light mode, wallpapers, Alacritty terminal, Neovim, and btop.
+          Pick a theme below—or press <kbd>T</kbd> to flip through them live.
+        </p>
+      </div>
+
+      <div class="theme-showcase-box">
+        <div class="theme-pill-grid">
+          <button type="button" class="theme-btn active" data-theme="tokyo-night">
+            <span class="theme-btn-swatch" style="background:#7aa2f7;"></span>
+            Tokyo Night
+          </button>
+          <button type="button" class="theme-btn" data-theme="catppuccin">
+            <span class="theme-btn-swatch" style="background:#89b4fa;"></span>
+            Catppuccin
+          </button>
+          <button type="button" class="theme-btn" data-theme="gruvbox">
+            <span class="theme-btn-swatch" style="background:#fabd2f;"></span>
+            Gruvbox
+          </button>
+          <button type="button" class="theme-btn" data-theme="everforest">
+            <span class="theme-btn-swatch" style="background:#a7c080;"></span>
+            Everforest
+          </button>
+          <button type="button" class="theme-btn" data-theme="nord">
+            <span class="theme-btn-swatch" style="background:#88c0d0;"></span>
+            Nord
+          </button>
+          <button type="button" class="theme-btn" data-theme="rose-pine">
+            <span class="theme-btn-swatch" style="background:#ebbcba;"></span>
+            Rosé Pine
+          </button>
+          <button type="button" class="theme-btn" data-theme="matte-black">
+            <span class="theme-btn-swatch" style="background:#64b5f6;"></span>
+            Matte Black
+          </button>
+        </div>
+
+        <div class="theme-preview-split">
+          <div class="theme-meta-details">
+            <h3 class="card-title" id="themeShowcaseName" style="font-size:1.8rem;">Tokyo Night</h3>
+            <p class="card-text" id="themeShowcaseDesc">Deep Tokyo midnight navy with vibrant neon highlights and cyan glows.</p>
+
+            <div>
+              <span style="font-size:0.8rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);">Palette Tokens:</span>
+              <div class="theme-color-palette" id="themeShowcasePalette">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+
+            <div class="code-snippet-box" style="margin-top:10px;">
+              <pre><code id="themeShowcaseCmd">gnomarchy theme set "tokyo-night"</code></pre>
+              <button class="copy-float-btn" data-copy-text='gnomarchy theme set "tokyo-night"' title="Copy command">Copy</button>
+            </div>
+          </div>
+
+          <!-- Mock Terminal Preview inside Theme Box -->
+          <div class="theme-terminal-mock">
+            <div class="theme-terminal-bar">
+              <span class="window-dot dot-red"></span>
+              <span class="window-dot dot-yellow"></span>
+              <span class="window-dot dot-green"></span>
+              <span style="color:var(--text-muted);font-size:0.75rem;margin-left:8px;">alacritty — btop preview</span>
+            </div>
+            <div class="theme-terminal-body">
+              <div><span style="color:var(--color-green);">user@gnomarchy</span>:<span style="color:var(--accent-primary);">~</span>$ btop --version</div>
+              <div style="color:var(--text-muted);">btop++ version: 1.4.0 (Gnomarchy Linux x86_64)</div>
+              <div style="margin-top:8px;"><span style="color:var(--color-yellow);">CPU</span> [████████████░░░░░░░░] 58% · 4.8 GHz</div>
+              <div><span style="color:var(--accent-primary);">MEM</span> [████████░░░░░░░░░░░░] 4.2 GiB / 32.0 GiB</div>
+              <div><span style="color:var(--color-magenta);">GPU</span> [██████░░░░░░░░░░░░░░] 31% · Wayland DRM</div>
+              <div style="margin-top:8px;color:var(--text-secondary);">System status: ALL SYSTEMS OPTIMAL · Btrfs Synced</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive CLI Dispatcher Playground -->
+  <section id="cli">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Master Dispatcher</span>
+        <h2 class="section-title">The `gnomarchy` CLI Dispatcher</h2>
+        <p class="section-subtitle">
+          Control your desktop, create web apps, trigger AI dictation, boot Windows VMs, and create snapshot rollbacks with one intuitive utility.
+        </p>
+      </div>
+
+      <div class="terminal-interactive-box">
+        <div class="terminal-tabs">
+          <button type="button" class="terminal-tab-btn active" data-cmd-key="theme">Theme Engine</button>
+          <button type="button" class="terminal-tab-btn" data-cmd-key="webapp">Web App Generator</button>
+          <button type="button" class="terminal-tab-btn" data-cmd-key="reminder">Desktop Reminders</button>
+          <button type="button" class="terminal-tab-btn" data-cmd-key="voxtype">Voxtype AI Dictation</button>
+          <button type="button" class="terminal-tab-btn" data-cmd-key="snapshot">Atomic Snapshots</button>
+          <button type="button" class="terminal-tab-btn" data-cmd-key="windows">Windows 11 VM</button>
+        </div>
+
+        <div class="terminal-viewport">
+          <div class="terminal-prompt-line">
+            <div>
+              <span style="color:var(--color-green);">gnomarch@workstation</span>:<span style="color:var(--accent-primary);">~</span>$
+              <span class="terminal-cmd" id="activeTerminalCmd">gnomarchy theme set "everforest"</span>
+            </div>
+            <button type="button" class="terminal-copy-btn" id="copyTerminalCmdBtn">Copy Command</button>
+          </div>
+
+          <pre class="terminal-output" id="activeTerminalOutput">[gnomarchy] Switching active system theme to 'everforest'...
+✔ GNOME Libadwaita accent color -> #a7c080
+✔ Alacritty terminal theme updated (~/.config/alacritty/alacritty.toml)
+✔ Neovim color scheme synchronized (~/.config/nvim/init.lua)
+✔ btop system monitor theme updated
+✔ Wallpaper set: ~/.config/gnomarchy/themes/everforest/backgrounds/default.png
+✔ Dispatched lifecycle hook: ~/.config/gnomarchy/hooks/on-theme-change
+Theme switch applied across all applications instantaneously.</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keyboard Shortcuts Grid -->
+  <section id="hotkeys">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Keyboard-First Workflow</span>
+        <h2 class="section-title">Speed at your fingertips.</h2>
+        <p class="section-subtitle">
+          Engineered for developers who love the terminal. Keep your hands on the home row with curated, conflict-free hotkeys.
+        </p>
+      </div>
+
+      <div class="hotkey-grid">
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>T</kbd></div>
+          <div class="hotkey-desc">Tactile Grid Window Tiling</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>Enter</kbd></div>
+          <div class="hotkey-desc">Alacritty GPU Terminal</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>B</kbd></div>
+          <div class="hotkey-desc">Brave Origin Browser</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>E</kbd></div>
+          <div class="hotkey-desc">Nautilus File Manager</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>D</kbd></div>
+          <div class="hotkey-desc">Voxtype AI Dictation</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>Esc</kbd></div>
+          <div class="hotkey-desc">Matrix Retro Screensaver</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>W</kbd></div>
+          <div class="hotkey-desc">Close Focused Window</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>Up</kbd></div>
+          <div class="hotkey-desc">Maximize Window</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>1..6</kbd></div>
+          <div class="hotkey-desc">Switch Workspaces Directly</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1..6</kbd></div>
+          <div class="hotkey-desc">Move Window to Workspace</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Print</kbd></div>
+          <div class="hotkey-desc">GNOME Interactive Screenshot</div>
+        </div>
+        <div class="hotkey-card">
+          <div class="key-combo"><kbd>Ctrl</kbd> + <kbd>Print</kbd></div>
+          <div class="hotkey-desc">Satty Area Annotation Grabber</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hardware Support Section -->
+  <section id="hardware">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Curated Hardware Profiles</span>
+        <h2 class="section-title">Tested on real iron.</h2>
+        <p class="section-subtitle">
+          Gnomarchy includes automatic hardware detection and tested workarounds for tricky laptop models, hybrid GPUs, and modern chipsets.
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon-box">🍏</div>
+          <h3 class="card-title">Apple T2 Intel Macs</h3>
+          <p class="card-text">
+            Give your 2018-2020 Intel MacBook Pro, Air, or Mac Mini a lightning-fast rebirth. Built-in kernel modules support Apple T2 audio, keyboard, touchpad, and WiFi.
+          </p>
+          <div class="card-footer-pill"><span>Support:</span> Apple T2 Patched Kernel</div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">⚡</div>
+          <h3 class="card-title">Framework 13 & 16</h3>
+          <p class="card-text">
+            Native support for Framework modular laptops with optimal ambient light sensor auto-brightness, suspend-then-hibernate power profiles, and display scaling.
+          </p>
+          <div class="card-footer-pill"><span>Support:</span> Framework Ready</div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🎮</div>
+          <h3 class="card-title">Asus ROG & NVIDIA Hybrid</h3>
+          <p class="card-text">
+            Out-of-the-box support for Asus ROG laptops with <code>supergfxctl</code> GPU mode switching, ROG fan profiles, and modern NVIDIA proprietary Wayland drivers.
+          </p>
+          <div class="card-footer-pill"><span>Support:</span> supergfxctl & Prime</div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🧠</div>
+          <h3 class="card-title">Intel Panther Lake & Ultra</h3>
+          <p class="card-text">
+            Cutting-edge rolling Arch kernel (6.13+) with full support for Intel Core Ultra, Panther Lake hybrid core scheduling, and integrated Arc graphics.
+          </p>
+          <div class="card-footer-pill"><span>Support:</span> Latest Arch Rolling Kernel</div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🥔</div>
+          <h3 class="card-title">Potato PCs & ThinkPads</h3>
+          <p class="card-text">
+            Tuned memory footprints, Zram swap compression, and stripped background daemons mean even older ThinkPads with 4GB RAM run crisp and responsive.
+          </p>
+          <div class="card-footer-pill"><span>Support:</span> Zram & Fast-Shutdown</div>
+        </div>
+
+        <div class="card">
+          <div class="card-icon-box">🛍️</div>
+          <h3 class="card-title">Flatpak & Bazaar App Store</h3>
+          <p class="card-text">
+            Integrated with Flathub and shipped with <strong>Bazaar</strong>, the beautiful native GNOME Flatpak store. Install Spotify, VS Code, Obsidian, and Slack with one click.
+          </p>
+          <div class="card-footer-pill"><span>Default:</span> Bazaar App Store</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Momentum by the numbers (ASCII Graphic inspired by Omarchy) -->
+  <section>
+    <div class="container container-narrow">
+      <div class="metrics-box">
+        <span class="section-tag">Momentum by the Numbers</span>
+        <h2 class="section-title">Built for builders.</h2>
+        <p class="section-subtitle">
+          Transparent, opinionated, and open source. Here is what powers the Gnomarchy distribution:
+        </p>
+
+        <div class="ascii-chart-container">
+<pre>
+████████████████████████████████████████████████████████████████████████
+ Arch Rolling Base   ████████████████████████████████ 100% Bleeding Edge
+ GNOME 50 Polish     ████████████████████████████ 99.8% Wayland Native
+ Snapper Safety Net  ████████████████████████ 100% Atomic Rollbacks
+ Local AI Dictation  ████████████████████ 0 Cloud Fees · 100% Offline
+ Fast Shutdown Limit ████████████ 10s Max Timeout (No 90s Hangs)
+████████████████████████████████████████████████████████████████████████
+</pre>
+        </div>
+
+        <div class="stats-counter-row">
+          <div class="stat-item">
+            <span class="stat-number">7</span>
+            <span class="stat-label">Built-in Themes</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">100%</span>
+            <span class="stat-label">MIT Open Source</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">&lt; 2 min</span>
+            <span class="stat-label">Fast Install</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">0</span>
+            <span class="stat-label">Telemetry / Cloud AI Fees</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials & Voices -->
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Community Voices</span>
+        <h2 class="section-title">What developers are saying</h2>
+        <p class="section-subtitle">Real experiences from engineers switching to Gnomarchy.</p>
+      </div>
+
+      <div class="quotes-grid">
+        <div class="quote-card">
+          <p class="quote-text">
+            “I loved Omarchy’s vision of an agent-driven OS, but I rely heavily on multi-monitor fractional scaling for my 4K displays. Gnomarchy gave me the exact same agentic developer stack with GNOME's bulletproof Wayland compositor. It is the dream workstation.”
+          </p>
+          <div class="quote-author">
+            <div class="author-avatar">AL</div>
+            <div class="author-info">
+              <span class="author-name">Alex Lind</span>
+              <span class="author-handle">@alexlind_dev</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            “The Tactile window tiling (<kbd>Super + T</kbd>) is pure genius. I don’t want windows jumping around randomly every time a terminal opens, but I still want instant keyboard snapping. Gnomarchy nailed the balance.”
+          </p>
+          <div class="quote-author">
+            <div class="author-avatar">SM</div>
+            <div class="author-info">
+              <span class="author-name">Sarah Morris</span>
+              <span class="author-handle">@morris_code</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            “Voxtype dictation on <kbd>Super + D</kbd> running local Whisper is magic. I dictate git commit messages, code comments, and chat responses without touching my mouse or paying OpenAI token fees.”
+          </p>
+          <div class="quote-author">
+            <div class="author-avatar">DK</div>
+            <div class="author-info">
+              <span class="author-name">Dan K.</span>
+              <span class="author-handle">@dank_sys</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installation Section -->
+  <section id="install">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-tag">Get Gnomarchy</span>
+        <h2 class="section-title">Install Gnomarchy</h2>
+        <p class="section-subtitle">
+          Be up and running with a complete developer desktop in less than two minutes.
+        </p>
+      </div>
+
+      <div class="install-options-grid">
+        <!-- Method 1: Bootable ISO -->
+        <div class="install-card">
+          <span class="install-badge badge-recommended">Method 1 · Recommended</span>
+          <h3 class="card-title">Bootable Installation ISO</h3>
+          <p class="card-text">
+            Flash to any USB stick and boot into the automated installer. It partitions your drive with Btrfs subvolumes, sets up Limine bootloader, configures Snapper rollbacks, and installs the GNOME desktop.
+          </p>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="https://github.com/hteariH/Gnomarchy/releases" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="flex:1;">
+              Download ISO
+            </a>
+            <a href="https://github.com/hteariH/Gnomarchy/releases" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+              Checksums & Signatures
+            </a>
+          </div>
+
+          <div class="code-snippet-box">
+            <pre><code># Write ISO to USB drive (replace /dev/sdX)
+sudo dd if=gnomarchy-linux.iso of=/dev/sdX bs=4M status=progress oflag=sync</code></pre>
+            <button class="copy-float-btn" data-copy-text="sudo dd if=gnomarchy-linux.iso of=/dev/sdX bs=4M status=progress oflag=sync">Copy</button>
+          </div>
+        </div>
+
+        <!-- Method 2: Quick Script Over Arch -->
+        <div class="install-card" id="install-curl">
+          <span class="install-badge badge-fast">Method 2 · Quick Install</span>
+          <h3 class="card-title">Deploy Over Clean Arch Linux</h3>
+          <p class="card-text">
+            Already have a minimal Arch Linux base installation? Transform it into a full Gnomarchy workstation with one command:
+          </p>
+
+          <div class="code-snippet-box">
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | bash</code></pre>
+            <button class="copy-float-btn" data-copy-text="curl -fsSL https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh | bash">Copy</button>
+          </div>
+
+          <p class="card-text" style="font-size:0.88rem;margin-top:8px;">
+            Want to test it first in a virtual machine? Clone the repository and run:
+          </p>
+          <div class="code-snippet-box">
+            <pre><code>git clone https://github.com/hteariH/Gnomarchy.git
+cd Gnomarchy
+./run-vm.sh</code></pre>
+            <button class="copy-float-btn" data-copy-text="git clone https://github.com/hteariH/Gnomarchy.git && cd Gnomarchy && ./run-vm.sh">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container container-wide">
+      <div class="footer-top">
+        <div class="footer-brand-bio">
+          <div class="brand-group">
+            <div class="brand-logo-badge">
+              <img src="assets/gnomarchy-icon.svg" alt="Gnomarchy" width="24" height="24">
+            </div>
+            <span class="brand-name">Gnomarchy</span>
+          </div>
+          <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">
+            The malleable GNOME workstation for the age of agents. Beautiful, rock-solid, and open source under the MIT License.
+          </p>
+          <div style="font-size:0.8rem;color:var(--text-muted);">
+            Inspired by <a href="https://omarchy.org" target="_blank" rel="noopener noreferrer">Omarchy.org</a> & DHH’s Omakub.
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Explore</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#philosophy">Why GNOME?</a></li>
+            <li><a href="#themes">Theme Engine</a></li>
+            <li><a href="#cli">CLI Playground</a></li>
+            <li><a href="#hotkeys">Shortcuts Guide</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Ecosystem</h4>
+          <ul>
+            <li><a href="https://github.com/hteariH/Gnomarchy" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/hteariH/Gnomarchy/releases" target="_blank" rel="noopener noreferrer">ISO Releases</a></li>
+            <li><a href="https://github.com/hteariH/Gnomarchy/blob/main/AGENTS.md" target="_blank" rel="noopener noreferrer">Agent Protocol (AGENTS.md)</a></li>
+            <li><a href="https://github.com/hteariH/Gnomarchy/blob/main/TESTING.md" target="_blank" rel="noopener noreferrer">Testing Guide</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Deployment</h4>
+          <ul>
+            <li><a href="https://gnomarchy.pages.dev" target="_blank" rel="noopener noreferrer">gnomarchy.pages.dev</a></li>
+            <li><a href="https://pages.cloudflare.com" target="_blank" rel="noopener noreferrer">Hosted on Cloudflare Pages</a></li>
+            <li><a href="https://archlinux.org" target="_blank" rel="noopener noreferrer">Arch Linux</a></li>
+            <li><a href="https://www.gnome.org" target="_blank" rel="noopener noreferrer">GNOME Desktop</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; 2026 Gnomarchy Contributors. Licensed under <a href="https://github.com/hteariH/Gnomarchy/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
+        </div>
+        <div>
+          Domain: <a href="https://gnomarchy.pages.dev" style="color:var(--accent-primary);font-family:var(--font-mono);">gnomarchy.pages.dev</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Interactive Client Script -->
+  <script src="app.js"></script>
+</body>
+</html>

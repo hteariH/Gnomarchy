@@ -1,5 +1,5 @@
 # Gnomarchy Core Packages List
-# Base System & Desktop Layer: GNOME 47/48 on Arch Linux
+# Base System & Desktop Layer: GNOME 50 on Arch Linux
 
 # Display Manager & Desktop Environment
 gdm
@@ -25,7 +25,7 @@ gnome-text-editor
 evince
 loupe
 gnome-themes-extra
-yaru-icon-theme
+papirus-icon-theme
 
 # Sound, Media, & PipeWire
 pipewire
@@ -101,7 +101,6 @@ ttf-jetbrains-mono-nerd
 
 # Graphic Annotations & Utilities
 satty
-localsend
 libnotify
 cmatrix
 imagemagick
@@ -112,4 +111,3 @@ qemu-desktop
 edk2-ovmf
 swtpm
 dnsmasq
-bridge-utils

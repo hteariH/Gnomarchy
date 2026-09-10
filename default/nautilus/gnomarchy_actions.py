@@ -102,7 +102,10 @@ class GnomarchyMenuProvider(GObject.GObject, Nautilus.MenuProvider):
     def _cb_localsend(self, menu, files):
         paths = [self._get_path(f) for f in files if self._get_path(f)]
         if paths:
-            subprocess.Popen(["localsend"] + paths)
+            if subprocess.run(["which", "localsend"], stdout=subprocess.DEVNULL).returncode == 0:
+                subprocess.Popen(["localsend"] + paths)
+            else:
+                subprocess.Popen(["flatpak", "run", "org.localsend.localsend_app"] + paths)
 
     def _cb_edit_micro(self, menu, files):
         paths = [self._get_path(f) for f in files if self._get_path(f)]

@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/hteariH/Gnomarchy/releases"><img src="https://img.shields.io/github/v/release/hteariH/Gnomarchy?style=for-the-badge&color=89b4fa&logo=github" alt="Release"></a>
   <img src="https://img.shields.io/badge/Arch%20Linux-Rolling-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux">
-  <img src="https://img.shields.io/badge/GNOME-47%20%2F%2048-4a86cf?style=for-the-badge&logo=gnome&logoColor=white" alt="GNOME">
+  <img src="https://img.shields.io/badge/GNOME-50-4a86cf?style=for-the-badge&logo=gnome&logoColor=white" alt="GNOME 50">
   <img src="https://img.shields.io/badge/Wayland-Native-f38ba8?style=for-the-badge&logo=wayland&logoColor=white" alt="Wayland">
   <img src="https://img.shields.io/badge/Btrfs-Snapper%20Rollbacks-a6e3a1?style=for-the-badge&logo=linux&logoColor=white" alt="Btrfs">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-fab387?style=for-the-badge" alt="License"></a>
@@ -15,7 +15,7 @@
 
 > **The Power of Arch Linux and Omarchy's Developer Tooling Meets the Polish of GNOME.**
 
-Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch Linux**. It takes the modern rolling base, Btrfs + Snapper atomic rollback snapshots, hardware quirk mitigations, unified theme engine, and agentic CLI developer stack from **Omarchy**—and replaces the Hyprland tiling compositor stack with a finely tuned, keyboard-friendly **GNOME 47/48** desktop environment and **GDM**.
+Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch Linux**. It takes the modern rolling base, Btrfs + Snapper atomic rollback snapshots, hardware quirk mitigations, unified theme engine, and agentic CLI developer stack from **Omarchy**—and replaces the Hyprland tiling compositor stack with a finely tuned, keyboard-friendly **GNOME 50** desktop environment and **GDM**.
 
 ---
 
