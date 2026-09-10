@@ -113,6 +113,33 @@ done
   ok "exactly $visible_browsers visible Brave entry" ||
   no "$visible_browsers visible Brave entries" "the dash will show duplicates"
 
+# --- Regression: extensions shipped without their compiled schemas ---------
+#
+# GNOME Shell reads an extension's settings from
+# <extension>/schemas/gschemas.compiled. Compiling only the system schema
+# directory left that file missing, and every extension with settings failed
+# to load with GLib.FileError.
+uncompiled=()
+ext_checked=0
+for ext_base in "$ROOT/usr/share/gnome-shell/extensions"   "$HOME_DIR/.local/share/gnome-shell/extensions"; do
+  [[ -d "$ext_base" ]] || continue
+  for ext_dir in "$ext_base"/*/; do
+    [[ -d "$ext_dir/schemas" ]] || continue
+    compgen -G "$ext_dir/schemas/*.gschema.xml" >/dev/null 2>&1 || continue
+    ext_checked=$((ext_checked + 1))
+    [[ -f "$ext_dir/schemas/gschemas.compiled" ]] ||
+      uncompiled+=("$(basename "$ext_dir")")
+  done
+done
+
+if ((ext_checked == 0)); then
+  no "no GNOME extensions with schemas found" "extensions were not deployed"
+elif ((${#uncompiled[@]} == 0)); then
+  ok "all $ext_checked extension schemas are compiled"
+else
+  no "${#uncompiled[@]} extension(s) have uncompiled schemas" "${uncompiled[*]}"
+fi
+
 # --- Regression: autostart Exec depended on a PATH the session lacks -------
 AUTOSTART="$HOME_DIR/.config/autostart/gnomarchy-first-run.desktop"
 if [[ -f "$AUTOSTART" ]]; then
