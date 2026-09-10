@@ -26,6 +26,8 @@ Commands:
   theme <set|list|current>     Manage system and desktop color themes
   tiling <enable|disable|status>
                                Dynamic auto-tiling (Hyprland-style) or manual grid
+  keymap <omarchy|gnome|status>
+                               Switch between Omarchy and Gnomarchy key layouts
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
@@ -67,6 +69,10 @@ case "$command_group" in
   tiling)
     shift
     exec gnomarchy-tiling "$@"
+    ;;
+  keymap)
+    shift
+    exec gnomarchy-keymap "$@"
     ;;
   theme)
     case "$subcommand" in

@@ -1,0 +1,265 @@
+#!/bin/bash
+
+# Gnomarchy keyboard layout profiles
+#
+#   omarchy  Mirrors Omarchy's Hyprland bindings as closely as GNOME allows:
+#            Super+arrows to focus, Super+Shift+arrows to move, ten workspaces
+#            on Super+1..0, Super+Space for the menu, Super+Q/W to close.
+#
+#   gnome    Gnomarchy's own defaults: six workspaces, Super+B/E for browser
+#            and files, Super+Alt+Space for the menu.
+#
+# Bindings were transcribed from Omarchy's default/hypr/bindings/*.lua rather
+# than from memory. What Hyprland does and GNOME does not - window groups, the
+# scratchpad, pseudo-tiling, pixel-exact resize steps - is listed by
+# `gnomarchy keymap status` instead of being silently dropped.
+set -eEo pipefail
+
+TS="org.gnome.shell.extensions.tilingshell"
+WM="org.gnome.desktop.wm.keybindings"
+MK="org.gnome.settings-daemon.plugins.media-keys"
+BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+
+info() { echo -e "\033[1;36m$1\033[0m"; }
+good() { echo -e "\033[1;32m  $1\033[0m"; }
+warn() { echo -e "\033[1;33m  $1\033[0m"; }
+
+require_session() {
+  if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && ! -S "/run/user/$(id -u)/bus" ]]; then
+    echo "No D-Bus session bus; run this from inside your desktop session." >&2
+    exit 1
+  fi
+}
+
+set_custom() {
+  # $1 slot, $2 name, $3 command, $4 binding
+  local p="$MK.custom-keybinding:$BINDINGS/$1/"
+  gsettings set "$p" name "$2"
+  gsettings set "$p" command "$3"
+  gsettings set "$p" binding "$4"
+}
+
+register_slots() {
+  local slots=() i
+  for i in "$@"; do slots+=("'$BINDINGS/$i/'"); done
+  local list
+  list="$(IFS=,; echo "${slots[*]}")"
+  gsettings set "$MK" custom-keybindings "[$list]"
+}
+
+BROWSER_CMD='sh -c "command -v brave-origin >/dev/null && exec brave-origin || command -v brave >/dev/null && exec brave || exec xdg-open https://"'
+
+apply_omarchy() {
+  info "Applying the Omarchy keyboard layout"
+
+  # --- Workspaces: Omarchy runs ten, Gnomarchy shipped six ------------------
+  gsettings set org.gnome.mutter dynamic-workspaces false
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 10
+
+  local i key
+  for i in $(seq 1 10); do
+    # Workspace 10 sits on the 0 key, as in Omarchy.
+    key=$((i % 10))
+    gsettings set "$WM" "switch-to-workspace-$i" "['<Super>$key']"
+    gsettings set "$WM" "move-to-workspace-$i" "['<Super><Shift>$key']"
+  done
+
+  # Super+Tab cycles workspaces in Omarchy. GNOME binds it to the application
+  # switcher by default, so that has to move out of the way first.
+  gsettings set "$WM" switch-applications "['<Alt>Tab']"
+  gsettings set "$WM" switch-applications-backward "['<Alt><Shift>Tab']"
+  gsettings set "$WM" switch-windows "['<Alt>grave']"
+  gsettings set "$WM" switch-windows-backward "['<Alt><Shift>grave']"
+
+  gsettings set "$WM" switch-to-workspace-right "['<Super>Tab']"
+  gsettings set "$WM" switch-to-workspace-left "['<Super><Shift>Tab']"
+  gsettings set "$WM" switch-to-workspace-last "['<Super><Control>Tab']"
+
+  # --- Windows --------------------------------------------------------------
+  gsettings set "$WM" close "['<Super>w', '<Super>q']"
+  gsettings set "$WM" toggle-fullscreen "['<Super>f']"
+  gsettings set "$WM" toggle-maximized "['<Super><Alt>f']"
+  gsettings set "$WM" begin-resize "['<Super>BackSpace']"
+  gsettings set "$WM" maximize "@as []"
+
+  # Super+Space is the Omarchy menu; GNOME uses it to cycle input sources.
+  gsettings set "$WM" switch-input-source "@as []"
+  gsettings set "$WM" switch-input-source-backward "@as []"
+
+  # Super+drag to move, Super+right-drag to resize, as in Hyprland.
+  gsettings set org.gnome.desktop.wm.preferences mouse-button-modifier "'<Super>'"
+
+  # --- Directional focus and movement --------------------------------------
+  # These live in Tiling Shell, so they only do anything in dynamic mode.
+  if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
+    gsettings set "$TS" focus-window-left "['<Super>Left']"
+    gsettings set "$TS" focus-window-right "['<Super>Right']"
+    gsettings set "$TS" focus-window-up "['<Super>Up']"
+    gsettings set "$TS" focus-window-down "['<Super>Down']"
+
+    gsettings set "$TS" move-window-left "['<Super><Shift>Left']"
+    gsettings set "$TS" move-window-right "['<Super><Shift>Right']"
+    gsettings set "$TS" move-window-up "['<Super><Shift>Up']"
+    gsettings set "$TS" move-window-down "['<Super><Shift>Down']"
+    gsettings set "$TS" move-window-center "['<Super><Shift>c']"
+  else
+    warn "Tiling Shell is not installed; directional focus needs 'gnomarchy tiling enable'."
+  fi
+
+  # --- Applications and menus ----------------------------------------------
+  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7 custom8
+  set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
+  set_custom custom1 'Browser' "$BROWSER_CMD" '<Super><Shift>b'
+  set_custom custom2 'Files' 'nautilus' '<Super><Shift>f'
+  set_custom custom3 'Annotate Screenshot' 'gnomarchy-capture annotate' '<Control>Print'
+  set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
+  set_custom custom5 'System Menu' 'gnomarchy-menu' '<Super>Escape'
+  set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super>space'
+  set_custom custom7 'Keybindings' 'gnomarchy gnome hotkeys' '<Super>k'
+  set_custom custom8 'Editor' 'gnome-terminal -- nvim' '<Super><Shift>n'
+
+  # Super+Alt+Space is Omarchy's apps menu; GNOME's app grid is the closest fit.
+  gsettings set org.gnome.shell.keybindings toggle-application-view "['<Super><Alt>space']"
+
+  echo omarchy > "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || true
+
+  good "Omarchy layout applied"
+}
+
+apply_gnome() {
+  info "Restoring the Gnomarchy default layout"
+
+  gsettings set org.gnome.desktop.wm.preferences num-workspaces 6
+  local i
+  for i in $(seq 1 10); do
+    if ((i <= 6)); then
+      gsettings set "$WM" "switch-to-workspace-$i" "['<Super>$i']"
+      gsettings set "$WM" "move-to-workspace-$i" "['<Super><Shift>$i']"
+    else
+      gsettings set "$WM" "switch-to-workspace-$i" "@as []"
+      gsettings set "$WM" "move-to-workspace-$i" "@as []"
+    fi
+  done
+
+  gsettings set "$WM" close "['<Super>w']"
+  gsettings set "$WM" maximize "['<Super>Up']"
+  gsettings set "$WM" toggle-fullscreen "['<Shift>F11']"
+  gsettings set "$WM" toggle-maximized "@as []"
+  gsettings set "$WM" switch-to-workspace-right "@as []"
+  gsettings set "$WM" switch-to-workspace-left "@as []"
+  gsettings set "$WM" switch-to-workspace-last "@as []"
+  gsettings set "$WM" switch-applications "['<Super>Tab', '<Alt>Tab']"
+  gsettings reset "$WM" switch-input-source 2>/dev/null || true
+
+  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6
+  set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
+  set_custom custom1 'Browser' "$BROWSER_CMD" '<Super>b'
+  set_custom custom2 'Files' 'nautilus' '<Super>e'
+  set_custom custom3 'Annotate Screenshot' 'gnomarchy-capture annotate' '<Control>Print'
+  set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
+  set_custom custom5 'Retro Screensaver' 'gnomarchy screensaver' '<Super>Escape'
+  set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
+
+  if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
+    gsettings set "$TS" focus-window-left "['<Super>h']"
+    gsettings set "$TS" focus-window-down "['<Super>j']"
+    gsettings set "$TS" focus-window-up "['<Super>k']"
+    gsettings set "$TS" focus-window-right "['<Super>l']"
+    gsettings set "$TS" move-window-left "['<Super><Shift>h']"
+    gsettings set "$TS" move-window-down "['<Super><Shift>j']"
+    gsettings set "$TS" move-window-up "['<Super><Shift>k']"
+    gsettings set "$TS" move-window-right "['<Super><Shift>l']"
+  fi
+
+  echo gnome > "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || true
+
+  good "Gnomarchy default layout restored"
+}
+
+show_status() {
+  local current="gnome"
+  [[ -f "$HOME/.config/gnomarchy/current/keymap" ]] &&
+    current="$(<"$HOME/.config/gnomarchy/current/keymap")"
+
+  echo "Keyboard layout: $current"
+  echo
+
+  if [[ "$current" == "omarchy" ]]; then
+    cat <<'EOF'
+  Super + Return            terminal
+  Super + Shift + Return    browser
+  Super + Shift + B         browser
+  Super + Shift + F         file manager
+  Super + Shift + N         editor
+  Super + Space             Gnomarchy menu
+  Super + Alt + Space       app grid
+  Super + Escape            system menu
+  Super + K                 this list
+
+  Super + W / Super + Q     close window
+  Super + F                 fullscreen
+  Super + Alt + F           maximize
+  Super + arrows            focus window (dynamic tiling only)
+  Super + Shift + arrows    move window (dynamic tiling only)
+  Super + drag              move window
+  Super + right-drag        resize window
+
+  Super + 1..0              switch to workspace 1..10
+  Super + Shift + 1..0      move window to workspace
+  Super + Tab               next workspace
+  Super + Shift + Tab       previous workspace
+  Super + Ctrl + Tab        last workspace
+  Alt + Tab                 switch application
+
+Not translatable to GNOME, so deliberately unbound:
+  window groups (Super+G), the scratchpad (Super+S),
+  pseudo-tiling (Super+P), pixel-step window resize,
+  per-monitor workspace moves.
+EOF
+  else
+    cat <<'EOF'
+  Super + Return            terminal
+  Super + B                 browser
+  Super + E                 file manager
+  Super + Alt + Space       Gnomarchy menu
+  Super + Escape            screensaver
+  Super + T                 Tactile grid (manual tiling)
+
+  Super + W                 close window
+  Super + Up                maximize
+  Super + 1..6              switch to workspace 1..6
+  Super + Shift + 1..6      move window to workspace
+EOF
+  fi
+
+  echo
+  echo "Switch with: gnomarchy keymap <omarchy|gnome>"
+}
+
+case "${1:-status}" in
+  omarchy)
+    require_session
+    mkdir -p "$HOME/.config/gnomarchy/current"
+    apply_omarchy
+    echo
+    warn "Directional focus needs dynamic tiling: gnomarchy tiling enable"
+    echo
+    show_status
+    ;;
+  gnome | default | reset)
+    require_session
+    mkdir -p "$HOME/.config/gnomarchy/current"
+    apply_gnome
+    echo
+    show_status
+    ;;
+  status) show_status ;;
+  *)
+    echo "Usage: gnomarchy keymap <omarchy|gnome|status>"
+    echo
+    echo "  omarchy   mirror Omarchy's Hyprland bindings"
+    echo "  gnome     Gnomarchy defaults"
+    echo "  status    show the active layout"
+    exit 1
+    ;;
+esac
