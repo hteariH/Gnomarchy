@@ -11,22 +11,28 @@ clear
 
 echo -e "\033[1;36m"
 cat <<'EOF'
-   ▄████████ █▄       ▄█     ▄████████  ▄▄▄▄███▄▄▄▄      ▄████████     ███        ▄██   ▄      
-  ███    ███ ███     ███    ███    ███▄██▀▀▀███▀▀▀██▄   ███    ███ ▀█████████▄   ███   ██▄    
-  ███    █▀  ███     ███    ███    ██████   ███   ███   ███    ███    ▀███▀▀██   ███▄▄▄███    
- ▄███        ███     ███    ███    ██████   ███   ███   ███    ███     ███   ▀   ▀▀▀▀▀▀███    
-▀▀███ ████▄  ███     ███  ▀██████████████   ███   ███ ▀███████████     ███       ▄██   ███    
-  ███    ███ ███     ███    ███    ██████   ███   ███   ███    ███     ███       ███   ███    
-  ███    ███ ███ ▄█▄ ███    ███    ██████   ███   ███   ███    ███     ███       ███   ███    
-  ████████▀   ▀███▀███▀     ███    █▀  ▀█   ███   █▀    ███    █▀     ▄████▀      ▀█████▀     
+   ____  _   _   ___   __  __     _    ____    ____  _   _ __   __
+  / ___|| \ | | / _ \ |  \/  |   / \  |  _ \  / ___|| | | |\ \ / /
+ | |  _ |  \| || | | || |\/| |  / _ \ | |_) || |    | |_| | \ V / 
+ | |_| || |\  || |_| || |  | | / ___ \|  _ < | |___ |  _  |  | |  
+  \____||_| \_| \___/ |_|  |_|/_/   \_\|_| \_\ \____||_| |_|  |_|  
 EOF
 echo -e "\033[0m"
 echo -e "\033[1;32mWelcome to the Gnomarchy Linux Installer!\033[0m\n"
 
-# Verify UEFI boot
-if [ ! -d /sys/firmware/efi/efivars ]; then
-  echo -e "\033[1;31m[ERROR]\033[0m Gnomarchy requires booting in UEFI mode."
-  exit 1
+# Detect firmware boot mode
+if [ -d /sys/firmware/efi/efivars ]; then
+  BOOT_MODE="UEFI"
+else
+  BOOT_MODE="Legacy BIOS"
+fi
+
+echo -e "Firmware Boot Mode: \033[1;35m$BOOT_MODE\033[0m"
+if [ "$BOOT_MODE" = "Legacy BIOS" ]; then
+  echo -e "\033[1;33m[NOTE]\033[0m Booted in Legacy BIOS mode. Gnomarchy will install with Universal BIOS + UEFI dual-boot support."
+  echo -e "\033[0;36m       (Tip for VirtualBox: You can also enable native EFI in VM Settings -> System -> Motherboard -> [x] Enable EFI)\033[0m\n"
+else
+  echo -e "\033[1;32m[OK]\033[0m Booted in modern UEFI mode.\n"
 fi
 
 # List disks
@@ -66,9 +72,13 @@ swapoff -a 2>/dev/null || true
 wipefs -af "$TARGET_DISK"
 sgdisk --zap-all "$TARGET_DISK"
 
-# Create partitions: 1 = EFI (1G), 2 = Linux Root (rest)
-sgdisk -n 1:0:+1024M -t 1:ef00 -c 1:"EFI System Partition" "$TARGET_DISK"
-sgdisk -n 2:0:0      -t 2:8300 -c 2:"Gnomarchy Root" "$TARGET_DISK"
+# Create partitions:
+# 1 = BIOS Boot Partition (1MB, ef02) for Legacy BIOS booting on GPT
+# 2 = EFI System Partition (1024MB, ef00) for UEFI booting on GPT
+# 3 = Linux Root (rest of disk, 8300)
+sgdisk -n 1:0:+1M     -t 1:ef02 -c 1:"BIOS Boot Partition" "$TARGET_DISK"
+sgdisk -n 2:0:+1024M  -t 2:ef00 -c 2:"EFI System Partition" "$TARGET_DISK"
+sgdisk -n 3:0:0       -t 3:8300 -c 3:"Gnomarchy Root" "$TARGET_DISK"
 
 # Partprobe
 partprobe "$TARGET_DISK"
@@ -76,11 +86,13 @@ sleep 2
 
 # Determine partition names
 if [[ "$TARGET_DISK" =~ [0-9]$ ]]; then
-  EFI_PART="${TARGET_DISK}p1"
-  ROOT_PART="${TARGET_DISK}p2"
+  BIOS_PART="${TARGET_DISK}p1"
+  EFI_PART="${TARGET_DISK}p2"
+  ROOT_PART="${TARGET_DISK}p3"
 else
-  EFI_PART="${TARGET_DISK}1"
-  ROOT_PART="${TARGET_DISK}2"
+  BIOS_PART="${TARGET_DISK}1"
+  EFI_PART="${TARGET_DISK}2"
+  ROOT_PART="${TARGET_DISK}3"
 fi
 
 # Format EFI
@@ -157,11 +169,16 @@ echo "root:$PASSWORD" | chpasswd
 # Initramfs
 mkinitcpio -P
 
-# Limine bootloader setup
+# Limine bootloader setup (Universal Dual-Boot BIOS + UEFI)
+echo "Installing Limine bootloader (BIOS + UEFI)..."
+cp /usr/share/limine/limine-bios.sys /boot/ 2>/dev/null || true
 limine bios-install "$TARGET_DISK" 2>/dev/null || true
 mkdir -p /boot/EFI/BOOT
-cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/
-efibootmgr --create --disk "$TARGET_DISK" --part 1 --loader '/EFI/BOOT/BOOTX64.EFI' --label 'Gnomarchy' 2>/dev/null || true
+cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/ 2>/dev/null || true
+cp /usr/share/limine/BOOTIA32.EFI /boot/EFI/BOOT/ 2>/dev/null || true
+if [ -d /sys/firmware/efi/efivars ]; then
+  efibootmgr --create --disk "$TARGET_DISK" --part 2 --loader '/EFI/BOOT/BOOTX64.EFI' --label 'Gnomarchy' 2>/dev/null || true
+fi
 
 # Limine config
 cat <<LIMINE_EOF > /boot/limine.conf
