@@ -91,6 +91,18 @@ case "$action" in
       fi
     fi
 
+    # Resolve browser runner (prefer brave-origin, fallback to brave, brave-browser, or chromium)
+    browser_bin="brave-origin"
+    if ! command -v brave-origin >/dev/null 2>&1; then
+      if command -v brave >/dev/null 2>&1; then
+        browser_bin="brave"
+      elif command -v brave-browser >/dev/null 2>&1; then
+        browser_bin="brave-browser"
+      elif command -v chromium >/dev/null 2>&1; then
+        browser_bin="chromium"
+      fi
+    fi
+
     # Create .desktop launcher
     cat > "$desktop_file" <<EOF
 [Desktop Entry]
@@ -98,7 +110,7 @@ Type=Application
 Name=$name
 GenericName=Web Application
 Comment=Gnomarchy Web App for $name
-Exec=chromium --app="$url" --user-data-dir="$app_profile" --class=gnomarchy-webapp-$app_id %U
+Exec=$browser_bin --app="$url" --user-data-dir="$app_profile" --class=gnomarchy-webapp-$app_id %U
 Icon=$final_icon
 StartupWMClass=gnomarchy-webapp-$app_id
 Terminal=false

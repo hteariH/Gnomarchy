@@ -71,6 +71,7 @@ All desktop settings are managed via GSettings.
 ### 4. Text Editor & Default Applications
 - Default text editor is **Micro**.
 - CLI: `micro <file>` (also `$EDITOR` and `$VISUAL`).
+- Default web browser is **Brave Origin** (`brave-origin` / `brave`).
 - File manager: `nautilus`.
 - Terminal: `alacritty`.
 - App Store: `bazaar` (`io.github.kolunmi.Bazaar`).

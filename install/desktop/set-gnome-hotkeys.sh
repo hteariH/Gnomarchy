@@ -37,9 +37,9 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BI
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ command 'alacritty'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ binding '<Super>Return'
 
-# 2. Browser (Super + B)
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom1/ name 'Browser'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom1/ command 'chromium'
+# 2. Browser (Super + B) - Brave Origin
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom1/ name 'Brave Origin'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom1/ command 'sh -c "command -v brave-origin >/dev/null && exec brave-origin || command -v brave >/dev/null && exec brave || command -v brave-browser >/dev/null && exec brave-browser || flatpak run com.brave.Browser >/dev/null 2>&1 || exec chromium || exec xdg-open https://"'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom1/ binding '<Super>b'
 
 # 3. File Manager (Super + E)

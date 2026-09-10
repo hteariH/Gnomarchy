@@ -14,6 +14,7 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Theme Engine**: Unified themes (7+ palettes: Tokyo Night, Catppuccin, Gruvbox, Everforest, Nord, Rose Pine, Matte Black)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
 - **Default Editor**: Micro (`$EDITOR`, `$VISUAL`, Git, and text/plain)
+- **Default Browser**: Brave Origin (`brave-origin` / `brave`, debloated, privacy-first)
 - **App Store & Packages**: Pacman, Flatpak (Flathub), and Bazaar
 
 ---
@@ -108,7 +109,7 @@ gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT'
 
 # Pin or reorder favorite applications in the dock
 gsettings get org.gnome.shell favorite-apps
-gsettings set org.gnome.shell favorite-apps "['chromium.desktop', 'alacritty.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
+gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'alacritty.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
 ```
 
 ---

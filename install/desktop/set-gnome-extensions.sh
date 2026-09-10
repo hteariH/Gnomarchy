@@ -100,8 +100,19 @@ if gsettings list-schemas | grep -q "org.gnome.shell.extensions.dash-to-dock"; t
 fi
 
 # Configure Pinned Dock Favorites (Ubuntu / Developer layout)
+BROWSER_DESKTOP="brave-origin.desktop"
+if [ -f "/usr/share/applications/brave-browser-origin.desktop" ]; then
+  BROWSER_DESKTOP="brave-browser-origin.desktop"
+elif [ -f "/usr/share/applications/brave-origin.desktop" ]; then
+  BROWSER_DESKTOP="brave-origin.desktop"
+elif [ -f "/usr/share/applications/brave-browser.desktop" ]; then
+  BROWSER_DESKTOP="brave-browser.desktop"
+elif [ -f "/var/lib/flatpak/exports/share/applications/com.brave.Browser.desktop" ]; then
+  BROWSER_DESKTOP="com.brave.Browser.desktop"
+fi
+
 gsettings set org.gnome.shell favorite-apps "[ \
-  'chromium.desktop', \
+  '$BROWSER_DESKTOP', \
   'alacritty.desktop', \
   'org.gnome.Nautilus.desktop', \
   'micro.desktop', \
