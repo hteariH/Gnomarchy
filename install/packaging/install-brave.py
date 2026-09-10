@@ -152,8 +152,13 @@ StartupWMClass=brave-browser
 
     with open(desktop_path, "w", encoding="utf-8") as f:
         f.write(desktop_content)
+
+    # brave-browser.desktop exists only as a compatibility alias so tools that
+    # look for that id still resolve. It must be hidden from the launcher,
+    # otherwise the dash and app grid show two identical Brave entries.
     with open(browser_desktop_path, "w", encoding="utf-8") as f:
-        f.write(desktop_content)
+        alias = desktop_content.rstrip("\n") + "\nNoDisplay=true\n"
+        f.write(alias)
 
     os.chmod(desktop_path, 0o644)
     os.chmod(browser_desktop_path, 0o644)

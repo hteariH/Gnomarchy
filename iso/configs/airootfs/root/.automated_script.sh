@@ -246,6 +246,26 @@ chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
 ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
 
+# The ISO ships the repo without .git (rsync --exclude=.git), so turn the
+# deployed copy into a real checkout. Without this the installed machine can
+# never pull configuration updates or receive new migrations.
+echo "Initializing Gnomarchy git repository on target..."
+GNOMARCHY_TARGET="/mnt/home/$USERNAME/.local/share/gnomarchy"
+if [ ! -d "$GNOMARCHY_TARGET/.git" ]; then
+  if git -C "$GNOMARCHY_TARGET" init -q 2>/dev/null &&
+    git -C "$GNOMARCHY_TARGET" remote add origin https://github.com/hteariH/Gnomarchy.git 2>/dev/null &&
+    git -C "$GNOMARCHY_TARGET" fetch -q --depth=1 origin main 2>/dev/null; then
+    git -C "$GNOMARCHY_TARGET" reset -q --hard FETCH_HEAD 2>/dev/null || true
+    git -C "$GNOMARCHY_TARGET" branch -q -M main 2>/dev/null || true
+    echo "  Repository initialized."
+  else
+    rm -rf "$GNOMARCHY_TARGET/.git" 2>/dev/null || true
+    echo "  Offline; gnomarchy update will initialize it on first run."
+  fi
+fi
+chmod +x "$GNOMARCHY_TARGET/bin"/* 2>/dev/null || true
+chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
+
 # Pre-populate all 22 bundled wallpapers into target system
 echo "Installing bundled wallpapers to target system..."
 mkdir -p /mnt/usr/share/backgrounds/gnomarchy

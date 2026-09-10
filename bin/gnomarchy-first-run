@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Gnomarchy first-run desktop configuration
+#
+# Anything that writes to dconf needs a live D-Bus session bus. The ISO
+# installer runs inside arch-chroot, where no session bus exists, so every
+# `gsettings set` issued there is silently discarded. Custom keybindings are
+# the worst case: they live at relocatable dconf paths and cannot be expressed
+# in a gschema override, so they have no fallback at all.
+#
+# This script applies that configuration on the user's first graphical login,
+# then removes its own autostart entry. It is idempotent and safe to re-run by
+# hand at any time:  gnomarchy first-run
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+export GNOMARCHY_PATH
+export GNOMARCHY_INSTALL="$GNOMARCHY_PATH/install"
+export PATH="$GNOMARCHY_PATH/bin:$PATH"
+
+AUTOSTART_FILE="$HOME/.config/autostart/gnomarchy-first-run.desktop"
+STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/gnomarchy/first-run.done"
+
+if ! command -v gsettings >/dev/null 2>&1; then
+  echo "gsettings is unavailable; cannot configure the desktop." >&2
+  exit 1
+fi
+
+# Refuse to run without a session bus: writing here would silently do nothing,
+# and we would then delete the autostart entry and never retry.
+if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && ! -S "/run/user/$(id -u)/bus" ]]; then
+  echo "No D-Bus session bus; skipping (will retry at next login)." >&2
+  exit 0
+fi
+
+source "$GNOMARCHY_INSTALL/helpers/presentation.sh"
+
+gnomarchy_header "Applying Gnomarchy Desktop Configuration"
+
+# The desktop steps are plain scripts that call gsettings; with a session bus
+# present they now actually take effect.
+for step in set-gnome-settings set-gnome-extensions set-gnome-terminal \
+  set-gnome-favorites set-gnome-hotkeys; do
+  script="$GNOMARCHY_INSTALL/desktop/$step.sh"
+  [[ -f "$script" ]] || continue
+  # shellcheck source=/dev/null
+  source "$script" || gnomarchy_warn "Step $step reported an error; continuing."
+done
+
+# Re-apply the active theme so the terminal palette, GTK colours and wallpaper
+# land now that dconf writes actually persist.
+theme="tokyo-night"
+[[ -f "$HOME/.config/gnomarchy/current/theme.name" ]] &&
+  theme="$(<"$HOME/.config/gnomarchy/current/theme.name")"
+if command -v gnomarchy-theme-set >/dev/null 2>&1; then
+  gnomarchy-theme-set "$theme" >/dev/null 2>&1 ||
+    gnomarchy_warn "Could not apply theme $theme."
+fi
+
+mkdir -p "$(dirname "$STAMP")"
+date -Iseconds > "$STAMP"
+
+# Remove the autostart entry so this runs only once per user.
+rm -f "$AUTOSTART_FILE"
+
+gnomarchy_step "Desktop configuration applied"
+
+# Extensions only load after the shell restarts. Under Wayland the shell cannot
+# be restarted in place, so ask the user to log out instead of doing it for them.
+if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u normal -i preferences-desktop \
+      "Gnomarchy is ready" \
+      "Log out and back in once to finish loading the desktop extensions." 2>/dev/null || true
+  fi
+  gnomarchy_warn "Log out and back in once to load the GNOME extensions."
+fi

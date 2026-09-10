@@ -13,10 +13,9 @@ EXTENSIONS=(
   "appindicatorsupport@rgcjonas.gmail.com"
 )
 
-# 1. Deploy extensions and compile system-wide schemas via Python installer
-if [ -f "$GNOMARCHY_INSTALL/desktop/install-extensions.py" ]; then
-  python3 "$GNOMARCHY_INSTALL/desktop/install-extensions.py"
-fi
+# Extension files and schemas are deployed earlier by
+# install-extension-files.sh, which works without a session bus. This script
+# only performs the dconf writes, so it requires a live session.
 
 # 2. Enable user extensions and activate each extension
 gsettings set org.gnome.shell disable-user-extensions false 2>/dev/null || true

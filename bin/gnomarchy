@@ -22,6 +22,7 @@ Usage: gnomarchy <command> [subcommand] [arguments...]
 
 Commands:
   menu                         Open the Gnomarchy command center (Super+Alt+Space)
+  first-run                    Re-apply desktop settings, shortcuts and favorites
   theme <set|list|current>     Manage system and desktop color themes
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
@@ -53,6 +54,9 @@ fi
 case "$command_group" in
   menu)
     exec gnomarchy-menu
+    ;;
+  first-run)
+    exec gnomarchy-first-run
     ;;
   backgrounds)
     shift

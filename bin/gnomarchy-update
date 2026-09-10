@@ -20,9 +20,32 @@ fi
 
 # Update Gnomarchy git repo if tracking git
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+# The ISO installer deploys Gnomarchy with rsync --exclude=.git, so an
+# ISO-installed machine has no repository and could never pull an update.
+# Bootstrap one in place the first time, pointing at the upstream remote.
+GNOMARCHY_REPO_URL="${GNOMARCHY_REPO_URL:-https://github.com/hteariH/Gnomarchy.git}"
+
+if [[ ! -d "$GNOMARCHY_PATH/.git" ]] && command -v git >/dev/null 2>&1; then
+  echo -e "\n\033[1;36m==> Initializing Gnomarchy Repository\033[0m"
+  echo "    (this install was deployed without one, so updates were impossible)"
+  if git -C "$GNOMARCHY_PATH" init -q 2>/dev/null &&
+    git -C "$GNOMARCHY_PATH" remote add origin "$GNOMARCHY_REPO_URL" 2>/dev/null &&
+    git -C "$GNOMARCHY_PATH" fetch -q --depth=1 origin main 2>/dev/null; then
+    git -C "$GNOMARCHY_PATH" reset -q --hard FETCH_HEAD 2>/dev/null || true
+    git -C "$GNOMARCHY_PATH" branch -q -M main 2>/dev/null || true
+    git -C "$GNOMARCHY_PATH" branch -q --set-upstream-to=origin/main main 2>/dev/null || true
+    chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null || true
+    echo -e "\033[1;32m    Repository initialized\033[0m"
+  else
+    echo -e "\033[1;33m    Could not initialize repository; skipping config update\033[0m"
+    rm -rf "$GNOMARCHY_PATH/.git" 2>/dev/null || true
+  fi
+fi
+
 if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
   echo -e "\n\033[1;36m==> Updating Gnomarchy Configurations\033[0m"
   git -C "$GNOMARCHY_PATH" pull --rebase origin main || true
+  chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null || true
 fi
 
 # Apply any migrations the pull just brought in. This is what carries config
