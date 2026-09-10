@@ -7,13 +7,11 @@ installs it to /opt/brave-origin, sets up system symlinks, desktop entry, and de
 
 import os
 import sys
-import json
 import shutil
 import zipfile
 import subprocess
 import urllib.request
 
-API_URL = "https://api.github.com/repos/brave/brave-browser/releases/latest"
 INSTALL_DIR = "/opt/brave-origin"
 DESKTOP_DIR = "/usr/share/applications"
 ICON_DIR = "/usr/share/icons/hicolor/128x128/apps"
@@ -22,40 +20,46 @@ PIXMAPS_DIR = "/usr/share/pixmaps"
 def log(msg):
     print(f"  [Brave Origin] {msg}")
 
-def get_release_asset():
-    req = urllib.request.Request(API_URL, headers={"User-Agent": "Mozilla/5.0"})
+def get_release_urls():
+    """Resolves latest release tag via GitHub redirect (immune to API rate limits)."""
     try:
+        url = "https://github.com/brave/brave-browser/releases/latest"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode())
+            final_url = resp.geturl()
+            tag = final_url.split("/")[-1]
+            ver = tag.lstrip("v")
+            log(f"Detected latest release: {tag}")
+            
+            origin_url = f"https://github.com/brave/brave-browser/releases/download/{tag}/brave-origin-{ver}-linux-amd64.zip"
+            browser_url = f"https://github.com/brave/brave-browser/releases/download/{tag}/brave-browser-{ver}-linux-amd64.zip"
+            return [origin_url, browser_url]
     except Exception as e:
-        log(f"Failed to query Brave release API: {e}")
-        return None
+        log(f"Redirect resolution failed: {e}")
+        # Hardcoded baseline fallback
+        return [
+            "https://github.com/brave/brave-browser/releases/download/v1.94.121/brave-origin-1.94.121-linux-amd64.zip",
+            "https://github.com/brave/brave-browser/releases/download/v1.94.121/brave-browser-1.94.121-linux-amd64.zip"
+        ]
 
-    # Prefer brave-origin, fallback to brave-browser
-    origin_asset = None
-    browser_asset = None
-
-    for asset in data.get("assets", []):
-        name = asset.get("name", "")
-        if "linux-amd64.zip" in name:
-            if "brave-origin" in name:
-                origin_asset = asset
-                break
-            elif "brave-browser" in name:
-                browser_asset = asset
-
-    chosen = origin_asset or browser_asset
-    if chosen:
-        log(f"Selected asset: {chosen.get('name')}")
-        return chosen.get("browser_download_url")
-    return None
-
-def download_and_extract(download_url):
+def download_and_extract(urls):
     temp_zip = "/tmp/brave-origin.zip"
-    log(f"Downloading Brave package from {download_url}...")
-    req = urllib.request.Request(download_url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=60) as resp, open(temp_zip, "wb") as out_file:
-        shutil.copyfileobj(resp, out_file, length=64 * 1024)
+    downloaded = False
+
+    for dl_url in urls:
+        log(f"Attempting download from {dl_url}...")
+        try:
+            req = urllib.request.Request(dl_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=120) as resp, open(temp_zip, "wb") as out_file:
+                shutil.copyfileobj(resp, out_file, length=128 * 1024)
+            downloaded = True
+            log("Download successful.")
+            break
+        except Exception as e:
+            log(f"Download failed for {dl_url}: {e}")
+
+    if not downloaded:
+        raise RuntimeError("Could not download Brave Origin from any release URL.")
 
     log(f"Extracting to {INSTALL_DIR}...")
     os.makedirs(INSTALL_DIR, exist_ok=True)
@@ -66,9 +70,9 @@ def download_and_extract(download_url):
         os.remove(temp_zip)
 
 def setup_binaries_and_symlinks():
-    # Identify the executable binary
     possible_bins = ["brave", "brave-browser", "brave-origin"]
     main_bin = None
+
     for name in possible_bins:
         path = os.path.join(INSTALL_DIR, name)
         if os.path.isfile(path):
@@ -76,7 +80,6 @@ def setup_binaries_and_symlinks():
             break
 
     if not main_bin:
-        # Check subdirectories
         for root, _, files in os.walk(INSTALL_DIR):
             for name in possible_bins:
                 if name in files:
@@ -91,7 +94,6 @@ def setup_binaries_and_symlinks():
 
     os.chmod(main_bin, 0o755)
 
-    # Symlink to /usr/local/bin
     os.makedirs("/usr/local/bin", exist_ok=True)
     links = [
         "/usr/local/bin/brave-origin",
@@ -110,7 +112,6 @@ def setup_binaries_and_symlinks():
     return True
 
 def setup_desktop_and_icons():
-    # Find icon
     icon_source = None
     for root, _, files in os.walk(INSTALL_DIR):
         for f in files:
@@ -130,7 +131,6 @@ def setup_desktop_and_icons():
         except Exception as e:
             log(f"Error copying desktop icons: {e}")
 
-    # Desktop entry content
     desktop_content = """[Desktop Entry]
 Version=1.0
 Name=Brave Origin
@@ -159,7 +159,6 @@ StartupWMClass=brave-browser
     os.chmod(browser_desktop_path, 0o644)
     log(f"Installed desktop entries at {desktop_path} and {browser_desktop_path}")
 
-    # Configure default browser via xdg
     try:
         subprocess.run(["xdg-settings", "set", "default-web-browser", "brave-origin.desktop"],
                        check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -173,24 +172,16 @@ StartupWMClass=brave-browser
         pass
 
 def main():
-    if os.geteuid() != 0:
-        print("Brave Origin installation requires root privileges.")
-        sys.exit(1)
-
-    url = get_release_asset()
-    if not url:
-        log("Could not find release asset from GitHub API.")
-        sys.exit(1)
-
+    urls = get_release_urls()
     try:
-        download_and_extract(url)
+        download_and_extract(urls)
         if setup_binaries_and_symlinks():
             setup_desktop_and_icons()
-            log("Brave Origin installed successfully.")
+            log("Brave Origin preinstalled successfully.")
         else:
             sys.exit(1)
     except Exception as e:
-        log(f"Installation failed: {e}")
+        log(f"Preinstallation failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

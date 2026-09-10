@@ -259,6 +259,25 @@ arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
 chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
 ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 
+# Preinstall Flatpak applications directly into target system storage
+echo -e "\n\033[1;36m==> Preinstalling Flatpak Desktop Applications (Bazaar App Store, LocalSend)\033[0m"
+if command -v flatpak >/dev/null 2>&1; then
+  mkdir -p /etc/flatpak/installations.d /mnt/var/lib/flatpak
+  cat <<'TARGET_FLATPAK_EOF' > /etc/flatpak/installations.d/target.conf
+[Installation "target"]
+Path=/mnt/var/lib/flatpak
+DisplayName=Target System
+StorageType=harddisk
+TARGET_FLATPAK_EOF
+
+  flatpak remote-add --if-not-exists --installation=target flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+  flatpak install -y --noninteractive --installation=target flathub io.github.kolunmi.Bazaar org.localsend.localsend_app 2>/dev/null || true
+  rm -f /etc/flatpak/installations.d/target.conf
+
+  # Configure flathub remote inside target system
+  arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+fi
+
 echo -e "\n\033[1;32mInstallation complete! Unmounting filesystems...\033[0m"
 umount -R /mnt
 if [[ "$ENCRYPT_OPT" =~ ^[Yy]$ ]]; then

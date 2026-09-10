@@ -5,7 +5,7 @@ gnomarchy_header "Installing Brave Origin (Debloated Privacy Browser)"
 # 1. Primary: Install official Brave Origin binary via GitHub Release installer
 if ! command -v brave-origin >/dev/null 2>&1 && ! command -v brave >/dev/null 2>&1; then
   echo "Installing official Brave Origin release binary..."
-  sudo python3 "$GNOMARCHY_INSTALL/packaging/install-brave.py" 2>/dev/null || true
+  sudo python3 "$GNOMARCHY_INSTALL/packaging/install-brave.py" || true
 fi
 
 # 2. Secondary Fallback: Install via Paru AUR helper if available
