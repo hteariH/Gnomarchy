@@ -29,6 +29,7 @@ Commands:
   keymap <omarchy|gnome|status>
                                Switch between Omarchy and Gnomarchy key layouts
   keybindings [--list]         Search the keybindings that are actually active
+  manual [page|--grep <text>]  Read the Gnomarchy manual
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
@@ -78,6 +79,10 @@ case "$command_group" in
   keybindings | keys)
     shift
     exec gnomarchy-keybindings "$@"
+    ;;
+  manual | docs)
+    shift
+    exec gnomarchy-manual "$@"
     ;;
   theme)
     case "$subcommand" in

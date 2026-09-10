@@ -157,7 +157,25 @@ gnomarchy tiling disable
 gnomarchy tiling status
 ```
 
-### Keybindings Manual & Search
+### The Manual
+
+```bash
+gnomarchy manual                    # browse and search
+gnomarchy manual 04                 # open a page by number
+gnomarchy manual tiling             # or by name
+gnomarchy manual --grep whisper     # search every page
+```
+
+Sixteen pages covering keybindings, tiling, themes, backgrounds, the menu,
+terminal, Neovim, web apps, dictation, screenshots, updates and migrations,
+snapshots, the Windows VM, and troubleshooting. Also on `Super + Shift + K`
+and under **Manual** in the command center.
+
+Unlike Omarchy's, which is a website, this manual is local: it works in a TTY,
+with no network, and on the half-installed system where the troubleshooting
+page is most needed.
+
+### Keybindings Search
 
 ```bash
 gnomarchy keybindings          # searchable list (also Super+K, or from the menu)

@@ -28,6 +28,12 @@ on:
         type: boolean
         default: false
 
+# A full install takes tens of minutes. Without this, a run of pushes queues a
+# run each and they all grind through the same work; only the newest matters.
+concurrency:
+  group: install-smoke-test-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

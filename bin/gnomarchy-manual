@@ -1,0 +1,174 @@
+#!/bin/bash
+
+# Gnomarchy manual
+#
+# Omarchy publishes its manual as a website. This one is local: it works in a
+# TTY, on a machine with no network, and on the half-installed system where you
+# most need the troubleshooting page.
+#
+#   gnomarchy manual              browse and search
+#   gnomarchy manual 04           open a page by number
+#   gnomarchy manual tiling       open a page by name
+#   gnomarchy manual --list       list the pages
+#   gnomarchy manual --grep word  search the text of every page
+set -eEo pipefail
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+MANUAL_DIR="$GNOMARCHY_PATH/manual"
+
+# Launched from a keybinding there is no terminal attached; re-exec into one.
+if [[ -z "${GNOMARCHY_MANUAL_TTY:-}" ]] && ! [[ -t 1 ]]; then
+  export GNOMARCHY_MANUAL_TTY=1
+  if command -v gnome-terminal >/dev/null 2>&1; then
+    exec gnome-terminal --title="Gnomarchy Manual" --geometry=96x40 -- "$0" "$@"
+  elif command -v alacritty >/dev/null 2>&1; then
+    exec alacritty --title "Gnomarchy Manual" -e "$0" "$@"
+  fi
+fi
+
+if [[ ! -d "$MANUAL_DIR" ]]; then
+  echo "No manual found at $MANUAL_DIR" >&2
+  echo "Run 'gnomarchy update' to fetch it." >&2
+  exit 1
+fi
+
+# "04-tiling.md" -> "04  Tiling"
+page_title() {
+  local base
+  base="$(basename "$1" .md)"
+  local num="${base%%-*}"
+  local slug="${base#*-}"
+  slug="${slug//-/ }"
+  printf '%s  %s' "$num" "$(tr '[:lower:]' '[:upper:]' <<<"${slug:0:1}")${slug:1}"
+}
+
+list_pages() {
+  local f
+  for f in "$MANUAL_DIR"/*.md; do
+    [[ -f "$f" ]] || continue
+    page_title "$f"
+    printf '\n'
+  done
+}
+
+# Accepts a number ("4", "04"), a slug ("tiling"), or a title from the picker.
+resolve_page() {
+  local query="$1" f base
+  query="${query%% *}"
+  [[ -z "$query" ]] && return 1
+
+  for f in "$MANUAL_DIR"/*.md; do
+    [[ -f "$f" ]] || continue
+    base="$(basename "$f" .md)"
+    if [[ "${base%%-*}" == "$query" ]] ||
+      [[ "${base%%-*}" == "0$query" ]] ||
+      [[ "$base" == "$query" ]] ||
+      [[ "${base#*-}" == "$query" ]]; then
+      printf '%s' "$f"
+      return 0
+    fi
+  done
+
+  # Fall back to a substring match on the slug.
+  for f in "$MANUAL_DIR"/*.md; do
+    [[ -f "$f" ]] || continue
+    base="$(basename "$f" .md)"
+    if [[ "${base#*-}" == *"$query"* ]]; then
+      printf '%s' "$f"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+render() {
+  local file="$1"
+  if command -v glow >/dev/null 2>&1; then
+    glow -p "$file"
+  elif command -v bat >/dev/null 2>&1; then
+    bat --style=plain --language=markdown --paging=always "$file"
+  elif command -v less >/dev/null 2>&1; then
+    less -R "$file"
+  else
+    cat "$file"
+  fi
+}
+
+browse() {
+  if command -v gum >/dev/null 2>&1 && [[ -t 0 ]]; then
+    while true; do
+      local choice
+      choice="$(list_pages | gum filter \
+        --header "Gnomarchy Manual" \
+        --placeholder "type to search..." \
+        --height 20)" || return 0
+      [[ -z "$choice" ]] && return 0
+
+      local file
+      file="$(resolve_page "$choice")" || {
+        echo "No such page: $choice" >&2
+        return 1
+      }
+      render "$file"
+    done
+  else
+    echo "Gnomarchy Manual"
+    echo
+    list_pages | sed 's/^/  /'
+    echo
+    echo "Open a page with: gnomarchy manual <number|name>"
+  fi
+}
+
+case "${1:-browse}" in
+  --list | list | -l)
+    list_pages
+    ;;
+
+  --grep | grep | -g | search)
+    shift
+    [[ $# -eq 0 ]] && {
+      echo "Usage: gnomarchy manual --grep <text>" >&2
+      exit 1
+    }
+    found=0
+    for f in "$MANUAL_DIR"/*.md; do
+      [[ -f "$f" ]] || continue
+      if grep -qi -- "$*" "$f"; then
+        found=1
+        printf '\n\033[1;36m%s\033[0m\n' "$(page_title "$f")"
+        grep -in --color=never -- "$*" "$f" | sed 's/^/    /'
+      fi
+    done
+    ((found)) || {
+      echo "No matches for: $*"
+      exit 1
+    }
+    ;;
+
+  browse | "")
+    browse
+    ;;
+
+  --help | -h | help)
+    cat <<'EOF'
+Usage: gnomarchy manual [page|--list|--grep <text>]
+
+  (no argument)     browse and search the manual
+  <number|name>     open a page, e.g. "04" or "tiling"
+  --list            list the pages
+  --grep <text>     search the text of every page
+EOF
+    ;;
+
+  *)
+    file="$(resolve_page "$1")" || {
+      echo "No manual page matching: $1" >&2
+      echo >&2
+      list_pages | sed 's/^/  /' >&2
+      exit 1
+    }
+    render "$file"
+    ;;
+esac

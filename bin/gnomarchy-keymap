@@ -112,7 +112,7 @@ apply_omarchy() {
   fi
 
   # --- Applications and menus ----------------------------------------------
-  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7 custom8
+  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7 custom8 custom9
   set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
   set_custom custom1 'Browser' "$BROWSER_CMD" '<Super><Shift>b'
   set_custom custom2 'Files' 'nautilus' '<Super><Shift>f'
@@ -122,6 +122,7 @@ apply_omarchy() {
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
   set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
   set_custom custom8 'Editor' 'gnome-terminal -- nvim' '<Super><Shift>n'
+  set_custom custom9 'Manual' 'gnomarchy-manual' '<Super><Shift>k'
 
   # Omarchy puts its apps menu on Super+Alt+Space, but that is the Gnomarchy
   # menu here, so the app grid keeps GNOME's own Super+A.
@@ -157,7 +158,7 @@ apply_gnome() {
   gsettings set "$WM" switch-applications "['<Super>Tab', '<Alt>Tab']"
   gsettings reset "$WM" switch-input-source 2>/dev/null || true
 
-  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7
+  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7 custom8
   set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
   set_custom custom1 'Browser' "$BROWSER_CMD" '<Super>b'
   set_custom custom2 'Files' 'nautilus' '<Super>e'
@@ -166,6 +167,7 @@ apply_gnome() {
   set_custom custom5 'Retro Screensaver' 'gnomarchy screensaver' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
   set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
+  set_custom custom8 'Manual' 'gnomarchy-manual' '<Super><Shift>k'
 
   if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
     gsettings set "$TS" focus-window-left "['<Super>h']"
@@ -203,6 +205,7 @@ show_status() {
   Super + A                 app grid
   Super + Escape            system menu
   Super + K                 this list
+  Super + Shift + K         the manual
 
   Super + W / Super + Q     close window
   Super + F                 fullscreen
@@ -232,6 +235,7 @@ EOF
   Super + Alt + Space       Gnomarchy menu
   Super + Escape            screensaver
   Super + K                 searchable keybindings
+  Super + Shift + K         the manual
   Super + T                 Tactile grid (manual tiling)
 
   Super + W                 close window
