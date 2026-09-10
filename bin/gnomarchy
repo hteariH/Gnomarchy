@@ -3,7 +3,14 @@
 # Gnomarchy Master CLI Dispatcher
 set -e
 
-GNOMARCHY_BIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SCRIPT_SOURCE" ]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+  SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+  [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
+done
+GNOMARCHY_BIN_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+export GNOMARCHY_PATH="${GNOMARCHY_PATH:-$(cd -- "$GNOMARCHY_BIN_DIR/.." && pwd)}"
 export PATH="$GNOMARCHY_BIN_DIR:$PATH"
 
 command_group="$1"

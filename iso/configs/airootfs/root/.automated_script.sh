@@ -242,6 +242,8 @@ else
   git clone https://github.com/hteariH/Gnomarchy.git "/mnt/home/$USERNAME/.local/share/gnomarchy"
 fi
 
+chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
+ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 chown -R 1000:1000 "/mnt/home/$USERNAME/.local"
 
 # Run Gnomarchy desktop installer inside chroot
@@ -251,8 +253,11 @@ arch-chroot -u "$USERNAME" /mnt /bin/bash -c "
   export GNOMARCHY_CHROOT_INSTALL=1
   export USER=\"$USERNAME\"
   export HOME=\"/home/$USERNAME\"
+  export PATH=\"/usr/local/bin:/home/$USERNAME/.local/share/gnomarchy/bin:\$PATH\"
   bash /home/$USERNAME/.local/share/gnomarchy/install.sh
 "
+chmod +x "/mnt/home/$USERNAME/.local/share/gnomarchy/bin"/* 2>/dev/null || true
+ln -sf "/home/$USERNAME/.local/share/gnomarchy/bin/gnomarchy" /mnt/usr/local/bin/gnomarchy 2>/dev/null || true
 
 echo -e "\n\033[1;32mInstallation complete! Unmounting filesystems...\033[0m"
 umount -R /mnt

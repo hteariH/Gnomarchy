@@ -62,6 +62,8 @@ rsync -a --exclude=".git" --exclude="out" --exclude="iso/work" "$REPO_ROOT/" "$P
 
 # Ensure installer script permissions inside profile
 chmod 755 "$PROFILE_DIR/airootfs/root/.automated_script.sh" 2>/dev/null || true
+chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/bin"/* 2>/dev/null || true
+chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/install.sh" 2>/dev/null || true
 
 # 5. Run mkarchiso
 echo -e "\n\033[1;36m==> Running mkarchiso to build Gnomarchy ISO...\033[0m"

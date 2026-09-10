@@ -1,0 +1,10 @@
+# Ensure Unix line endings for all scripts and configurations across all platforms
+* text=auto eol=lf
+
+# Binary assets
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary

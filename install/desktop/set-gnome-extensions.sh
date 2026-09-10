@@ -3,6 +3,7 @@
 gnomarchy_header "Installing & Configuring GNOME Extensions"
 
 EXTENSIONS=(
+  "dash-to-dock@micxgx.gmail.com"
   "tactile@lundal.io"
   "just-perfection-desktop@just-perfection"
   "blur-my-shell@aunetx"
@@ -10,96 +11,88 @@ EXTENSIONS=(
   "tophat@fflewddur.github.io"
   "AlphabeticalAppGrid@stuarthayhurst"
   "appindicatorsupport@rgcjonas.gmail.com"
-  "dash-to-dock@micxgx.gmail.com"
 )
 
-# Install extensions via gnome-extensions-cli
-for ext in "${EXTENSIONS[@]}"; do
-  echo "  Installing extension: $ext"
-  if command -v gext >/dev/null 2>&1; then
-    gext install "$ext" 2>/dev/null || true
+# 1. Deploy extensions and compile system-wide schemas via Python installer
+if [ -f "$GNOMARCHY_INSTALL/desktop/install-extensions.py" ]; then
+  python3 "$GNOMARCHY_INSTALL/desktop/install-extensions.py"
+fi
+
+# 2. Enable user extensions and activate each extension
+gsettings set org.gnome.shell disable-user-extensions false 2>/dev/null || true
+if command -v gnome-extensions >/dev/null 2>&1; then
+  for ext in "${EXTENSIONS[@]}"; do
     gnome-extensions enable "$ext" 2>/dev/null || true
-  fi
-done
-
-# Copy any available extension schemas into system schemas for gsettings access
-EXT_DIR="$HOME/.local/share/gnome-shell/extensions"
-if [ -d "$EXT_DIR" ]; then
-  for schema_dir in "$EXT_DIR"/*/schemas; do
-    if [ -d "$schema_dir" ]; then
-      sudo cp -f "$schema_dir"/*.gschema.xml /usr/share/glib-2.0/schemas/ 2>/dev/null || true
-    fi
   done
-  sudo glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true
 fi
 
-# Configure Tactile (Option A: Omakub Grid Tiling)
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.tactile"; then
+# 3. Configure Tactile (Option A: Omakub Grid Tiling)
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tactile"; then
   echo "  Configuring Tactile tiling grid..."
-  gsettings set org.gnome.shell.extensions.tactile col-0 1
-  gsettings set org.gnome.shell.extensions.tactile col-1 2
-  gsettings set org.gnome.shell.extensions.tactile col-2 1
-  gsettings set org.gnome.shell.extensions.tactile col-3 0
-  gsettings set org.gnome.shell.extensions.tactile row-0 1
-  gsettings set org.gnome.shell.extensions.tactile row-1 1
-  gsettings set org.gnome.shell.extensions.tactile gap-size 18
-  gsettings set org.gnome.shell.extensions.tactile show-tiles "['<Super>t']"
+  gsettings set org.gnome.shell.extensions.tactile col-0 1 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile col-1 2 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile col-2 1 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile col-3 0 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile row-0 1 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile row-1 1 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile gap-size 18 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tactile show-tiles "['<Super>t']" 2>/dev/null || true
 fi
 
-# Configure Just Perfection
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.just-perfection"; then
-  gsettings set org.gnome.shell.extensions.just-perfection animation 2
-  gsettings set org.gnome.shell.extensions.just-perfection dash-app-running true
-  gsettings set org.gnome.shell.extensions.just-perfection workspace true
-  gsettings set org.gnome.shell.extensions.just-perfection workspace-popup false
+# 4. Configure Just Perfection
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.just-perfection"; then
+  gsettings set org.gnome.shell.extensions.just-perfection animation 2 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.just-perfection dash-app-running true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.just-perfection workspace true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.just-perfection workspace-popup false 2>/dev/null || true
 fi
 
-# Configure Blur My Shell
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.blur-my-shell"; then
-  gsettings set org.gnome.shell.extensions.blur-my-shell.overview blur true
-  gsettings set org.gnome.shell.extensions.blur-my-shell.overview pipeline 'pipeline_default'
-  gsettings set org.gnome.shell.extensions.blur-my-shell.panel blur false
-  gsettings set org.gnome.shell.extensions.blur-my-shell.lockscreen blur false
+# 5. Configure Blur My Shell
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.blur-my-shell"; then
+  gsettings set org.gnome.shell.extensions.blur-my-shell.overview blur true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.blur-my-shell.overview pipeline 'pipeline_default' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.blur-my-shell.panel blur false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.blur-my-shell.lockscreen blur false 2>/dev/null || true
 fi
 
-# Configure Space Bar (Clean numeric workspaces)
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.space-bar"; then
-  gsettings set org.gnome.shell.extensions.space-bar.behavior smart-workspace-names false
-  gsettings set org.gnome.shell.extensions.space-bar.shortcuts enable-activate-workspace-shortcuts false
-  gsettings set org.gnome.shell.extensions.space-bar.shortcuts enable-move-to-workspace-shortcuts true
+# 6. Configure Space Bar (Clean numeric workspaces)
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.space-bar"; then
+  gsettings set org.gnome.shell.extensions.space-bar.behavior smart-workspace-names false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.space-bar.shortcuts enable-activate-workspace-shortcuts false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.space-bar.shortcuts enable-move-to-workspace-shortcuts true 2>/dev/null || true
 fi
 
-# Configure TopHat (Minimal top bar system metrics)
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.tophat"; then
-  gsettings set org.gnome.shell.extensions.tophat show-icons false
-  gsettings set org.gnome.shell.extensions.tophat show-cpu true
-  gsettings set org.gnome.shell.extensions.tophat show-mem true
-  gsettings set org.gnome.shell.extensions.tophat show-disk false
-  gsettings set org.gnome.shell.extensions.tophat network-usage-unit bits
+# 7. Configure TopHat (Minimal top bar system metrics)
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tophat"; then
+  gsettings set org.gnome.shell.extensions.tophat show-icons false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tophat show-cpu true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tophat show-mem true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tophat show-disk false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.tophat network-usage-unit bits 2>/dev/null || true
 fi
 
-# Configure Alphabetical App Grid (Option B: Native launcher organized cleanly)
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.alphabetical-app-grid"; then
-  gsettings set org.gnome.shell.extensions.alphabetical-app-grid folder-order-position 'end'
+# 8. Configure Alphabetical App Grid (Clean native launcher)
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.alphabetical-app-grid"; then
+  gsettings set org.gnome.shell.extensions.alphabetical-app-grid folder-order-position 'end' 2>/dev/null || true
 fi
 
-# Configure Dash to Dock (Ubuntu-style left side panel)
-if gsettings list-schemas | grep -q "org.gnome.shell.extensions.dash-to-dock"; then
+# 9. Configure Dash to Dock (Ubuntu-style left side panel)
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.dash-to-dock"; then
   echo "  Configuring Dash to Dock (Ubuntu style on left edge)..."
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT'
-  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height true
-  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true
-  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false
-  gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 38
-  gsettings set org.gnome.shell.extensions.dash-to-dock show-trash false
-  gsettings set org.gnome.shell.extensions.dash-to-dock show-mounts false
-  gsettings set org.gnome.shell.extensions.dash-to-dock multi-monitor true
-  gsettings set org.gnome.shell.extensions.dash-to-dock show-apps-at-top false
-  gsettings set org.gnome.shell.extensions.dash-to-dock running-indicator-style 'DOTS'
-  gsettings set org.gnome.shell.extensions.dash-to-dock hot-keys false
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 38 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-trash false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-mounts false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock multi-monitor true 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-apps-at-top false 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock running-indicator-style 'DOTS' 2>/dev/null || true
+  gsettings set org.gnome.shell.extensions.dash-to-dock hot-keys false 2>/dev/null || true
 fi
 
-# Configure Pinned Dock Favorites (Ubuntu / Developer layout)
+# 10. Configure Pinned Dock Favorites (Ubuntu / Developer layout)
 BROWSER_DESKTOP="brave-origin.desktop"
 if [ -f "/usr/share/applications/brave-browser-origin.desktop" ]; then
   BROWSER_DESKTOP="brave-browser-origin.desktop"

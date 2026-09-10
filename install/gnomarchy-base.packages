@@ -8,6 +8,8 @@ gnome-control-center
 gnome-tweaks
 gnome-keyring
 gnome-browser-connector
+gnome-shell-extension-appindicator
+extension-manager
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 xdg-user-dirs
@@ -73,6 +75,7 @@ fd
 zoxide
 jq
 less
+unzip
 plocate
 dust
 tldr
