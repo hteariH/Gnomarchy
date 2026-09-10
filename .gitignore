@@ -9,6 +9,9 @@ iso/work/
 # Logs & caches
 *.log
 .cache/
+.wrangler/
+node_modules/
+
 
 # OS specific
 .DS_Store
