@@ -104,7 +104,7 @@ jobs:
           cat answers/gnomarchy-unattended.conf
 
           truncate -s 8M answers.img
-          mkfs.vfat -n GNOMARCHY_AUTO answers.img
+          mkfs.vfat -n GNOMARCHY answers.img
           mcopy -i answers.img answers/gnomarchy-unattended.conf ::/
           mdir -i answers.img ::/
 
@@ -257,6 +257,16 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts
+          # Always leave something behind, so an early failure still uploads a
+          # usable artifact instead of an empty directory.
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "commit: ${{ github.sha }}"
+            echo "kvm: ${{ steps.kvm.outputs.available }}"
+            echo "root mounted: ${{ steps.mount.outputs.mounted }}"
+            echo "---"
+            ls -lh out/ 2>/dev/null || echo "(no ISO built)"
+          } > artifacts/summary.txt
           cp installer-serial.log artifacts/ 2>/dev/null || true
           cp session-serial.log artifacts/ 2>/dev/null || true
           sudo cp /mnt/gnomarchy/var/log/gnomarchy-install.log artifacts/ 2>/dev/null || true

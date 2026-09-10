@@ -18,7 +18,7 @@ dock entries, a deployed tree with no `.git`, helper commands missing from the
 session PATH, and a wallpaper path pointing at a layout that no longer existed.
 
 The installer is driven by an answers file on a separate disk labeled
-`GNOMARCHY_AUTO`, so **the ISO under test is byte for byte the ISO that ships**.
+`GNOMARCHY`, so **the ISO under test is byte for byte the ISO that ships**.
 To reproduce locally:
 
 ```bash
@@ -26,7 +26,7 @@ printf '%s
 '   'GNOMARCHY_DISK=/dev/vda'   'GNOMARCHY_FULLNAME="Test User"'   'GNOMARCHY_USERNAME=citest'   'GNOMARCHY_PASSWORD=test-password'   'GNOMARCHY_ENCRYPT=n' > gnomarchy-unattended.conf
 
 truncate -s 8M answers.img
-mkfs.vfat -n GNOMARCHY_AUTO answers.img
+mkfs.vfat -n GNOMARCHY answers.img
 mcopy -i answers.img gnomarchy-unattended.conf ::/
 ```
 

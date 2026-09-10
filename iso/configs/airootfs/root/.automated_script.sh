@@ -38,7 +38,7 @@ fi
 # ---------------------------------------------------------------------------
 # Unattended answers (optional)
 #
-# If a block device labeled GNOMARCHY_AUTO is attached, or the boot medium
+# If a block device labeled GNOMARCHY is attached, or the boot medium
 # carries gnomarchy-unattended.conf, read the installation answers from it and
 # skip the prompts. This is what CI drives, so the released ISO is byte for
 # byte the ISO that gets tested -- the answers arrive on a separate disk
@@ -60,7 +60,7 @@ find_unattended_conf() {
     return 0
   fi
 
-  dev="$(blkid -L GNOMARCHY_AUTO 2>/dev/null || true)"
+  dev="$(blkid -L GNOMARCHY 2>/dev/null || true)"
   if [ -n "$dev" ]; then
     mkdir -p "$mnt"
     if mount -o ro "$dev" "$mnt" 2>/dev/null; then
