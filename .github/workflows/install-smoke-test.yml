@@ -164,6 +164,22 @@ jobs:
             exit 1
           fi
 
+      - name: Show where the installer got to
+        if: always() && steps.mount.outputs.mounted == 'true'
+        run: |
+          LOG=/mnt/gnomarchy/var/log/gnomarchy-install.log
+          if sudo test -f "$LOG"; then
+            echo "Last stage completed:"
+            sudo grep 'STAGE OK' "$LOG" | tail -1 || echo "  (none)"
+            echo "Stopped in:"
+            sudo grep 'STAGE START' "$LOG" | tail -1 || echo "  (none)"
+            echo
+            echo "--- last 60 lines of the install log ---"
+            sudo tail -60 "$LOG"
+          else
+            echo "::warning::No install log on the target; the chroot stage may never have started."
+          fi
+
       - name: Verify installed system (offline)
         env:
           GNOMARCHY_TEST_USER: citest
