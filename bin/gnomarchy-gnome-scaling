@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Enable or configure fractional scaling in GNOME / Mutter
+scale="$1"
+
+if [[ -z "$scale" ]]; then
+  echo "Current Mutter experimental features:"
+  gsettings get org.gnome.mutter experimental-features
+  echo -e "\nTo enable fractional scaling support: gnomarchy gnome scaling enable"
+  echo "To set text scaling factor:            gnomarchy gnome scaling text 1.25"
+  exit 0
+fi
+
+case "$scale" in
+  enable)
+    echo "Enabling Wayland fractional scaling in GNOME..."
+    gsettings set org.gnome.mutter experimental-features "['scale-monitor-framebuffer']"
+    echo "Fractional scaling is now available in GNOME Settings -> Displays."
+    ;;
+  disable)
+    echo "Disabling fractional scaling experimental flag..."
+    gsettings set org.gnome.mutter experimental-features "[]"
+    ;;
+  text)
+    factor="$2"
+    if [[ -z "$factor" ]]; then
+      echo "Current text scaling factor: $(gsettings get org.gnome.desktop.interface text-scaling-factor)"
+    else
+      echo "Setting text scaling factor to: $factor"
+      gsettings set org.gnome.desktop.interface text-scaling-factor "$factor"
+    fi
+    ;;
+  *)
+    echo "Usage: gnomarchy gnome scaling <enable|disable|text [factor]>"
+    exit 1
+    ;;
+esac

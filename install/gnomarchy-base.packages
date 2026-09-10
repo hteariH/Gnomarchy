@@ -1,0 +1,102 @@
+# Gnomarchy Core Packages List
+# Base System & Desktop Layer: GNOME 47/48 on Arch Linux
+
+# Display Manager & Desktop Environment
+gdm
+gnome-shell
+gnome-control-center
+gnome-tweaks
+gnome-keyring
+gnome-browser-connector
+xdg-desktop-portal-gnome
+xdg-desktop-portal-gtk
+xdg-user-dirs
+polkit-gnome
+mutter
+
+# GNOME Applications & File Management
+nautilus
+nautilus-python
+sushi
+gnome-calculator
+gnome-disk-utility
+gnome-system-monitor
+gnome-text-editor
+evince
+loupe
+gnome-themes-extra
+yaru-icon-theme
+
+# Sound, Media, & PipeWire
+pipewire
+pipewire-alsa
+pipewire-pulse
+wireplumber
+alsa-utils
+mpv
+imv
+ffmpegthumbnailer
+
+# System, Boot & Storage
+plymouth
+btrfs-progs
+snapper
+snap-pac
+limine
+power-profiles-daemon
+bolt
+bluez
+bluez-utils
+networkmanager
+avahi
+nss-mdns
+ufw
+wl-clipboard
+libsecret
+dosfstools
+exfatprogs
+
+# Developer CLI & Terminal Environment
+alacritty
+neovim
+tmux
+starship
+btop
+fastfetch
+eza
+bat
+fzf
+ripgrep
+fd
+zoxide
+jq
+less
+plocate
+dust
+tldr
+git
+github-cli
+gum
+tree-sitter-cli
+lazygit
+lazydocker
+docker
+docker-compose
+docker-buildx
+
+# Python & Extension Tools
+python
+python-pip
+python-pipx
+python-gobject
+libyaml
+
+# Fonts & Typography
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+ttf-jetbrains-mono-nerd
+
+# Graphic Annotations & Utilities
+satty
+localsend

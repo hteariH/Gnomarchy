@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Update Arch system and sync Gnomarchy updates
+set -e
+
+echo -e "\033[1;36m==> Updating Gnomarchy System Packages\033[0m"
+
+# Update Pacman packages
+sudo pacman -Syu --noconfirm
+
+# Update AUR packages if yay is present
+if command -v yay >/dev/null 2>&1; then
+  echo -e "\n\033[1;36m==> Updating AUR Packages\033[0m"
+  yay -Sua --noconfirm
+fi
+
+# Update Gnomarchy git repo if tracking git
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
+  echo -e "\n\033[1;36m==> Updating Gnomarchy Configurations\033[0m"
+  git -C "$GNOMARCHY_PATH" pull --rebase origin main || true
+fi
+
+echo -e "\n\033[1;32m✓ System up to date!\033[0m"

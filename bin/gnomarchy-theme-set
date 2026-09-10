@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# Apply a Gnomarchy theme across GNOME, Terminal, and Editor
+set -e
+
+if [[ -z "$1" ]]; then
+  echo "Usage: gnomarchy theme set <theme-name>"
+  exit 1
+fi
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+THEME_NAME="$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')"
+
+SYSTEM_THEMES_DIR="$GNOMARCHY_PATH/themes"
+USER_THEMES_DIR="$HOME/.config/gnomarchy/themes"
+
+if [[ -d "$USER_THEMES_DIR/$THEME_NAME" ]]; then
+  THEME_DIR="$USER_THEMES_DIR/$THEME_NAME"
+elif [[ -d "$SYSTEM_THEMES_DIR/$THEME_NAME" ]]; then
+  THEME_DIR="$SYSTEM_THEMES_DIR/$THEME_NAME"
+else
+  echo "Theme '$THEME_NAME' not found."
+  echo "Run 'gnomarchy theme list' to see available themes."
+  exit 1
+fi
+
+CURRENT_DIR="$HOME/.config/gnomarchy/current"
+mkdir -p "$CURRENT_DIR"
+echo "$THEME_NAME" > "$CURRENT_DIR/theme.name"
+
+# 1. Apply GNOME Color Mode (Dark vs Light)
+if [[ -f "$THEME_DIR/light.mode" ]]; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-light' 2>/dev/null || true
+else
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+fi
+
+# 2. Apply GNOME Accent Color (GNOME 47+)
+if [[ -f "$THEME_DIR/accent.txt" ]]; then
+  ACCENT="$(<"$THEME_DIR/accent.txt")"
+  gsettings set org.gnome.desktop.interface accent-color "$ACCENT" 2>/dev/null || true
+fi
+
+# 3. Apply Wallpaper
+WALLPAPER=""
+if [[ -d "$THEME_DIR/backgrounds" ]]; then
+  WALLPAPER=$(find "$THEME_DIR/backgrounds" -type f \( -name "*.jpg" -o -name "*.png" \) | head -n 1)
+elif [[ -f "$THEME_DIR/background.jpg" ]]; then
+  WALLPAPER="$THEME_DIR/background.jpg"
+elif [[ -f "$THEME_DIR/background.png" ]]; then
+  WALLPAPER="$THEME_DIR/background.png"
+fi
+
+if [[ -n "$WALLPAPER" ]]; then
+  gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null || true
+  gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null || true
+fi
+
+# 4. Apply Alacritty Terminal Theme
+if [[ -f "$THEME_DIR/alacritty.toml" ]]; then
+  mkdir -p "$HOME/.config/alacritty"
+  cp "$THEME_DIR/alacritty.toml" "$HOME/.config/alacritty/colors.toml"
+  
+  # Ensure alacritty.toml imports colors.toml
+  if [[ -f "$HOME/.config/alacritty/alacritty.toml" ]]; then
+    if ! grep -q "colors.toml" "$HOME/.config/alacritty/alacritty.toml"; then
+      echo 'import = ["~/.config/alacritty/colors.toml"]' >> "$HOME/.config/alacritty/alacritty.toml"
+    fi
+  else
+    echo 'import = ["~/.config/alacritty/colors.toml"]' > "$HOME/.config/alacritty/alacritty.toml"
+  fi
+fi
+
+# 5. Apply Neovim Theme
+if [[ -f "$THEME_DIR/neovim.lua" ]]; then
+  mkdir -p "$HOME/.config/nvim/lua/plugins"
+  cp "$THEME_DIR/neovim.lua" "$HOME/.config/nvim/lua/plugins/theme.lua" 2>/dev/null || true
+fi
+
+# 6. Apply btop Theme
+if [[ -f "$THEME_DIR/btop.theme" ]]; then
+  mkdir -p "$HOME/.config/btop/themes"
+  cp "$THEME_DIR/btop.theme" "$HOME/.config/btop/themes/current.theme" 2>/dev/null || true
+fi
+
+echo "Applied theme: $THEME_NAME"
+
+# Notify user on desktop if display session is active
+if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
+  notify-send -i preferences-desktop-theme "Gnomarchy Theme" "Active theme switched to $THEME_NAME" 2>/dev/null || true
+fi

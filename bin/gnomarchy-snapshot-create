@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Create a Btrfs Snapper snapshot
+description="$1"
+if [[ -z "$description" ]]; then
+  description="Manual snapshot $(date '+%Y-%m-%d %H:%M')"
+fi
+
+echo "Creating Snapper root snapshot: $description"
+sudo snapper -c root create -d "$description"
+echo "Snapshot created successfully."

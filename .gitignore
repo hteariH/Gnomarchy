@@ -1,0 +1,15 @@
+# Build output & images
+out/
+*.iso
+*.qcow2
+*.img
+iso/work/
+/tmp/
+
+# Logs & caches
+*.log
+.cache/
+
+# OS specific
+.DS_Store
+Thumbs.db

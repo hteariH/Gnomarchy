@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# Gnomarchy Master CLI Dispatcher
+set -e
+
+GNOMARCHY_BIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$GNOMARCHY_BIN_DIR:$PATH"
+
+command_group="$1"
+subcommand="$2"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy <command> [subcommand] [arguments...]
+
+Commands:
+  theme <set|list|current>     Manage system and desktop color themes
+  gnome <extensions|hotkeys|scaling|restart>
+                               Manage GNOME desktop settings & workflow
+  snapshot <create|list>       Manage Btrfs Snapper rollback snapshots
+  update                       Perform system & Gnomarchy configuration updates
+  version                      Display Gnomarchy version
+  help                         Show this help message
+EOF
+}
+
+if [[ -z "$command_group" || "$command_group" == "help" || "$command_group" == "--help" || "$command_group" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+case "$command_group" in
+  theme)
+    case "$subcommand" in
+      set)
+        shift 2
+        exec gnomarchy-theme-set "$@"
+        ;;
+      list)
+        exec gnomarchy-theme-list
+        ;;
+      current)
+        exec gnomarchy-theme-current
+        ;;
+      *)
+        echo "Usage: gnomarchy theme <set|list|current>"
+        exit 1
+        ;;
+    esac
+    ;;
+  gnome)
+    case "$subcommand" in
+      extensions)
+        shift 2
+        exec gnomarchy-gnome-extensions "$@"
+        ;;
+      hotkeys)
+        exec gnomarchy-gnome-hotkeys
+        ;;
+      scaling)
+        shift 2
+        exec gnomarchy-gnome-scaling "$@"
+        ;;
+      restart)
+        exec gnomarchy-gnome-restart
+        ;;
+      *)
+        echo "Usage: gnomarchy gnome <extensions|hotkeys|scaling|restart>"
+        exit 1
+        ;;
+    esac
+    ;;
+  snapshot)
+    case "$subcommand" in
+      create)
+        shift 2
+        exec gnomarchy-snapshot-create "$@"
+        ;;
+      list)
+        exec gnomarchy-snapshot-list
+        ;;
+      *)
+        echo "Usage: gnomarchy snapshot <create|list>"
+        exit 1
+        ;;
+    esac
+    ;;
+  update)
+    exec gnomarchy-update
+    ;;
+  version)
+    exec gnomarchy-version
+    ;;
+  *)
+    # Check if direct binary exists (e.g. gnomarchy-theme-set)
+    if command -v "gnomarchy-$command_group" >/dev/null 2>&1; then
+      shift
+      exec "gnomarchy-$command_group" "$@"
+    else
+      echo "Unknown command: $command_group"
+      usage
+      exit 1
+    fi
+    ;;
+esac

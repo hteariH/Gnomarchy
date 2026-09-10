@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Manage GNOME extensions in Gnomarchy
+action="$1"
+target="$2"
+
+case "$action" in
+  list)
+    gnome-extensions list --enabled
+    ;;
+  enable)
+    if [[ -z "$target" ]]; then
+      echo "Usage: gnomarchy gnome extensions enable <uuid>"
+      exit 1
+    fi
+    gnome-extensions enable "$target"
+    ;;
+  disable)
+    if [[ -z "$target" ]]; then
+      echo "Usage: gnomarchy gnome extensions disable <uuid>"
+      exit 1
+    fi
+    gnome-extensions disable "$target"
+    ;;
+  reset)
+    echo "Reapplying default Gnomarchy extensions..."
+    bash "$GNOMARCHY_PATH/install/desktop/set-gnome-extensions.sh"
+    ;;
+  *)
+    echo "Usage: gnomarchy gnome extensions <list|enable|disable|reset>"
+    exit 1
+    ;;
+esac

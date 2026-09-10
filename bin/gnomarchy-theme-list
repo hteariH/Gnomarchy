@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# List all available Gnomarchy themes
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+SYSTEM_THEMES_DIR="$GNOMARCHY_PATH/themes"
+USER_THEMES_DIR="$HOME/.config/gnomarchy/themes"
+
+CURRENT_THEME=""
+if [[ -f "$HOME/.config/gnomarchy/current/theme.name" ]]; then
+  CURRENT_THEME="$(<"$HOME/.config/gnomarchy/current/theme.name")"
+fi
+
+echo "Available Gnomarchy Themes:"
+echo "=========================="
+
+list_dir_themes() {
+  local dir="$1"
+  if [[ -d "$dir" ]]; then
+    for theme in "$dir"/*; do
+      if [[ -d "$theme" ]]; then
+        name="$(basename "$theme")"
+        if [[ "$name" == "$CURRENT_THEME" ]]; then
+          echo -e "  * \033[1;32m$name\033[0m (active)"
+        else
+          echo "    $name"
+        fi
+      fi
+    done
+  fi
+}
+
+list_dir_themes "$SYSTEM_THEMES_DIR"
+if [[ -d "$USER_THEMES_DIR" ]]; then
+  echo -e "\nUser Custom Themes:"
+  list_dir_themes "$USER_THEMES_DIR"
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Safe refresh of GNOME desktop components
+echo "Refreshing GNOME desktop environment..."
+
+# Reload systemd user units
+systemctl --user daemon-reload 2>/dev/null || true
+
+# Refresh extension state
+if command -v gnome-extensions >/dev/null 2>&1; then
+  for ext in $(gnome-extensions list --enabled); do
+    gnome-extensions disable "$ext" 2>/dev/null || true
+    sleep 0.2
+    gnome-extensions enable "$ext" 2>/dev/null || true
+  done
+fi
+
+echo "Desktop environment refreshed."

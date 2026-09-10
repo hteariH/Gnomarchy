@@ -1,0 +1,32 @@
+# Gnomarchy default bashrc
+if [[ $- != *i* ]]; then
+  return
+fi
+
+# PATH additions
+export PATH="$HOME/.local/share/gnomarchy/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+# Enable bash completion
+if [ -f /usr/share/bash-completion/bash_completion ]; then
+  . /usr/share/bash-completion/bash_completion
+fi
+
+# Source aliases
+if [ -f "$HOME/.local/share/gnomarchy/default/bash/aliases" ]; then
+  source "$HOME/.local/share/gnomarchy/default/bash/aliases"
+fi
+
+# Initialize starship prompt if available
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init bash)"
+fi
+
+# Initialize zoxide (smarter cd) if available
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init bash)"
+fi
+
+# Initialize mise (runtime version manager) if available
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate bash)"
+fi

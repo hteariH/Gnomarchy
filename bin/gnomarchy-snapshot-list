@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# List Snapper root snapshots
+sudo snapper -c root list
