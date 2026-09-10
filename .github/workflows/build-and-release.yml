@@ -47,6 +47,7 @@ jobs:
               chmod +x iso/builder/build-iso.sh && \
               ./iso/builder/build-iso.sh /workspace/out
             "
+          sudo chown -R $USER:$USER out
 
       - name: Generate Checksums
         run: |
