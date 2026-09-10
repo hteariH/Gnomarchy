@@ -4,7 +4,12 @@
 #
 #   omarchy  Mirrors Omarchy's Hyprland bindings as closely as GNOME allows:
 #            Super+arrows to focus, Super+Shift+arrows to move, ten workspaces
-#            on Super+1..0, Super+Space for the menu, Super+Q/W to close.
+#            on Super+1..0, Super+Q/W to close.
+#
+#            One deliberate departure: Omarchy puts its menu on Super+Space,
+#            which in GNOME switches the keyboard layout. Layout switching is
+#            used far more often than a launcher, so it keeps Super+Space and
+#            the menu stays on Super+Alt+Space.
 #
 #   gnome    Gnomarchy's own defaults: six workspaces, Super+B/E for browser
 #            and files, Super+Alt+Space for the menu.
@@ -82,9 +87,9 @@ apply_omarchy() {
   gsettings set "$WM" begin-resize "['<Super>BackSpace']"
   gsettings set "$WM" maximize "@as []"
 
-  # Super+Space is the Omarchy menu; GNOME uses it to cycle input sources.
-  gsettings set "$WM" switch-input-source "@as []"
-  gsettings set "$WM" switch-input-source-backward "@as []"
+  # Super+Space stays with GNOME's input-source switching. Omarchy puts its
+  # menu there, but a keyboard layout toggle is used far more often than a
+  # launcher, so the menu keeps Gnomarchy's Super+Alt+Space instead.
 
   # Super+drag to move, Super+right-drag to resize, as in Hyprland.
   gsettings set org.gnome.desktop.wm.preferences mouse-button-modifier "'<Super>'"
@@ -114,12 +119,13 @@ apply_omarchy() {
   set_custom custom3 'Annotate Screenshot' 'gnomarchy-capture annotate' '<Control>Print'
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
   set_custom custom5 'System Menu' 'gnomarchy-menu' '<Super>Escape'
-  set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super>space'
+  set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
   set_custom custom7 'Keybindings' 'gnomarchy gnome hotkeys' '<Super>k'
   set_custom custom8 'Editor' 'gnome-terminal -- nvim' '<Super><Shift>n'
 
-  # Super+Alt+Space is Omarchy's apps menu; GNOME's app grid is the closest fit.
-  gsettings set org.gnome.shell.keybindings toggle-application-view "['<Super><Alt>space']"
+  # Omarchy puts its apps menu on Super+Alt+Space, but that is the Gnomarchy
+  # menu here, so the app grid keeps GNOME's own Super+A.
+  gsettings reset org.gnome.shell.keybindings toggle-application-view 2>/dev/null || true
 
   echo omarchy > "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || true
 
@@ -191,8 +197,9 @@ show_status() {
   Super + Shift + B         browser
   Super + Shift + F         file manager
   Super + Shift + N         editor
-  Super + Space             Gnomarchy menu
-  Super + Alt + Space       app grid
+  Super + Alt + Space       Gnomarchy menu
+  Super + Space             switch keyboard layout (GNOME default)
+  Super + A                 app grid
   Super + Escape            system menu
   Super + K                 this list
 

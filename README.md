@@ -168,10 +168,15 @@ gnomarchy keymap status    # show the active layout and its bindings
 ```
 
 The Omarchy layout moves focus to `Super`+arrows and window movement to
-`Super+Shift`+arrows, expands to ten workspaces on `Super+1..0`, puts the menu
-on `Super+Space`, closes windows with `Super+W` or `Super+Q`, and moves the
-browser and file manager to `Super+Shift+B` and `Super+Shift+F`. Directional
-focus requires dynamic tiling, so pair it with `gnomarchy tiling enable`.
+`Super+Shift`+arrows, expands to ten workspaces on `Super+1..0`, closes windows
+with `Super+W` or `Super+Q`, and moves the browser and file manager to
+`Super+Shift+B` and `Super+Shift+F`. Directional focus requires dynamic tiling,
+so pair it with `gnomarchy tiling enable`.
+
+One deliberate departure from upstream: Omarchy puts its menu on `Super+Space`,
+which in GNOME switches the keyboard layout. Layout switching is used far more
+often than a launcher, so it keeps `Super+Space` and the menu stays on
+`Super+Alt+Space` in both profiles.
 
 Bindings were transcribed from Omarchy's `default/hypr/bindings/*.lua`, not
 from memory. What Hyprland does and GNOME cannot - window groups, the
