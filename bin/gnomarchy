@@ -18,6 +18,8 @@ Commands:
   gnome <extensions|hotkeys|scaling|restart>
                                Manage GNOME desktop settings & workflow
   snapshot <create|list>       Manage Btrfs Snapper rollback snapshots
+  agent <list|claude|opencode|pi|aider>
+                               Launch or inspect AI coding agents & skills
   update                       Perform system & Gnomarchy configuration updates
   version                      Display Gnomarchy version
   help                         Show this help message
@@ -84,6 +86,10 @@ case "$command_group" in
         exit 1
         ;;
     esac
+    ;;
+  agent)
+    shift
+    exec gnomarchy-agent "$@"
     ;;
   update)
     exec gnomarchy-update

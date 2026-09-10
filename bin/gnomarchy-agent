@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Gnomarchy AI Agent Assistant Manager
+set -e
+
+GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
+SKILL_PATH="$GNOMARCHY_PATH/default/gnomarchy-skill/SKILL.md"
+
+agent="$1"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy agent <command|name>
+
+Commands:
+  list       List supported & installed AI coding agents
+  skill      Display path and preview of the Gnomarchy Agent Skill
+  claude     Launch Anthropic Claude Code CLI
+  opencode   Launch OpenCode AI CLI
+  pi         Launch Pi Coding Agent CLI
+  aider      Launch Aider paired programming CLI
+
+Example:
+  gnomarchy agent claude
+  gnomarchy agent list
+EOF
+}
+
+case "$agent" in
+  ""|help|--help|-h)
+    usage
+    exit 0
+    ;;
+  list)
+    echo "Gnomarchy Supported AI Coding Agents:"
+    echo "===================================="
+    for tool in claude opencode pi aider codex; do
+      if command -v "$tool" >/dev/null 2>&1; then
+        echo -e "  [+] \033[1;32m$tool\033[0m (Installed - $(which "$tool"))"
+      else
+        echo -e "  [-] $tool (Not installed)"
+      fi
+    done
+    echo -e "\nGnomarchy Skill Location: $SKILL_PATH"
+    ;;
+  skill)
+    if [ -f "$SKILL_PATH" ]; then
+      cat "$SKILL_PATH"
+    else
+      echo "Skill file not found at $SKILL_PATH"
+      exit 1
+    fi
+    ;;
+  claude)
+    if command -v claude >/dev/null 2>&1; then
+      shift
+      exec claude "$@"
+    else
+      echo "Claude Code is not installed. Installing via npm/npx..."
+      npx @anthropic-ai/claude-code "$@"
+    fi
+    ;;
+  opencode)
+    if command -v opencode >/dev/null 2>&1; then
+      shift
+      exec opencode "$@"
+    else
+      echo "OpenCode is not installed. Visit https://opencode.ai for installation."
+      exit 1
+    fi
+    ;;
+  pi)
+    if command -v pi >/dev/null 2>&1; then
+      shift
+      exec pi "$@"
+    else
+      echo "Pi agent is not installed."
+      exit 1
+    fi
+    ;;
+  aider)
+    if command -v aider >/dev/null 2>&1; then
+      shift
+      exec aider "$@"
+    else
+      echo "Aider is not installed. Install via: pipx install aider-chat"
+      exit 1
+    fi
+    ;;
+  *)
+    if command -v "$agent" >/dev/null 2>&1; then
+      shift
+      exec "$agent" "$@"
+    else
+      echo "Unknown AI agent: $agent"
+      usage
+      exit 1
+    fi
+    ;;
+esac
