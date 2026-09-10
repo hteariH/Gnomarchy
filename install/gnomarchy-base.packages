@@ -55,9 +55,11 @@ wl-clipboard
 libsecret
 dosfstools
 exfatprogs
+flatpak
 
 # Developer CLI & Terminal Environment
 alacritty
+micro
 neovim
 tmux
 starship

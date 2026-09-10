@@ -20,6 +20,8 @@ alias dc='docker compose'
 alias lg='lazygit'
 alias ld='lazydocker'
 
+alias e='micro'
+alias nano='micro'
 alias v='nvim'
 alias vim='nvim'
 

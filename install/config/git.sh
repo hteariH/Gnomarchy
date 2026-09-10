@@ -5,4 +5,4 @@ if [ -z "$(git config --global init.defaultBranch)" ]; then
   git config --global init.defaultBranch main
 fi
 git config --global pull.rebase true
-git config --global core.editor nvim
+git config --global core.editor micro

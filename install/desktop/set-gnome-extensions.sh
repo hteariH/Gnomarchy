@@ -10,6 +10,7 @@ EXTENSIONS=(
   "tophat@fflewddur.github.io"
   "AlphabeticalAppGrid@stuarthayhurst"
   "appindicatorsupport@rgcjonas.gmail.com"
+  "dash-to-dock@micxgx.gmail.com"
 )
 
 # Install extensions via gnome-extensions-cli
@@ -81,5 +82,31 @@ fi
 if gsettings list-schemas | grep -q "org.gnome.shell.extensions.alphabetical-app-grid"; then
   gsettings set org.gnome.shell.extensions.alphabetical-app-grid folder-order-position 'end'
 fi
+
+# Configure Dash to Dock (Ubuntu-style left side panel)
+if gsettings list-schemas | grep -q "org.gnome.shell.extensions.dash-to-dock"; then
+  echo "  Configuring Dash to Dock (Ubuntu style on left edge)..."
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT'
+  gsettings set org.gnome.shell.extensions.dash-to-dock extend-height true
+  gsettings set org.gnome.shell.extensions.dash-to-dock dock-fixed true
+  gsettings set org.gnome.shell.extensions.dash-to-dock intellihide false
+  gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 38
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-trash false
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-mounts false
+  gsettings set org.gnome.shell.extensions.dash-to-dock multi-monitor true
+  gsettings set org.gnome.shell.extensions.dash-to-dock show-apps-at-top false
+  gsettings set org.gnome.shell.extensions.dash-to-dock running-indicator-style 'DOTS'
+  gsettings set org.gnome.shell.extensions.dash-to-dock hot-keys false
+fi
+
+# Configure Pinned Dock Favorites (Ubuntu / Developer layout)
+gsettings set org.gnome.shell favorite-apps "[ \
+  'chromium.desktop', \
+  'alacritty.desktop', \
+  'org.gnome.Nautilus.desktop', \
+  'micro.desktop', \
+  'io.github.kolunmi.Bazaar.desktop', \
+  'org.gnome.Settings.desktop' \
+]" 2>/dev/null || true
 
 gnomarchy_step "GNOME extensions installed and pre-configured"

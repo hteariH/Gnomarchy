@@ -12,7 +12,10 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **Tactile Grid Tiling (`Super + T`)**: Avoid the rigid complexity of automatic tiling window managers while keeping lightning-fast keyboard window positioning inspired by DHH's Omakub.
 - **Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME Libadwaita accent color, dark/light mode, wallpapers, Alacritty terminal, Neovim, btop, and VS Code—with a single command (`gnomarchy theme set <name>`).
 - **Bulletproof Btrfs & Snapper Rollbacks**: Automated boot snapshots integrated with the Limine bootloader let you roll back kernel or package updates directly from the boot menu.
-- **Turnkey Developer Stack**: Pre-configured with Neovim, Alacritty, Starship, Docker, Lazygit, Lazydocker, Mise (multi-language version management), and AI agent tooling.
+- **Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (Terminal, Browser, Files, Micro, Bazaar App Store).
+- **Modern Text Editing (Micro)**: Micro pre-installed and configured as the default system and CLI text editor (`$EDITOR`, `$VISUAL`, Git, and desktop MIME types).
+- **Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
+- **Turnkey Developer Stack**: Pre-configured with Micro, Neovim, Alacritty, Starship, Docker, Lazygit, Lazydocker, Mise (multi-language version management), and AI agent tooling.
 - **Curated Hardware Profiles**: Out-of-the-box fixes for Apple T2 Macs, Asus ROG laptops, Framework 13/16, Intel Panther Lake, and Nvidia hybrid graphics.
 
 ---

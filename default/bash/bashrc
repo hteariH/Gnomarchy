@@ -6,6 +6,10 @@ fi
 # PATH additions
 export PATH="$HOME/.local/share/gnomarchy/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
+# Default Editor
+export EDITOR="micro"
+export VISUAL="micro"
+
 # Enable bash completion
 if [ -f /usr/share/bash-completion/bash_completion ]; then
   . /usr/share/bash-completion/bash_completion
