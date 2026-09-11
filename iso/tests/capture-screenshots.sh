@@ -105,6 +105,19 @@ close_launched() {
   sleep 4
 }
 
+# The browser is installed by its own stage rather than from the package
+# list, and lands under any of three names depending on which route worked -
+# the official release binary, brave-bin from the AUR, or the Flatpak.
+browser_command() {
+  if command -v brave-origin >/dev/null 2>&1; then
+    echo "brave-origin"
+  elif command -v brave >/dev/null 2>&1; then
+    echo "brave"
+  elif flatpak info com.brave.Browser >/dev/null 2>&1; then
+    echo "flatpak run com.brave.Browser"
+  fi
+}
+
 dismiss_notifications
 
 if [[ "$phase" == "1" ]]; then
@@ -174,6 +187,20 @@ if [[ "$phase" == "1" ]]; then
 
   gnomarchy theme set tokyo-night >/dev/null 2>&1 || true
 
+  # Brave Origin greets a fresh profile with a welcome window of its own,
+  # which --no-first-run does not suppress - it is Origin, not Chromium first
+  # run. It sat on top of the tiled frame last time. Letting it happen here,
+  # between stages and off camera, leaves an initialised profile behind for
+  # phase 2, which boots into the same home directory.
+  warm="$(browser_command)"
+  if [[ -n "$warm" ]]; then
+    echo "warming the browser profile"
+    setsid $warm --no-first-run --password-store=basic >/dev/null 2>&1 &
+    sleep 30
+    pkill -f brave >/dev/null 2>&1 || true
+    sleep 5
+  fi
+
   echo
   echo "--- enabling dynamic tiling for the phase 2 boot ---"
   gnomarchy tiling enable 2>&1 | tail -5 || echo "gnomarchy tiling enable failed"
@@ -195,19 +222,6 @@ echo "tiling status:"
 gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
 echo
 
-# The browser is installed by its own stage rather than from the package
-# list, and lands under any of three names depending on which route worked -
-# the official release binary, brave-bin from the AUR, or the Flatpak.
-browser_command() {
-  if command -v brave-origin >/dev/null 2>&1; then
-    echo "brave-origin"
-  elif command -v brave >/dev/null 2>&1; then
-    echo "brave"
-  elif flatpak info com.brave.Browser >/dev/null 2>&1; then
-    echo "flatpak run com.brave.Browser"
-  fi
-}
-
 # Something for the editor to show. A blank VS Code window photographs as a
 # grey rectangle.
 HELLO="$HOME/hello.py"
@@ -226,20 +240,20 @@ PYEOF
 # VS Code wants its workspace-trust dialog out of the way, and the browser its
 # first-run onboarding; both would otherwise cover the window they are meant
 # to be showing.
-launch code --disable-workspace-trust "$HELLO"
+launch code --disable-workspace-trust --password-store=basic "$HELLO"
 sleep 20
 
 browser="$(browser_command)"
 if [[ -n "$browser" ]]; then
   # Unquoted on purpose: the Flatpak route is three words, not one.
-  launch $browser --new-window --no-first-run --no-default-browser-check https://gnomarchy.pages.dev
+  launch $browser --new-window --no-first-run --no-default-browser-check --password-store=basic https://gnomarchy.pages.dev
   sleep 20
 else
   echo "MISS  browser -- no brave-origin, brave or com.brave.Browser found"
   launch nautilus
 fi
 
-launch alacritty -e btop
+launch alacritty -o font.size=9 -e btop
 sleep 10
 
 stage 11-tiling
