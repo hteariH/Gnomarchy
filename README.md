@@ -1,7 +1,7 @@
 # Gnomarchy Linux 🐧
 
 <p align="center">
-  <img src="assets/banner.png" alt="Gnomarchy Feature Graphic" width="100%">
+  <img src="assets/logo.svg" alt="Gnomarchy" width="120">
 </p>
 
 <p align="center">
