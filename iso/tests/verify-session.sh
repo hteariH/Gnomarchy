@@ -119,6 +119,28 @@ colors="$(grep -o '#' <<<"$palette" | wc -l)"
   ok "GNOME Terminal has a full 16-colour palette" ||
   no "terminal palette not applied" "$colors colours"
 
+# --- Regression: an icon theme installed but never applied -----------------
+# papirus-icon-theme was in the package list from the start and nothing ever
+# set it, so every install ran on Adwaita and the package was dead weight.
+icons="$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")"
+if [[ "$icons" == Papirus* ]]; then
+  ok "icon theme is applied ($icons)"
+else
+  no "icon theme is not a Papirus variant" "got: ${icons:-unset}"
+fi
+
+# Not a check, a question this test is the right place to answer: which icon
+# the editor entry actually asks for, and whether anything provides it. The
+# icon looked wrong in a screenshot and the cause was guessed at rather than
+# established.
+for entry in /usr/share/applications/code-oss.desktop   /usr/share/applications/visual-studio-code.desktop   /usr/share/applications/code.desktop; do
+  [[ -f "$entry" ]] || continue
+  icon_name="$(sed -n 's/^Icon=//p' "$entry" | head -1)"
+  echo "INFO  $(basename "$entry") asks for Icon=$icon_name"
+  found="$(find /usr/share/icons /usr/share/pixmaps -name "$icon_name.*" 2>/dev/null | head -3)"
+  echo "INFO  provided by: ${found:-nothing}"
+done
+
 echo
 echo "=== $pass passed, $fail failed ==="
 echo "RESULT: $([[ $fail -eq 0 ]] && echo SUCCESS || echo FAILURE)"

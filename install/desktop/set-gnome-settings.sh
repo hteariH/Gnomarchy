@@ -16,6 +16,13 @@ gsettings set org.gnome.desktop.interface monospace-font-name 'JetBrainsMono Ner
 gsettings set org.gnome.desktop.interface document-font-name 'Noto Sans 10'
 gsettings set org.gnome.desktop.interface font-name 'Noto Sans 10'
 
+# Icons
+# papirus-icon-theme is installed by the package list; before this it was
+# never applied, so the setting stayed on Adwaita and the theme was dead
+# weight on every install. The dark variant is the baseline because 18 of the
+# 22 themes are dark; gnomarchy-theme-set moves it with the theme from here.
+gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
+
 # Calendar & Time
 gsettings set org.gnome.desktop.calendar show-weekdate true
 gsettings set org.gnome.desktop.interface clock-show-weekday true

@@ -96,7 +96,7 @@ Control the desktop and OS layer using the `gnomarchy` CLI:
 
 ### Unified Theme Engine (22 Built-in Themes)
 
-Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every theme carries a Libadwaita accent color, generated GTK3/GTK4 window colors, a 16-color ANSI palette applied to both GNOME Terminal and Alacritty, a Neovim colorscheme, and a btop system monitor theme.
+Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every theme carries a Libadwaita accent color, generated GTK3/GTK4 window colors, a 16-color ANSI palette applied to both GNOME Terminal and Alacritty, a Neovim colorscheme, a btop system monitor theme, and the matching Papirus icon variant.
 
 Wallpapers are **downloaded at install time** from the upstream Omarchy repository (pinned commit, every file checksum-verified) into `/usr/share/backgrounds/gnomarchy/<theme>/`. Gnomarchy does not redistribute them — see [BACKGROUNDS.md](BACKGROUNDS.md) for the provenance and licensing reasoning. Each theme also ships a small generated SVG wallpaper as an offline fallback, and you can override either with your own images in `~/.config/gnomarchy/backgrounds/<theme>/`.
 

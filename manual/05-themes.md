@@ -11,6 +11,7 @@ gnomarchy theme current
 ## What one command changes
 
 - GNOME dark/light mode and the Libadwaita accent colour
+- the Papirus icon variant, which follows the light or dark mode
 - GTK3 and GTK4 window colours, generated from the theme palette
 - GNOME Terminal - all 16 ANSI colours, plus background and foreground
 - Alacritty, if you use it as a secondary terminal
