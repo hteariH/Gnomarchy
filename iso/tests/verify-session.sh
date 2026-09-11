@@ -9,18 +9,36 @@
 #
 # Writes results to /var/tmp/gnomarchy-session-verify.txt and powers off, so
 # CI reads the outcome from the disk image rather than the serial console.
+# Progress also goes to the journal. A report written only to a file tells us
+# nothing when the script hangs before finishing, which is exactly what
+# happened: the run timed out with no output at all.
+trace() { logger -t gnomarchy-verify -- "$*" 2>/dev/null || true; }
+
+trace "verify-session started as $(whoami), session=${XDG_SESSION_TYPE:-unknown}"
+
 exec >"/var/tmp/gnomarchy-session-verify.txt" 2>&1
 
 pass=0
 fail=0
-ok() { echo "PASS  $1"; pass=$((pass + 1)); }
-no() { echo "FAIL  $1${2:+ -- $2}"; fail=$((fail + 1)); }
+ok() {
+  echo "PASS  $1"
+  trace "PASS $1"
+  pass=$((pass + 1))
+}
+no() {
+  echo "FAIL  $1${2:+ -- $2}"
+  trace "FAIL $1 ${2:-}"
+  fail=$((fail + 1))
+}
 
-# first-run is an autostart entry; give it time to finish before sampling dconf.
-for _ in $(seq 1 60); do
+# first-run is an autostart entry; give it time to finish before sampling
+# dconf, but do not wait forever - report what we see instead of hanging.
+trace "waiting for first-run to finish"
+for i in $(seq 1 24); do
   [[ -f "$HOME/.local/state/gnomarchy/first-run.done" ]] && break
   sleep 5
 done
+trace "first-run stamp present: $([[ -f "$HOME/.local/state/gnomarchy/first-run.done" ]] && echo yes || echo no)"
 
 echo "=== Session verification ==="
 echo "session type: ${XDG_SESSION_TYPE:-unknown}"
@@ -106,4 +124,12 @@ echo "=== $pass passed, $fail failed ==="
 echo "RESULT: $([[ $fail -eq 0 ]] && echo SUCCESS || echo FAILURE)"
 
 sync
-systemctl poweroff
+trace "verification finished: $pass passed, $fail failed"
+
+# Powering off ends the CI run. Go through sudo, which has an explicit
+# NOPASSWD rule: a bare systemctl poweroff depends on polkit granting it, and
+# if that is refused the script hangs and the whole job times out.
+sudo -n systemctl poweroff 2>/dev/null ||
+  systemctl poweroff 2>/dev/null ||
+  sudo -n reboot 2>/dev/null ||
+  trace "could not power off"

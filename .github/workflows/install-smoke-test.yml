@@ -270,7 +270,7 @@ jobs:
           fi
 
           set +e
-          sudo timeout 30m qemu-system-x86_64 \
+          sudo timeout 15m qemu-system-x86_64 \
             $ACCEL -smp 4 -m $MEM \
             -drive if=pflash,format=raw,readonly=on,file=${{ steps.ovmf.outputs.code }} \
             -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
@@ -290,6 +290,11 @@ jobs:
           sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
           sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
           sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
+
+          echo "--- verification trace ---"
+          if sudo test -d /mnt/gnomarchy/var/log/journal; then
+            sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager               -t gnomarchy-verify 2>/dev/null || echo "(no trace recorded)"
+          fi
 
           echo "--- journal from the boot attempt ---"
           if sudo test -d /mnt/gnomarchy/var/log/journal; then
