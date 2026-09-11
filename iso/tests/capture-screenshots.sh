@@ -195,11 +195,53 @@ echo "tiling status:"
 gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
 echo
 
-# Three windows opened one after another, so auto-tiling has something to
-# place. Opening them at once tends to race the extension.
+# The browser is installed by its own stage rather than from the package
+# list, and lands under any of three names depending on which route worked -
+# the official release binary, brave-bin from the AUR, or the Flatpak.
+browser_command() {
+  if command -v brave-origin >/dev/null 2>&1; then
+    echo "brave-origin"
+  elif command -v brave >/dev/null 2>&1; then
+    echo "brave"
+  elif flatpak info com.brave.Browser >/dev/null 2>&1; then
+    echo "flatpak run com.brave.Browser"
+  fi
+}
+
+# Something for the editor to show. A blank VS Code window photographs as a
+# grey rectangle.
+HELLO="$HOME/hello.py"
+cat > "$HELLO" <<'PYEOF'
+def main():
+    print("Hello from Gnomarchy")
+
+
+if __name__ == "__main__":
+    main()
+PYEOF
+
+# Opened slowest first, and one at a time: auto-tiling places each window as
+# it appears, and opening them together races the extension.
+#
+# VS Code wants its workspace-trust dialog out of the way, and the browser its
+# first-run onboarding; both would otherwise cover the window they are meant
+# to be showing.
+launch code --disable-workspace-trust "$HELLO"
+sleep 20
+
+browser="$(browser_command)"
+if [[ -n "$browser" ]]; then
+  # Unquoted on purpose: the Flatpak route is three words, not one.
+  launch $browser --new-window --no-first-run --no-default-browser-check https://gnomarchy.pages.dev
+  sleep 20
+else
+  echo "MISS  browser -- no brave-origin, brave or com.brave.Browser found"
+  launch nautilus
+fi
+
 launch alacritty -e btop
-launch gnome-terminal
-launch nautilus
+sleep 10
+
 stage 11-tiling
 close_launched
 
