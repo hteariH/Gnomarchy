@@ -32,6 +32,10 @@ loupe
 gnome-themes-extra
 papirus-icon-theme
 
+# Communication
+telegram-desktop
+discord
+
 # Sound, Media, & PipeWire
 pipewire
 pipewire-alsa

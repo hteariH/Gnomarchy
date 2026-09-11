@@ -131,12 +131,13 @@ menu_power() {
 while true; do
   header
   choice="$(choose "What do you need?" \
-    "Theme" "Keybindings" "Manual" "Web App" "Capture" "Snapshot" "System" "Power" "Exit")" || exit 0
+    "Theme" "Keybindings" "Manual" "Gaming" "Web App" "Capture" "Snapshot" "System" "Power" "Exit")" || exit 0
 
   case "$choice" in
     Theme) menu_theme ;;
     Keybindings) gnomarchy-keybindings ;;
     Manual) gnomarchy-manual ;;
+    Gaming) gnomarchy-gaming status; gum input --placeholder "Press Enter to continue" >/dev/null ;;
     "Web App") menu_webapp ;;
     Capture) menu_capture ;;
     Snapshot) menu_snapshot ;;
