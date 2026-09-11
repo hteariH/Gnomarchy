@@ -196,7 +196,6 @@ show_status() {
   if [[ "$current" == "omarchy" ]]; then
     cat <<'EOF'
   Super + Return            terminal
-  Super + Shift + Return    browser
   Super + Shift + B         browser
   Super + Shift + F         file manager
   Super + Shift + N         editor

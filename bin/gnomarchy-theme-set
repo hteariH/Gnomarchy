@@ -208,9 +208,9 @@ fi
 
 # 8. Apply GTK / libadwaita colors
 #
-# GNOME's accent-color setting only offers six stock hues, so the terminal
-# palette is projected onto libadwaita's named colors to carry the theme into
-# GTK3 and GTK4 applications.
+# GNOME's accent-color setting only offers a fixed set of named hues, so the
+# terminal palette is projected onto libadwaita's named colors to carry the
+# theme into GTK3 and GTK4 applications.
 if [[ -f "$THEME_DIR/alacritty.toml" ]]; then
   read_color() {
     # $1 = toml section, $2 = key

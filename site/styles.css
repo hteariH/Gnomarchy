@@ -1328,7 +1328,7 @@ section {
 
 .feature-grid-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 24px;
 }
 
@@ -1381,7 +1381,7 @@ section {
 
 .shortcuts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -1413,7 +1413,7 @@ section {
 
 .install-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
   gap: 28px;
 }
 
@@ -1508,4 +1508,310 @@ footer.gnome-footer {
   justify-content: space-between;
   font-size: 0.82rem;
   color: var(--text-muted);
+}
+
+
+/* ==========================================================================
+   Gnomarchy mark
+   ========================================================================== */
+
+.brand-mark {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Terminal panel (hero)
+   ========================================================================== */
+
+.terminal-body {
+  background: var(--bg-canvas);
+  padding: 20px 24px;
+  overflow-x: auto;
+  text-align: left;
+}
+
+.terminal-body pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  white-space: pre;
+}
+
+.terminal-footnote {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.terminal-footnote code {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Fact strip
+   ========================================================================== */
+
+.fact-strip {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  gap: 1px;
+  background: var(--border-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.fact-item {
+  background: var(--bg-card);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fact-key {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.fact-val {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.fact-val code {
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Key lists
+   ========================================================================== */
+
+.key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.key-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.key-row kbd {
+  flex-shrink: 0;
+  min-width: 132px;
+}
+
+/* ==========================================================================
+   Tiling illustration
+   ========================================================================== */
+
+.tiling-demo {
+  margin-top: 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.tiling-demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tiling-demo-stage {
+  padding: 20px;
+}
+
+.tiling-caption {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  min-height: 2.8em;
+}
+
+.tiling-panes {
+  position: relative;
+  height: 260px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tiling-pane {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid var(--border-focus);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tiling-pane.is-new {
+  background: rgba(187, 154, 247, 0.16);
+  border-color: var(--color-magenta);
+  color: var(--color-magenta);
+  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================================================
+   Theme reach list
+   ========================================================================== */
+
+.theme-reach,
+.keymap-note {
+  margin-top: 34px;
+  padding: 26px 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+.reach-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 10px 28px;
+}
+
+.reach-list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 0.89rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.reach-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.reach-list strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.reach-list code,
+.keymap-note code,
+.card-p code,
+.section-subtitle code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+/* ==========================================================================
+   CLI note and legend
+   ========================================================================== */
+
+.cli-note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-subtle);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.cli-legend {
+  margin: 14px auto 0;
+  max-width: 620px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .key-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .key-row kbd {
+    min-width: 0;
+  }
+
+  .tiling-panes {
+    height: 200px;
+  }
+}
+
+/* ==========================================================================
+   Narrow viewports: nothing may push the page wider than the screen
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* The install command is one long unbreakable token; let it wrap. */
+  .curl-install-bar {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    text-align: left;
+    word-break: break-all;
+  }
+
+  /* With .nav-links hidden the capsule still has to fit brand + actions. */
+  .nav-capsule {
+    gap: 10px;
+  }
+
+  .theme-pill-btn kbd {
+    display: none;
+  }
+
+  .code-snippet {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .hero-buttons {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  #navThemeLabel {
+    display: none;
+  }
 }

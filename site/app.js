@@ -1,12 +1,15 @@
 /**
- * Gnomarchy — Interactive Client Application
- * Theme engine, Tactile Grid simulator, Voxtype AI wave generator, and CLI playground
+ * Gnomarchy — interactive client application
+ *
+ * Theme switcher, tiling-mode illustration, dictation sequence and the CLI
+ * playground. Every string in CLI_ENTRIES is what the corresponding script in
+ * bin/ actually prints; anything that is commentary rather than output goes in
+ * the separate `note` field so the two are never confused.
  */
-
 (function () {
   'use strict';
 
-  // --- Themes System ---
+  // --- Themes ---------------------------------------------------------------
   const THEMES = [
     { id: 'tokyo-night', name: 'Tokyo Night' },
     { id: 'catppuccin', name: 'Catppuccin' },
@@ -62,151 +65,217 @@
     applyTheme(THEMES[currentThemeIndex].id);
   }
 
-  // Global 'T' key listener
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.key === 't' || e.key === 'T') {
-      cycleTheme();
-    }
+    if (e.key === 't' || e.key === 'T') cycleTheme();
   });
 
-  // --- Tactile Grid Simulator ---
-  function setupTactileSimulator() {
-    const buttons = document.querySelectorAll('[data-grid-slot]');
-    const win = document.getElementById('tactileMockWindow');
-    const title = document.getElementById('tactileMockTitle');
-    if (!buttons.length || !win) return;
+  // --- Tiling mode illustration --------------------------------------------
+  // Two static layouts showing what each mode does with a third window, not a
+  // simulation of either extension.
+  const TILING_MODES = {
+    dynamic: {
+      caption: 'A third window opens and the other two shrink to make room. ' +
+               'You never place anything yourself.',
+      panes: [
+        { label: 'Alacritty', left: '2%', top: '4%', width: '47%', height: '92%' },
+        { label: 'Brave', left: '51%', top: '4%', width: '47%', height: '44%' },
+        { label: 'nvim', left: '51%', top: '52%', width: '47%', height: '44%', isNew: true }
+      ]
+    },
+    manual: {
+      caption: 'The third window opens floating, wherever GNOME puts it. ' +
+               'Super + T and a letter drops it into a grid zone when you decide to.',
+      panes: [
+        { label: 'Alacritty', left: '2%', top: '4%', width: '47%', height: '92%' },
+        { label: 'Brave', left: '51%', top: '4%', width: '47%', height: '92%' },
+        { label: 'nvim', left: '27%', top: '24%', width: '46%', height: '52%', isNew: true }
+      ]
+    }
+  };
+
+  function renderTiling(mode) {
+    const spec = TILING_MODES[mode];
+    const stage = document.getElementById('tilingPanes');
+    const caption = document.getElementById('tilingCaption');
+    if (!spec || !stage) return;
+
+    if (caption) caption.textContent = spec.caption;
+
+    stage.innerHTML = '';
+    spec.panes.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'tiling-pane' + (p.isNew ? ' is-new' : '');
+      el.style.left = p.left;
+      el.style.top = p.top;
+      el.style.width = p.width;
+      el.style.height = p.height;
+      el.textContent = p.label;
+      stage.appendChild(el);
+    });
+  }
+
+  function setupTiling() {
+    const buttons = document.querySelectorAll('[data-tiling-mode]');
+    if (!buttons.length) return;
 
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
         buttons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        const slot = btn.dataset.gridSlot;
-        if (slot === 'left') {
-          win.style.left = '16px';
-          win.style.width = 'calc(50% - 24px)';
-          if (title) title.textContent = 'Alacritty — Snapped Left 50%';
-        } else if (slot === 'right') {
-          win.style.left = 'calc(50% + 8px)';
-          win.style.width = 'calc(50% - 24px)';
-          if (title) title.textContent = 'Brave Origin — Snapped Right 50%';
-        } else if (slot === 'center') {
-          win.style.left = '15%';
-          win.style.width = '70%';
-          if (title) title.textContent = 'Neovim — Focused Center 70%';
-        } else if (slot === 'full') {
-          win.style.left = '16px';
-          win.style.width = 'calc(100% - 32px)';
-          if (title) title.textContent = 'GNOME Workstation — Maximized';
-        }
+        renderTiling(btn.dataset.tilingMode);
       });
     });
+
+    renderTiling('dynamic');
   }
 
-  // --- Voxtype AI Voice Wave Simulator ---
-  function setupVoxtypeSimulator() {
+  // --- Dictation sequence ---------------------------------------------------
+  function setupVoxtypeSequence() {
     const btn = document.getElementById('simulateVoiceBtn');
     const statusLabel = document.getElementById('voiceStatusLabel');
     const transcript = document.getElementById('voiceTranscript');
     const bars = document.querySelectorAll('#audioWaveVisualizer .audio-bar');
     if (!btn) return;
 
-    let isSimulating = false;
-
-    const phrases = [
-      "Refactor the authentication handler to use Btrfs atomic subvolume snapshots.",
-      "Switch system theme to Everforest and reload Alacritty terminal.",
-      "Convert linear.app to an isolated desktop web application.",
-      "Set a reminder for 25 minutes to review pull request 402."
-    ];
-    let phraseIdx = 0;
+    let running = false;
 
     btn.addEventListener('click', () => {
-      if (isSimulating) return;
-      isSimulating = true;
+      if (running) return;
+      running = true;
 
       if (statusLabel) {
-        statusLabel.textContent = '🎙️ LISTENING (PIPEWIRE 48kHz)...';
+        statusLabel.textContent = 'RECORDING';
         statusLabel.style.color = 'var(--accent)';
       }
-      if (transcript) transcript.textContent = 'Listening to speech input...';
+      if (transcript) transcript.textContent = 'Recording. Press Super+D again to stop.';
 
       let count = 0;
       const interval = setInterval(() => {
         bars.forEach(bar => {
-          const h = Math.floor(Math.random() * 42) + 8;
-          bar.style.height = `${h}px`;
+          bar.style.height = `${Math.floor(Math.random() * 42) + 8}px`;
         });
         count++;
 
         if (count > 16) {
           clearInterval(interval);
           bars.forEach((bar, i) => {
-            const defaultHeights = [14, 24, 36, 48, 28, 18, 40, 30, 12];
-            bar.style.height = `${defaultHeights[i % defaultHeights.length]}px`;
+            const heights = [14, 24, 36, 48, 28, 18, 40, 30, 12];
+            bar.style.height = `${heights[i % heights.length]}px`;
           });
+
           if (statusLabel) {
-            statusLabel.textContent = '✔ TRANSCRIBED (LOCAL WHISPER)';
-            statusLabel.style.color = 'var(--color-green)';
+            statusLabel.textContent = 'TRANSCRIBING (whisper-cpp, CPU)';
+            statusLabel.style.color = 'var(--text-muted)';
           }
-          if (transcript) {
-            transcript.textContent = `"${phrases[phraseIdx % phrases.length]}"`;
-            phraseIdx++;
-          }
-          isSimulating = false;
+          if (transcript) transcript.textContent = 'Running whisper-cpp on the recording...';
+
+          setTimeout(() => {
+            if (statusLabel) {
+              statusLabel.textContent = 'TYPED INTO THE FOCUSED WINDOW';
+              statusLabel.style.color = 'var(--color-green)';
+            }
+            if (transcript) {
+              transcript.textContent =
+                '"Roll back to the snapshot from before the kernel upgrade."';
+            }
+            running = false;
+          }, 900);
         }
       }, 100);
     });
   }
 
-  // --- Master CLI Playground ---
+  // --- CLI playground -------------------------------------------------------
+  // `output` is verbatim; `note` is this site talking, not the script.
   const CLI_ENTRIES = {
     theme: {
-      cmd: 'gnomarchy theme set "nord"',
-      output: `[gnomarchy] Switching active system theme to 'nord'...
-✔ GNOME Libadwaita accent color -> #88c0d0
-✔ Alacritty terminal theme updated (~/.config/alacritty/alacritty.toml)
-✔ Neovim color scheme synchronized (~/.config/nvim/init.lua)
-✔ btop system monitor theme updated
-✔ Wallpaper set: ~/.config/gnomarchy/themes/nord/backgrounds/nord.svg
-✔ Dispatched lifecycle hook: ~/.config/gnomarchy/hooks/on-theme-change
-Theme switch applied across all applications instantaneously.`
+      cmd: 'gnomarchy theme set nord',
+      output: 'Applied theme: nord',
+      note: 'Terse on purpose. The palette reaches Alacritty, GNOME Terminal, ' +
+            'GTK 3 and 4, Neovim, btop, the GNOME accent and the wallpaper — ' +
+            'all generated from the theme’s alacritty.toml.'
+    },
+    tiling: {
+      cmd: 'gnomarchy tiling enable',
+      output: `Enabling dynamic tiling (Tiling Shell)
+  Dynamic tiling enabled
+
+  Super + h/j/k/l           focus window left/down/up/right
+  Super + Shift + h/j/k/l   move window in that direction
+  Super + Shift + c         centre the window
+  Super + Ctrl (hold)       temporarily suspend tiling while dragging
+
+  Log out and back in to load the change (Wayland cannot restart the shell in place).`,
+      note: 'Enabling one mode disables the other. With both extensions live ' +
+            'they fight over window placement.'
     },
     snapshot: {
-      cmd: 'gnomarchy snapshot create "Before system refactor"',
-      output: `[gnomarchy] Creating atomic Btrfs subvolume snapshot...
-✔ Snapper created pre-snapshot #91
-✔ Subvolumes captured: @ (root), @home, @var_log
-✔ Updated Limine boot menu entries (/boot/limine.cfg)
-Snapshot complete. Select '#91: Before system refactor' from boot menu to roll back anytime.`
+      cmd: 'gnomarchy snapshot create "Before the kernel upgrade"',
+      output: `Creating Snapper root snapshot: Before the kernel upgrade
+Snapshot created successfully.`,
+      note: 'Snapper is configured on root, with timeline and cleanup timers and ' +
+            'a retention limit of 10. Roll back with snapper rollback and a ' +
+            'reboot — limine does not currently list snapshots as boot entries. ' +
+            '/home is a separate subvolume and is not part of a root snapshot.'
     },
     webapp: {
-      cmd: 'gnomarchy webapp add "Claude" "https://claude.ai"',
-      output: `[gnomarchy] Generating isolated web application for 'Claude'...
-✔ Fetching highest-res favicon from https://claude.ai/favicon.ico
-✔ Created desktop entry: ~/.local/share/applications/claude-webapp.desktop
-✔ Configured isolated Brave Origin browser profile: ~/.local/share/gnomarchy/webapps/Claude
-✔ Pinned Claude to GNOME Dash to Dock favorites panel
-Web App 'Claude' is ready. Launch via Super key or Dash.`
+      cmd: 'gnomarchy webapp add Claude https://claude.ai',
+      output: `Fetching icon for claude.ai...
+✓ Web application 'Claude' created successfully!
+  Location: /home/you/.local/share/applications/gnomarchy-webapp-claude.desktop
+  URL:      https://claude.ai`,
+      note: 'The app gets its own browser profile under ' +
+            '~/.local/share/gnomarchy/webapps/claude/profile and is appended to ' +
+            'the GNOME favourites, which is what the dock reads.'
     },
-    reminder: {
-      cmd: 'gnomarchy reminder 25m "Pomodoro break"',
-      output: `[gnomarchy] Reminder scheduled!
-ID:        #405
-Alarm:     25 minutes from now
-Message:   "Pomodoro break"
-Sound:     Subtle GNOME chime enabled
-Run 'gnomarchy reminder list' to view active alarms.`
+    keymap: {
+      cmd: 'gnomarchy keymap status',
+      output: `Keyboard layout: gnome
+
+  Super + Return            terminal
+  Super + B                 browser
+  Super + E                 file manager
+  Super + Alt + Space       Gnomarchy menu
+  Super + Escape            screensaver
+  Super + K                 searchable keybindings
+  Super + Shift + K         the manual
+  Super + T                 Tactile grid (manual tiling)
+
+  Super + W                 close window
+  Super + Up                maximize
+  Super + 1..6              switch to workspace 1..6
+  Super + Shift + 1..6      move window to workspace
+
+Switch with: gnomarchy keymap <omarchy|gnome>`,
+      note: 'gnomarchy keybindings goes further and reads the bindings back out ' +
+            'of dconf, so it shows what is really set rather than what was ' +
+            'intended.'
+    },
+    update: {
+      cmd: 'gnomarchy update',
+      output: `==> Updating Gnomarchy System Packages
+==> Updating Gnomarchy Configurations
+    Configuration updated
+==> Applying pending migrations
+    2026-09-11-1500-bind-keybindings-and-manual.sh
+
+✓ System up to date!`,
+      note: 'No set -e here on purpose: each stage may fail on its own and is ' +
+            'recorded. An earlier version swallowed every failure and printed ' +
+            'success regardless, which hid a broken git pull for weeks.'
     },
     windows: {
-      cmd: 'gnomarchy windows start',
-      output: `[gnomarchy] Booting Windows 11 KVM Virtual Machine...
-✔ QEMU/KVM hypervisor acceleration active
-✔ VirtIO fast storage & VirtIO network adapters attached
-✔ swtpm Software TPM 2.0 active
-✔ Shared clipboard & host folder: ~/WindowsShare
-Windows 11 desktop launched in seamless Wayland window.`
+      cmd: 'gnomarchy windows info',
+      output: `Windows 11 VM Configuration:
+  Location: /home/you/.local/share/gnomarchy/vms/windows-11
+  RAM:      8 GB
+  CPUs:     4 Cores (Host Passthrough)
+  Disk:     VirtIO SCSI / QCOW2
+  Graphics: VirtIO GPU (OpenGL Accelerated)
+  TPM:      Software TPM 2.0 (swtpm)`,
+      note: 'You supply the Windows ISO. It opens in an ordinary QEMU window — ' +
+            'there is no seamless mode, no shared clipboard and no shared folder.'
     }
   };
 
@@ -214,30 +283,36 @@ Windows 11 desktop launched in seamless Wayland window.`
     const tabs = document.querySelectorAll('.cli-tab');
     const cmdDisplay = document.getElementById('cliCmdDisplay');
     const outDisplay = document.getElementById('cliOutputDisplay');
+    const noteDisplay = document.getElementById('cliNoteDisplay');
     const copyBtn = document.getElementById('cliCopyBtn');
+
+    function show(key) {
+      const entry = CLI_ENTRIES[key];
+      if (!entry || !cmdDisplay || !outDisplay) return;
+      cmdDisplay.textContent = entry.cmd;
+      outDisplay.textContent = entry.output;
+      if (noteDisplay) {
+        noteDisplay.textContent = entry.note || '';
+        noteDisplay.hidden = !entry.note;
+      }
+    }
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-
-        const key = tab.dataset.cmd;
-        const entry = CLI_ENTRIES[key];
-        if (entry && cmdDisplay && outDisplay) {
-          cmdDisplay.textContent = entry.cmd;
-          outDisplay.textContent = entry.output;
-        }
+        show(tab.dataset.cmd);
       });
     });
 
+    show('theme');
+
     if (copyBtn && cmdDisplay) {
-      copyBtn.addEventListener('click', () => {
-        copyText(cmdDisplay.textContent, copyBtn);
-      });
+      copyBtn.addEventListener('click', () => copyText(cmdDisplay.textContent, copyBtn));
     }
   }
 
-  // --- Copy Helper ---
+  // --- Copy helper ----------------------------------------------------------
   function copyText(text, el) {
     const orig = el.textContent;
     const notify = () => {
@@ -267,35 +342,27 @@ Windows 11 desktop launched in seamless Wayland window.`
     document.body.removeChild(ta);
   }
 
-  // --- Initialize ---
+  // --- Init -----------------------------------------------------------------
   document.addEventListener('DOMContentLoaded', () => {
     try {
-      const saved = localStorage.getItem('gnomarchy-theme') || 'tokyo-night';
-      applyTheme(saved);
+      applyTheme(localStorage.getItem('gnomarchy-theme') || 'tokyo-night');
     } catch (e) {
       applyTheme('tokyo-night');
     }
 
     document.querySelectorAll('[data-theme-target]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        applyTheme(btn.dataset.themeTarget);
-      });
+      btn.addEventListener('click', () => applyTheme(btn.dataset.themeTarget));
     });
 
     const navToggle = document.getElementById('navThemeToggleBtn');
-    if (navToggle) {
-      navToggle.addEventListener('click', cycleTheme);
-    }
+    if (navToggle) navToggle.addEventListener('click', cycleTheme);
 
     document.querySelectorAll('[data-copy-cmd]').forEach(el => {
-      el.addEventListener('click', () => {
-        const cmd = el.getAttribute('data-copy-cmd');
-        copyText(cmd, el);
-      });
+      el.addEventListener('click', () => copyText(el.getAttribute('data-copy-cmd'), el));
     });
 
-    setupTactileSimulator();
-    setupVoxtypeSimulator();
+    setupTiling();
+    setupVoxtypeSequence();
     setupCliPlayground();
   });
 })();
