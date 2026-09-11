@@ -7,6 +7,16 @@ org.gnome.Shell.Screenshot only for an allowlist of senders it ships with, so
 a script in the session gets AccessDenied no matter what it does. QEMU has no
 such opinion: screendump writes whatever the virtual display is showing.
 
+The same reasoning applies to the keyboard. GNOME 40 and later open the
+Activities overview when a session starts, and it stays open: windows launched
+from a script carry no activation token, so nothing dismisses it, and every
+frame comes back a zoomed-out overview rather than a desktop. Neither the
+shell D-Bus interface nor a wlroots input tool can help - but QEMU can inject
+the keystroke at the virtual hardware level, below anything with an opinion
+about who is allowed to. So Escape is pressed for the first stretch of the
+boot, while the session is still empty and the key can do no harm; by the time
+any window exists, the pressing has stopped.
+
 Frames land as PPM and are converted later; a frame identical to the one
 before it is dropped, because a desktop holding still for twelve seconds would
 otherwise produce a pile of copies. Each kept frame is recorded in an index
@@ -14,7 +24,7 @@ with the wall-clock time it was taken, which is what pairs it with the stage
 timestamps the in-guest script writes into its transcript.
 
 Usage:
-  screendump-loop.py SOCKET OUTDIR LABEL INTERVAL MAX_SECONDS
+  screendump-loop.py SOCKET OUTDIR LABEL INTERVAL MAX_SECONDS [ESCAPE_SECONDS]
 """
 
 import hashlib
@@ -38,6 +48,16 @@ def read_reply(stream):
         if "event" in message:
             continue
         return message
+
+
+def send_key(stream, qcode):
+    """Press one key in the guest, at the virtual keyboard."""
+    stream.write(json.dumps({
+        "execute": "send-key",
+        "arguments": {"keys": [{"type": "qcode", "data": qcode}]},
+    }) + "\n")
+    stream.flush()
+    return read_reply(stream)
 
 
 def connect(sock_path, appear_timeout=180):
@@ -74,13 +94,14 @@ def connect(sock_path, appear_timeout=180):
 
 
 def main():
-    if len(sys.argv) != 6:
+    if len(sys.argv) not in (6, 7):
         print(__doc__, file=sys.stderr)
         return 2
 
     sock_path, outdir, label = sys.argv[1], sys.argv[2], sys.argv[3]
     interval = float(sys.argv[4])
     max_seconds = float(sys.argv[5])
+    escape_seconds = float(sys.argv[6]) if len(sys.argv) == 7 else 35.0
 
     os.makedirs(outdir, exist_ok=True)
     conn, stream = connect(sock_path)
@@ -93,13 +114,20 @@ def main():
     started = time.time()
     kept = 0
     attempts = 0
+    escapes = 0
     previous_digest = None
 
     while time.time() - started < max_seconds:
         attempts += 1
+        elapsed = time.time() - started
         frame = os.path.abspath(os.path.join(outdir, "%s-%04d.ppm" % (label, kept)))
         taken_at = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         try:
+            # Dismiss the startup overview while the session is still empty.
+            if elapsed < escape_seconds:
+                send_key(stream, "esc")
+                escapes += 1
+
             stream.write(json.dumps({
                 "execute": "screendump",
                 "arguments": {"filename": frame},
@@ -137,8 +165,8 @@ def main():
         time.sleep(interval)
 
     index.close()
-    print("screendump-loop: %d distinct frames from %d attempts over %.0fs"
-          % (kept, attempts, time.time() - started))
+    print("screendump-loop: %d distinct frames from %d attempts over %.0fs, %d escapes"
+          % (kept, attempts, time.time() - started, escapes))
     return 0
 
 

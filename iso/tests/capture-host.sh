@@ -3,9 +3,11 @@
 # Host side of the screenshot capture: boot the installed image and photograph
 # its video output while the in-guest script composes the desktop.
 #
-# The guest cannot photograph itself - GNOME Shell refuses its screenshot
-# interface to any sender outside the allowlist it ships with - so the pictures
-# are taken here, through the QEMU monitor. See iso/tests/capture-screenshots.sh
+# The guest can neither photograph nor type into itself - GNOME Shell refuses
+# its screenshot interface to any sender outside the allowlist it ships with,
+# and the overview it opens at login has nothing to dismiss it. Both jobs are
+# therefore done from here, through the QEMU monitor, which sits below anything
+# with an opinion about who is allowed to. See iso/tests/capture-screenshots.sh
 # for the guest half and the full reasoning.
 #
 # One invocation is one boot. The guest powers itself off when its phase is
@@ -16,10 +18,13 @@
 #   capture-host.sh DISK OVMF_CODE OVMF_VARS OUTDIR LABEL
 #
 # Environment:
-#   ACCEL         qemu acceleration arguments (default: -accel tcg)
-#   MEM           guest memory in MB (default: 4096)
-#   INTERVAL      seconds between frames (default: 5)
-#   BOOT_TIMEOUT  hard limit on the boot, in seconds (default: 1500)
+#   ACCEL           qemu acceleration arguments (default: -accel tcg)
+#   MEM             guest memory in MB (default: 4096)
+#   INTERVAL        seconds between frames (default: 5)
+#   BOOT_TIMEOUT    hard limit on the boot, in seconds (default: 1500)
+#   ESCAPE_SECONDS  how long to keep pressing Escape to dismiss the startup
+#                   overview, in seconds (default: 35). It must end before
+#                   the guest opens its first window.
 
 set -eEo pipefail
 
@@ -38,6 +43,7 @@ ACCEL="${ACCEL:--accel tcg}"
 MEM="${MEM:-4096}"
 INTERVAL="${INTERVAL:-5}"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-1500}"
+ESCAPE_SECONDS="${ESCAPE_SECONDS:-35}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOCK="$PWD/qmp-$LABEL.sock"
@@ -48,7 +54,7 @@ rm -f "$SOCK"
 echo "--- capture boot: $LABEL ---"
 echo "disk:     $DISK"
 echo "frames:   $OUTDIR"
-echo "interval: ${INTERVAL}s, timeout: ${BOOT_TIMEOUT}s"
+echo "interval: ${INTERVAL}s, timeout: ${BOOT_TIMEOUT}s, escape for: ${ESCAPE_SECONDS}s"
 
 # virtio-vga carrying an explicit EDID resolution, so the frames come out at
 # 1080p rather than the 1024x768 a bare VGA device negotiates. The default
@@ -75,7 +81,8 @@ sudo timeout "$BOOT_TIMEOUT" qemu-system-x86_64 "${qemu_args[@]}" &
 qemu_pid=$!
 
 # QEMU owns the socket as root, so the photographer has to be root too.
-sudo python3 "$HERE/screendump-loop.py" "$SOCK" "$OUTDIR" "$LABEL" "$INTERVAL" "$BOOT_TIMEOUT" &
+sudo python3 "$HERE/screendump-loop.py" \
+  "$SOCK" "$OUTDIR" "$LABEL" "$INTERVAL" "$BOOT_TIMEOUT" "$ESCAPE_SECONDS" &
 loop_pid=$!
 
 wait "$qemu_pid"

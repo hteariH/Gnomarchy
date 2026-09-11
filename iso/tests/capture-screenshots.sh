@@ -109,23 +109,17 @@ if [[ "$phase" == "1" ]]; then
   fi
 
   # The dock, the wallpaper and the extensions all land a little after the
-  # session is technically up.
-  sleep 25
+  # session is up, and this gap also has to outlast the host pressing Escape.
+
+  sleep 45
 
   echo
   echo "--- stages ---"
   stage 01-desktop
 
-  # Confirmed present on GNOME 50 by introspection on the previous run, along
-  # with FocusSearch. Launching the next window dismisses the overview, so
-  # there is nothing to close here.
-  if gdbus call --session --dest org.gnome.Shell \
-       --object-path /org/gnome/Shell \
-       --method org.gnome.Shell.ShowApplications >/dev/null 2>&1; then
-    stage 02-overview
-  else
-    echo "SKIP 02-overview -- ShowApplications refused"
-  fi
+  # There is no overview stage. ShowApplications is refused the same way the
+  # screenshot interface is, and the host now presses Escape early to clear
+  # the overview GNOME opens on its own - so what follows is a desktop.
 
   # gnomarchy-menu re-execs itself into a terminal when it has no tty, which
   # is exactly the case here, so it must be backgrounded.
