@@ -109,6 +109,15 @@ case "${1:-status}" in
     }
     ;;
 
+  gui | center)
+    if command -v rog-control-center >/dev/null 2>&1; then
+      exec rog-control-center
+    fi
+    echo "ROG Control Center is not installed." >&2
+    echo "Install it with: sudo pacman -S rog-control-center" >&2
+    exit 1
+    ;;
+
   graphics | gfx)
     if ! command -v supergfxctl >/dev/null 2>&1; then
       echo "supergfxctl is not installed." >&2
@@ -135,6 +144,7 @@ case "${1:-status}" in
 Usage: gnomarchy asus <command>
 
   status              laptop model, asusd, graphics mode, charge limit
+  gui                 open ROG Control Center (works on TUF too)
   charge <20-100>     stop charging at a percentage, to spare the battery
   profile [name]      platform profile (quiet / balanced / performance)
   keyboard <level>    backlight: off, low, med, high

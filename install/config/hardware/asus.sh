@@ -27,10 +27,13 @@ fi
 MODEL="$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo 'unknown')"
 echo "Asus laptop detected ($MODEL). Installing asusctl..."
 
-if sudo pacman -S --noconfirm --needed asusctl 2>/dev/null; then
+# rog-control-center is the official GUI and ships in extra at the same
+# version as asusctl. Despite the name it covers TUF as well.
+if sudo pacman -S --noconfirm --needed asusctl rog-control-center 2>/dev/null; then
   # asusd owns the hardware; without it asusctl can only report.
   sudo systemctl enable asusd.service >/dev/null 2>&1 || true
   echo "  asusd enabled - fan curves, keyboard backlight and charge limit available"
+  echo "  ROG Control Center installed (also in the app grid)"
 else
   echo "  Warning: asusctl could not be installed; skipping Asus configuration."
   return 0 2>/dev/null || exit 0

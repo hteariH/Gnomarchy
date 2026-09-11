@@ -40,7 +40,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🎮 One-Command Gaming Stack**: `gnomarchy gaming install` sets up Steam, Proton-GE, Wine, Lutris, Faugus Launcher, gamescope, GameMode and MangoHud, with the 32-bit Vulkan driver matched to your GPU.
 - **💬 Telegram & Discord Preinstalled**
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
-- **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
+- **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl and ROG Control Center: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
 
 ---
 
@@ -150,14 +150,15 @@ interface, so one profile covers them.
 
 ```bash
 gnomarchy asus status            # model, asusd, graphics mode, charge limit
+gnomarchy asus gui               # ROG Control Center
 gnomarchy asus charge 80         # stop charging at 80% to spare the battery
 gnomarchy asus profile           # quiet / balanced / performance
 gnomarchy asus keyboard med      # backlight
 gnomarchy asus graphics          # switch integrated / hybrid GPU
 ```
 
-`asusctl` comes from the official `extra` repository and coexists with
-power-profiles-daemon. `supergfxctl` is AUR-only and is installed only on
+`asusctl` and **ROG Control Center**, its official GUI, both come from the
+official `extra` repository and coexist with power-profiles-daemon. `supergfxctl` is AUR-only and is installed only on
 machines with a discrete NVIDIA GPU to switch to.
 
 ### Gaming

@@ -15,10 +15,9 @@ grep -qi 'asustek\|asus' <<<"$vendor" || exit 0
 
 echo "Asus laptop detected ($(cat /sys/class/dmi/id/product_name 2>/dev/null || echo unknown))."
 
-if ! command -v asusctl >/dev/null 2>&1; then
-  sudo pacman -S --noconfirm --needed asusctl 2>/dev/null ||
-    { echo "  Could not install asusctl."; exit 0; }
-fi
+# rog-control-center is the official GUI, in extra at the same version.
+sudo pacman -S --noconfirm --needed asusctl rog-control-center 2>/dev/null ||
+  { echo "  Could not install asusctl."; exit 0; }
 
 sudo systemctl enable --now asusd.service 2>/dev/null || true
 echo "  asusd enabled."
