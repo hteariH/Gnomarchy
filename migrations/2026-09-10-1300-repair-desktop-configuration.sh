@@ -41,7 +41,6 @@ Exec=/usr/local/bin/gnomarchy first-run
 Icon=preferences-desktop
 Terminal=false
 X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Phase=Applications
 NoDisplay=true
 AUTOSTART
   echo "No session bus; desktop configuration scheduled for next login."

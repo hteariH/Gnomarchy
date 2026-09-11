@@ -11,6 +11,17 @@ gnomarchy first-run
 
 Then log out and back in.
 
+To see what happened on the last attempt:
+
+```bash
+journalctl --user -t gnomarchy-first-run
+```
+
+That trace names the step that failed. Nothing at all means the autostart entry
+never ran; check that `~/.config/autostart/gnomarchy-first-run.desktop` exists
+and does **not** contain `X-GNOME-Autostart-Phase`, which makes GNOME 50 skip
+the entry entirely.
+
 ## An extension shows an error
 
 Usually a missing compiled schema:

@@ -225,7 +225,6 @@ jobs:
             'Exec=/usr/local/bin/gnomarchy-verify-session' \
             'Terminal=false' \
             'X-GNOME-Autostart-enabled=true' \
-            'X-GNOME-Autostart-Phase=Applications' \
             'NoDisplay=true' \
             | sudo tee /mnt/gnomarchy/home/citest/.config/autostart/zz-verify.desktop > /dev/null
           sudo chown -R 1000:1000 /mnt/gnomarchy/home/citest/.config

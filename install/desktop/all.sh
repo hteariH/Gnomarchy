@@ -27,6 +27,10 @@ else
   gnomarchy_substep "Keyboard shortcuts and dconf settings will be applied at first login."
 
   mkdir -p "$HOME/.config/autostart"
+  # Note: no X-GNOME-Autostart-Phase here. GNOME 50 runs XDG autostart through
+  # systemd-xdg-autostart-generator, which skips any entry that sets a startup
+  # phase, because phases cannot be expressed as units. Setting it stopped this
+  # entry from ever running.
   cat > "$HOME/.config/autostart/gnomarchy-first-run.desktop" <<'AUTOSTART'
 [Desktop Entry]
 Type=Application
@@ -36,7 +40,6 @@ Exec=/usr/local/bin/gnomarchy first-run
 Icon=preferences-desktop
 Terminal=false
 X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Phase=Applications
 NoDisplay=true
 AUTOSTART
 
