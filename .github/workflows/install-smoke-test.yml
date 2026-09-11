@@ -23,6 +23,10 @@ on:
       - '.github/workflows/install-smoke-test.yml'
   workflow_dispatch:
     inputs:
+      capture_screenshots:
+        description: Also boot the installed system and capture desktop screenshots
+        type: boolean
+        default: false
       keep_image:
         description: 'Upload the installed disk image as an artifact'
         type: boolean
@@ -41,7 +45,7 @@ jobs:
   install-test:
     name: Install in QEMU and verify
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 200
 
     steps:
       - name: Checkout repository
@@ -55,7 +59,7 @@ jobs:
       - name: Install QEMU and image tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf dosfstools mtools
+          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf dosfstools mtools imagemagick
 
       - name: Check for KVM acceleration
         id: kvm
@@ -378,6 +382,161 @@ jobs:
           name: installed-disk-image
           path: disk.qcow2
           retention-days: 3
+
+      # --- Screenshots -------------------------------------------------
+      # Off by default and dispatch-only: these frames are for the README and
+      # for posting, not for proving the install works, and they cost a boot of
+      # their own. Nothing here runs on push or pull_request.
+      - name: Prepare the image for screenshot capture
+        if: always() && inputs.capture_screenshots
+        env:
+          MOUNTED: ${{ steps.mount.outputs.mounted }}
+        run: |
+          if [ "$MOUNTED" != "true" ]; then
+            echo "The install never mounted, so there is nothing to photograph."
+            exit 0
+          fi
+
+          sudo umount -R /mnt/gnomarchy 2>/dev/null || true
+          sudo mount -o subvol=@ /dev/nbd0p3 /mnt/gnomarchy
+          sudo mount -o subvol=@home /dev/nbd0p3 /mnt/gnomarchy/home
+
+          sudo install -m 755 iso/tests/capture-screenshots.sh \
+            /mnt/gnomarchy/usr/local/bin/gnomarchy-capture-screenshots
+
+          # Verification has already run, and its autostart entry powers the
+          # machine off - which would end the capture session before it starts.
+          sudo rm -f /mnt/gnomarchy/home/citest/.config/autostart/zz-verify.desktop
+          printf "%s\n" \
+            "[Desktop Entry]" \
+            "Type=Application" \
+            "Name=Gnomarchy Screenshot Capture" \
+            "Exec=/usr/local/bin/gnomarchy-capture-screenshots" \
+            "Terminal=false" \
+            "X-GNOME-Autostart-enabled=true" \
+            "NoDisplay=true" \
+            | sudo tee /mnt/gnomarchy/home/citest/.config/autostart/zz-capture.desktop > /dev/null
+
+          # The capture logs out once to reload the shell for tiling and picks
+          # its phase back up from this file, so it must start absent.
+          sudo rm -f /mnt/gnomarchy/home/citest/.local/state/gnomarchy/capture-phase
+          sudo chown -R 1000:1000 /mnt/gnomarchy/home/citest/.config
+
+          echo "--- autostart entries for the capture boot ---"
+          sudo ls -la /mnt/gnomarchy/home/citest/.config/autostart/
+
+          sudo umount -R /mnt/gnomarchy
+          sudo qemu-nbd --disconnect /dev/nbd0
+          sleep 3
+
+      # Two boots, not one with a logout in the middle. Dynamic tiling only
+      # takes effect once the shell reloads, and under Wayland that needs a new
+      # session; logging out was tried and kills the capture script with it.
+      # The guest powers itself off at the end of each phase.
+      - name: Capture the desktop, boot 1
+        if: always() && inputs.capture_screenshots
+        env:
+          MOUNTED: ${{ steps.mount.outputs.mounted }}
+          KVM: ${{ steps.kvm.outputs.available }}
+        run: |
+          if [ "$MOUNTED" != "true" ]; then
+            echo "Skipped: nothing installed to photograph."
+            exit 0
+          fi
+          if [ "$KVM" = "true" ]; then
+            export ACCEL="-accel kvm -cpu host"
+            export MEM=8192
+          fi
+          bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase1
+
+      - name: Capture the desktop, boot 2
+        if: always() && inputs.capture_screenshots
+        env:
+          MOUNTED: ${{ steps.mount.outputs.mounted }}
+          KVM: ${{ steps.kvm.outputs.available }}
+        run: |
+          if [ "$MOUNTED" != "true" ]; then
+            echo "Skipped: nothing installed to photograph."
+            exit 0
+          fi
+          if [ "$KVM" = "true" ]; then
+            export ACCEL="-accel kvm -cpu host"
+            export MEM=8192
+          fi
+          bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase2
+
+      - name: Convert and collect the frames
+        if: always() && inputs.capture_screenshots
+        env:
+          MOUNTED: ${{ steps.mount.outputs.mounted }}
+        run: |
+          if [ "$MOUNTED" != "true" ]; then
+            echo "Skipped: nothing installed to photograph."
+            exit 0
+          fi
+
+          sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
+          sleep 5
+          sudo mkdir -p /mnt/gnomarchy
+          sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
+          # The journal is its own subvolume; without this it is an empty
+          # directory and every question asked of it answers nothing.
+          sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
+
+          mkdir -p screenshots
+          sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-capture.txt screenshots/ 2>/dev/null || true
+          cp capture-phase1-serial.log capture-phase2-serial.log screenshots/ 2>/dev/null || true
+          sudo chown -R "$USER:$USER" screenshots
+
+          # A session that dies mid-shoot photographs as a login screen, and
+          # the transcript does not notice: the script goes on announcing
+          # stages into a session that is no longer there. This is the only
+          # place that difference is visible.
+          echo "=== session and shell trouble during the capture boots ==="
+          sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager -p warning 2>/dev/null |
+            grep -iE "gnome-shell|gdm|gnome-session|segfault|core-dump|oom" | tail -50 ||
+            echo "(nothing, or the journal is unreadable)"
+
+          # The transcript says when each arrangement was on screen, which is
+          # what pairs a frame with the thing it is a picture of.
+          echo "=== capture transcript ==="
+          cat screenshots/gnomarchy-capture.txt 2>/dev/null || echo "(no transcript - the capture script never ran)"
+
+          # A framebuffer dump is about 6 MB a frame; the same pixels as PNG are
+          # a fraction of that, and PNG is what anyone downloading this wants.
+          CONVERT=convert
+          command -v magick >/dev/null 2>&1 && CONVERT=magick
+          shopt -s nullglob
+          for ppm in frames/*.ppm; do
+            png="screenshots/$(basename "${ppm%.ppm}").png"
+            "$CONVERT" "$ppm" "$png" || echo "could not convert $ppm"
+          done
+          for index in frames/*-index.txt; do
+            cp "$index" screenshots/
+          done
+
+          echo
+          echo "=== frames ==="
+          ls -la screenshots/
+
+          # A run that photographs nothing has to be visibly red, or it reads
+          # as a success that merely happened to produce no artifact.
+          if ! ls screenshots/*.png >/dev/null 2>&1; then
+            echo "--- serial tails ---"
+            tail -60 capture-phase1-serial.log 2>/dev/null || true
+            tail -60 capture-phase2-serial.log 2>/dev/null || true
+            echo "::error::No screenshots were captured."
+            exit 1
+          fi
+
+      - name: Upload screenshots
+        if: always() && inputs.capture_screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnomarchy-screenshots
+          path: screenshots/
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Clean up
         if: always()
