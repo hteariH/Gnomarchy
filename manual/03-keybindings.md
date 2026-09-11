@@ -46,6 +46,24 @@ gnomarchy keymap status
     Super + drag              move window
     Super + right-drag        resize window
 
+## Super + digits belong to the workspaces
+
+GNOME binds `switch-to-application-1` to `Super + 1` and so on up to
+`Super + 9`: press one and it focuses, or launches, the Nth pinned app in the
+dock. Gnomarchy puts the workspaces on those same keys, so each of them used to
+have two handlers and did whichever the shell registered last.
+
+The workspaces win, because that is what both profiles advertise:
+
+| profile | workspaces | still switches applications |
+|---|---|---|
+| Gnomarchy defaults | `Super + 1..6` | `Super + 7`, `8`, `9` |
+| Omarchy | `Super + 1..0` (ten) | nothing — all nine are workspaces |
+
+Switching back from the Omarchy profile hands `Super + 7..9` to the
+application switcher again. `gnomarchy keybindings` reads dconf, so it always
+lists what is really bound.
+
 ## One deliberate difference from Omarchy
 
 Omarchy puts its menu on `Super + Space`. In GNOME that switches the keyboard

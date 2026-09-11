@@ -22,6 +22,7 @@ set -eEo pipefail
 
 FORGE_KEYS="org.gnome.shell.extensions.forge.keybindings"
 WM="org.gnome.desktop.wm.keybindings"
+SHELL_KEYS="org.gnome.shell.keybindings"
 MK="org.gnome.settings-daemon.plugins.media-keys"
 BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 
@@ -88,6 +89,15 @@ apply_omarchy() {
     key=$((i % 10))
     gsettings set "$WM" "switch-to-workspace-$i" "['<Super>$key']"
     gsettings set "$WM" "move-to-workspace-$i" "['<Super><Shift>$key']"
+
+    # GNOME Shell's switch-to-application-N sits on the same Super+N. This
+    # profile takes all ten digits, so all nine app keys go. There is no
+    # switch-to-application-10, so the 0 key needs nothing -- and this has to
+    # be an if, not `(( )) &&`: a false (( )) returns 1, which under set -e
+    # would end the script on the tenth pass.
+    if ((key != 0)); then
+      gsettings set "$SHELL_KEYS" "switch-to-application-$key" "@as []"
+    fi
   done
 
   # Super+Tab cycles workspaces in Omarchy. GNOME binds it to the application
@@ -170,6 +180,15 @@ apply_gnome() {
     else
       gsettings set "$WM" "switch-to-workspace-$i" "@as []"
       gsettings set "$WM" "move-to-workspace-$i" "@as []"
+    fi
+
+    # Six workspaces here, so Super+7..9 go back to GNOME Shell's
+    # switch-to-application -- the Omarchy profile takes all nine and this is
+    # the branch that has to hand them back.
+    if ((i <= 6)); then
+      gsettings set "$SHELL_KEYS" "switch-to-application-$i" "@as []"
+    elif ((i <= 9)); then
+      gsettings reset "$SHELL_KEYS" "switch-to-application-$i"
     fi
   done
 

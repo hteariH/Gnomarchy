@@ -60,6 +60,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | <kbd>Super</kbd> + <kbd>Up</kbd> | Maximize focused window |
 | <kbd>Super</kbd> + <kbd>Backspace</kbd> | Interactive window resize mode |
 | <kbd>Super</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Switch directly to workspace 1 through 6 |
+| <kbd>Super</kbd> + <kbd>7</kbd> – <kbd>9</kbd> | GNOME's app switcher: focus or launch the Nth pinned app |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Move focused window to workspace 1 through 6 |
 | <kbd>Super</kbd> + <kbd>D</kbd> | **Voxtype**: Toggle AI Speech-to-Text Dictation |
 | <kbd>Super</kbd> + <kbd>Escape</kbd> | **Screensaver**: Fullscreen Retro Matrix terminal screensaver |
@@ -236,6 +237,11 @@ The Omarchy layout moves focus to `Super`+arrows and window movement to
 with `Super+W` or `Super+Q`, and moves the browser and file manager to
 `Super+Shift+B` and `Super+Shift+F`. Directional focus requires dynamic tiling,
 so pair it with `gnomarchy tiling enable`.
+
+Because it claims all ten digits, that profile also takes `Super+7..9` from
+GNOME's application switcher; the default profile, with six workspaces, leaves
+those three alone. Either way each digit has exactly one handler - they used to
+have two, and did whichever the shell registered last.
 
 One deliberate departure from upstream: Omarchy puts its menu on `Super+Space`,
 which in GNOME switches the keyboard layout. Layout switching is used far more

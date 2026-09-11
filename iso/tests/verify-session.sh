@@ -186,6 +186,53 @@ else
   no "${#clashes[@]} accelerator(s) bound twice" "${clashes[*]}"
 fi
 
+# --- Regression: Super+N switched workspace and launched an app ------------
+#
+# GNOME ships switch-to-application-1..9 on Super+1..9 in
+# org.gnome.shell.keybindings, and Gnomarchy puts switch-to-workspace-N on the
+# same keys in org.gnome.desktop.wm.keybindings -- six of them by default, all
+# nine on the Omarchy profile. Every one of those keys had two handlers and did
+# whichever the shell registered last. Turning Dash to Dock's hot-keys off,
+# which the installer does, is a different setting and never affected this.
+#
+# These two schemas are where that class of defect lives, so compare them
+# wholesale rather than checking the digits by name.
+collect_schema_accels() {
+  local schema="$1" key value
+  gsettings list-schemas 2>/dev/null | grep -qx "$schema" || return 0
+
+  while read -r key; do
+    [[ -n "$key" ]] || continue
+    value="$(gsettings get "$schema" "$key" 2>/dev/null || echo '')"
+    # Keybinding keys are lists of accelerators; everything else is skipped.
+    [[ "$value" == "["*"<"* ]] || continue
+    while read -r accel; do
+      [[ -n "$accel" ]] && printf '%s\t%s\n' "$accel" "$key"
+    done < <(tr ',' '\n' <<<"$value" | tr -d "[]' " | grep -v '^$')
+  done < <(gsettings list-keys "$schema" 2>/dev/null)
+}
+
+mapfile -t wm_accels < <(collect_schema_accels org.gnome.desktop.wm.keybindings)
+mapfile -t shell_accels < <(collect_schema_accels org.gnome.shell.keybindings)
+
+wm_shell_clashes=()
+for wm_entry in "${wm_accels[@]}"; do
+  for shell_entry in "${shell_accels[@]}"; do
+    if [[ "${wm_entry%%$'\t'*}" == "${shell_entry%%$'\t'*}" ]]; then
+      wm_shell_clashes+=("${wm_entry%%$'\t'*} (${wm_entry#*$'\t'} / ${shell_entry#*$'\t'})")
+    fi
+  done
+done
+
+if ((${#wm_accels[@]} == 0 || ${#shell_accels[@]} == 0)); then
+  echo "INFO  could not read one of the keybinding schemas; skipping wm/shell comparison"
+elif ((${#wm_shell_clashes[@]} == 0)); then
+  ok "no key is claimed by both the window manager and the shell (${#wm_accels[@]} vs ${#shell_accels[@]} checked)"
+else
+  no "${#wm_shell_clashes[@]} key(s) claimed by both the window manager and the shell" \
+    "${wm_shell_clashes[*]}"
+fi
+
 # Not a check, a question this test is the right place to answer: which icon
 # the editor entry actually asks for, and whether anything provides it. The
 # icon looked wrong in a screenshot and the cause was guessed at rather than
