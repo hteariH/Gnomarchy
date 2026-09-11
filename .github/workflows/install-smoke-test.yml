@@ -59,7 +59,7 @@ jobs:
       - name: Install QEMU and image tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf dosfstools mtools
+          sudo apt-get install -y qemu-system-x86 qemu-utils ovmf dosfstools mtools imagemagick
 
       - name: Check for KVM acceleration
         id: kvm
@@ -429,7 +429,11 @@ jobs:
           sudo qemu-nbd --disconnect /dev/nbd0
           sleep 3
 
-      - name: Boot the installed system and capture screenshots
+      # Two boots, not one with a logout in the middle. Dynamic tiling only
+      # takes effect once the shell reloads, and under Wayland that needs a new
+      # session; logging out was tried and kills the capture script with it.
+      # The guest powers itself off at the end of each phase.
+      - name: Capture the desktop, boot 1
         if: always() && inputs.capture_screenshots
         env:
           MOUNTED: ${{ steps.mount.outputs.mounted }}
@@ -439,32 +443,29 @@ jobs:
             echo "Skipped: nothing installed to photograph."
             exit 0
           fi
-
-          ACCEL="-accel tcg"
-          MEM=4096
           if [ "$KVM" = "true" ]; then
-            ACCEL="-accel kvm -cpu host"
-            MEM=8192
+            export ACCEL="-accel kvm -cpu host"
+            export MEM=8192
           fi
+          bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase1
 
-          # virtio-vga carrying an explicit EDID resolution, so the frames come
-          # out at 1080p rather than the 1024x768 a bare VGA device negotiates.
-          # The default display device has to be off or the guest sees two.
-          set +e
-          sudo timeout 30m qemu-system-x86_64 \
-            $ACCEL -smp 4 -m $MEM \
-            -drive if=pflash,format=raw,readonly=on,file=${{ steps.ovmf.outputs.code }} \
-            -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
-            -drive file=disk.qcow2,if=virtio,format=qcow2 \
-            -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
-            -vga none -device virtio-vga,xres=1920,yres=1080 \
-            -display none -serial file:capture-serial.log \
-            -no-reboot
-          echo "qemu exit: $?"
-          set -e
-          sudo chown "$USER:$USER" disk.qcow2 capture-serial.log 2>/dev/null || true
+      - name: Capture the desktop, boot 2
+        if: always() && inputs.capture_screenshots
+        env:
+          MOUNTED: ${{ steps.mount.outputs.mounted }}
+          KVM: ${{ steps.kvm.outputs.available }}
+        run: |
+          if [ "$MOUNTED" != "true" ]; then
+            echo "Skipped: nothing installed to photograph."
+            exit 0
+          fi
+          if [ "$KVM" = "true" ]; then
+            export ACCEL="-accel kvm -cpu host"
+            export MEM=8192
+          fi
+          bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase2
 
-      - name: Extract the screenshots
+      - name: Convert and collect the frames
         if: always() && inputs.capture_screenshots
         env:
           MOUNTED: ${{ steps.mount.outputs.mounted }}
@@ -480,12 +481,27 @@ jobs:
           sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
 
           mkdir -p screenshots
-          sudo cp -r /mnt/gnomarchy/var/tmp/gnomarchy-screenshots/. screenshots/ 2>/dev/null || true
           sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-capture.txt screenshots/ 2>/dev/null || true
           sudo chown -R "$USER:$USER" screenshots
 
+          # The transcript says when each arrangement was on screen, which is
+          # what pairs a frame with the thing it is a picture of.
           echo "=== capture transcript ==="
           cat screenshots/gnomarchy-capture.txt 2>/dev/null || echo "(no transcript - the capture script never ran)"
+
+          # A framebuffer dump is about 6 MB a frame; the same pixels as PNG are
+          # a fraction of that, and PNG is what anyone downloading this wants.
+          CONVERT=convert
+          command -v magick >/dev/null 2>&1 && CONVERT=magick
+          shopt -s nullglob
+          for ppm in frames/*.ppm; do
+            png="screenshots/$(basename "${ppm%.ppm}").png"
+            "$CONVERT" "$ppm" "$png" || echo "could not convert $ppm"
+          done
+          for index in frames/*-index.txt; do
+            cp "$index" screenshots/
+          done
+
           echo
           echo "=== frames ==="
           ls -la screenshots/
@@ -493,8 +509,9 @@ jobs:
           # A run that photographs nothing has to be visibly red, or it reads
           # as a success that merely happened to produce no artifact.
           if ! ls screenshots/*.png >/dev/null 2>&1; then
-            echo "--- capture serial tail ---"
-            tail -80 capture-serial.log || true
+            echo "--- serial tails ---"
+            tail -60 capture-phase1-serial.log 2>/dev/null || true
+            tail -60 capture-phase2-serial.log 2>/dev/null || true
             echo "::error::No screenshots were captured."
             exit 1
           fi

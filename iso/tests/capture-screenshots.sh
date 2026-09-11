@@ -1,31 +1,41 @@
 #!/bin/bash
 
-# In-guest screenshot capture.
+# In-guest half of the screenshot capture: compose the desktop, hold each
+# arrangement still, and say in the transcript exactly when it was on screen.
 #
-# Runs inside the installed system's graphical session, the same way
-# verify-session.sh does, and for the same reason: a screenshot of the desktop
-# can only be taken by something living in a session with a D-Bus bus.
+# It takes no pictures. The first version tried, through
+# org.gnome.Shell.Screenshot, and every call came back with
 #
-# It deliberately does NOT use `gnomarchy capture`. That wraps grim + slurp,
-# which need wlr-screencopy and wlr-layer-shell - wlroots protocols Mutter does
-# not implement - and its gnome-screenshot fallback is not in the package list.
-# The one mechanism that works under GNOME is the shell's own D-Bus interface.
+#   org.freedesktop.DBus.Error.AccessDenied: Screenshot is not allowed
 #
-# Two phases, because enabling dynamic tiling only takes effect after the shell
-# reloads, and under Wayland that means logging out. Phase 1 shoots everything
-# else, turns tiling on and logs out; autologin brings us back into phase 2,
-# which shoots the tiled layout and powers off. The phase is recorded in a file
-# so the same autostart entry serves both.
+# which is policy rather than a bug: since GNOME 41 the shell only answers that
+# interface for a fixed allowlist of senders - gnome-settings-daemon and the
+# xdg-desktop-portal backends. A script in the session is not on it and cannot
+# get on it, because those well-known names are already owned. The portal route
+# needs a permission granted through a dialog nobody is there to click.
 #
-# Results land in /var/tmp/gnomarchy-screenshots/ and a transcript in
-# /var/tmp/gnomarchy-capture.txt, which CI reads off the disk image afterwards.
+# So the pictures are taken from outside, by QEMU itself: the host dumps the
+# video framebuffer on a timer while this script drives the desktop. See
+# iso/tests/capture-host.sh. That is also the more honest image - it is the
+# actual video output of the real Wayland session, not a reconstruction.
+#
+# Frames are matched to stages by wall clock, which is why every stage prints a
+# timestamp and then holds still for HOLD seconds.
+#
+# Two phases, one boot each. Enabling dynamic tiling only takes effect once the
+# shell reloads, and under Wayland that means a new session; a fresh boot is
+# the most reliable way to get one. Logging out was tried and does not work -
+# it kills this script along with the session, so nothing survives to continue.
+# The phase is recorded in a file, which persists across the reboot.
 
-SHOT_DIR="/var/tmp/gnomarchy-screenshots"
 REPORT="/var/tmp/gnomarchy-capture.txt"
 STATE_DIR="$HOME/.local/state/gnomarchy"
 PHASE_FILE="$STATE_DIR/capture-phase"
 
-mkdir -p "$SHOT_DIR" "$STATE_DIR"
+# Long enough that a frame grabbed every few seconds lands mid-stage.
+HOLD="${GNOMARCHY_CAPTURE_HOLD:-12}"
+
+mkdir -p "$STATE_DIR"
 
 trace() { logger -t gnomarchy-capture -- "$*" 2>/dev/null || true; }
 
@@ -39,50 +49,39 @@ echo "=== capture phase $phase ==="
 echo "date: $(date -Is)"
 echo "session type: ${XDG_SESSION_TYPE:-unknown}"
 echo "user: $(whoami)"
+echo "hold per stage: ${HOLD}s"
 echo
 
-# A logout that never lands in phase 2 would otherwise loop forever.
+# Guard against a phase file that never advances.
 if (( phase > 2 )); then
   echo "phase $phase is past the end - powering off"
   sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
   exit 0
 fi
 
-shots_taken=0
-shots_failed=0
-
-# Take one screenshot. Never fatal: a step that cannot be shot should cost one
-# frame, not the whole run, and the reason belongs in the transcript so the
-# next CI run can be aimed rather than guessed.
-shot() {
-  local name="$1" path="$SHOT_DIR/$name.png" out
-  if out="$(gdbus call --session \
-        --dest org.gnome.Shell \
-        --object-path /org/gnome/Shell/Screenshot \
-        --method org.gnome.Shell.Screenshot.Screenshot \
-        false false "$path" 2>&1)"; then
-    if [[ -s "$path" ]]; then
-      echo "SHOT  $name ($(stat -c%s "$path") bytes)"
-      trace "shot $name ok"
-      shots_taken=$((shots_taken + 1))
-      return 0
-    fi
-    echo "MISS  $name -- call returned [$out] but the file is empty or absent"
-  else
-    echo "MISS  $name -- $out"
-  fi
-  trace "shot $name failed"
-  shots_failed=$((shots_failed + 1))
-  return 1
+power_off() {
+  echo
+  echo "powering off at $(date -Is)"
+  sync
+  sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
 }
 
-# Launch a windowed program and remember it, so the frame can be cleared
-# before the next one is composed.
+# Announce an arrangement and hold it. The timestamps are the whole point:
+# they are what tells the host which frames are worth keeping.
+stage() {
+  local name="$1"
+  echo "STAGE $name  start=$(date -Is)"
+  sleep "$HOLD"
+  echo "STAGE $name  end=$(date -Is)"
+  trace "stage $name held ${HOLD}s"
+}
+
 launched_pids=()
 launch() {
   setsid "$@" >/dev/null 2>&1 &
   launched_pids+=("$!")
   trace "launched: $*"
+  sleep 6
 }
 
 close_launched() {
@@ -91,12 +90,12 @@ close_launched() {
     kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
   done
   launched_pids=()
-  sleep 3
+  sleep 4
 }
 
 if [[ "$phase" == "1" ]]; then
   # first-run is an autostart entry too, and everything worth photographing -
-  # the theme, the dock, the keybindings - is what it writes. Shooting before
+  # the theme, the dock, the keybindings - is what it writes. Composing before
   # it finishes photographs a stock GNOME desktop.
   echo "--- waiting for first-run ---"
   for i in $(seq 1 36); do
@@ -109,83 +108,54 @@ if [[ "$phase" == "1" ]]; then
     echo "WARNING: first-run never completed; frames will show an unconfigured desktop"
   fi
 
-  # Let the shell settle: the dock, the wallpaper and the extensions all land
-  # a little after the session is technically up.
-  sleep 20
+  # The dock, the wallpaper and the extensions all land a little after the
+  # session is technically up.
+  sleep 25
 
-  # Which shell methods this GNOME actually exposes. The screenshot API has
-  # moved between releases and the overview has no stable public call at all,
-  # so record the truth here rather than guessing again next run.
   echo
-  echo "--- org.gnome.Shell methods ---"
-  gdbus introspect --session --dest org.gnome.Shell \
-    --object-path /org/gnome/Shell 2>&1 | grep -E "^ +[A-Z][A-Za-z]*\(" || echo "(introspection failed)"
-  echo "--- org.gnome.Shell.Screenshot methods ---"
-  gdbus introspect --session --dest org.gnome.Shell \
-    --object-path /org/gnome/Shell/Screenshot 2>&1 | grep -E "^ +[A-Z][A-Za-z]*\(" || echo "(introspection failed)"
-  echo
+  echo "--- stages ---"
+  stage 01-desktop
 
-  echo "--- frames ---"
-  shot 01-desktop
-
-  # The overview has no supported D-Bus entry point, so try the candidates in
-  # order and log which one answered. There is no Eval fallback: it works only
-  # when unsafe-mode is on, which it is not by default.
-  overview_method=""
-  for m in ShowApplications FocusSearch; do
-    if gdbus call --session --dest org.gnome.Shell \
-         --object-path /org/gnome/Shell \
-         --method "org.gnome.Shell.$m" >/dev/null 2>&1; then
-      overview_method="$m"
-      break
-    fi
-  done
-  if [[ -n "$overview_method" ]]; then
-    echo "overview opened via $overview_method"
-    sleep 4
-    shot 02-overview
-    gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell \
-      --method "org.gnome.Shell.$overview_method" >/dev/null 2>&1 || true
-    sleep 3
+  # Confirmed present on GNOME 50 by introspection on the previous run, along
+  # with FocusSearch. Launching the next window dismisses the overview, so
+  # there is nothing to close here.
+  if gdbus call --session --dest org.gnome.Shell \
+       --object-path /org/gnome/Shell \
+       --method org.gnome.Shell.ShowApplications >/dev/null 2>&1; then
+    stage 02-overview
   else
-    echo "SKIP  02-overview -- no shell method would open the overview"
+    echo "SKIP 02-overview -- ShowApplications refused"
   fi
 
-  # The command center. gnomarchy-menu re-execs itself into a terminal when it
-  # has no tty, which is exactly the case here, so it must be backgrounded.
+  # gnomarchy-menu re-execs itself into a terminal when it has no tty, which
+  # is exactly the case here, so it must be backgrounded.
   launch gnomarchy menu
-  sleep 10
-  shot 03-command-center
+  stage 03-command-center
   close_launched
 
   launch alacritty -e btop
-  sleep 8
-  shot 04-terminal-btop
+  stage 04-terminal-btop
 
   launch alacritty -e nvim "$HOME/.local/share/gnomarchy/README.md"
-  sleep 12
-  shot 05-neovim
+  stage 05-neovim
   close_launched
 
   launch nautilus
-  sleep 8
-  shot 06-files
+  stage 06-files
   close_launched
 
   # The theme engine is the headline feature and the one that photographs
-  # best, so it gets a frame per theme with a terminal and a GTK window open -
+  # best, so it gets a stage per theme with a terminal and a GTK window open -
   # both of which the switch repaints.
   launch alacritty -e btop
   launch nautilus
-  sleep 8
   n=7
   for theme in kanagawa gruvbox rose-pine catppuccin-latte; do
     if gnomarchy theme set "$theme" >/dev/null 2>&1; then
-      sleep 8
-      shot "$(printf '%02d' $n)-theme-$theme"
+      sleep 6
+      stage "$(printf '%02d' $n)-theme-$theme"
     else
       echo "MISS  theme $theme -- gnomarchy theme set failed"
-      shots_failed=$((shots_failed + 1))
     fi
     n=$((n + 1))
   done
@@ -194,54 +164,37 @@ if [[ "$phase" == "1" ]]; then
   gnomarchy theme set tokyo-night >/dev/null 2>&1 || true
 
   echo
-  echo "--- enabling dynamic tiling and logging out for phase 2 ---"
+  echo "--- enabling dynamic tiling for the phase 2 boot ---"
   gnomarchy tiling enable 2>&1 | tail -5 || echo "gnomarchy tiling enable failed"
   echo 2 > "$PHASE_FILE"
-  sync
 
-  echo "phase 1 complete: $shots_taken taken, $shots_failed failed"
-  trace "phase 1 complete: $shots_taken taken, $shots_failed failed"
-
-  gnome-session-quit --logout --no-prompt >/dev/null 2>&1 || true
-
-  # If the logout did not take, do not strand the VM until the CI timeout -
-  # the phase 1 frames are already on disk and worth more than a hung run.
-  sleep 90
-  echo "logout did not end the session; powering off with phase 1 frames only"
-  sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
+  echo
+  echo "phase 1 complete"
+  trace "phase 1 complete"
+  power_off
   exit 0
 fi
 
-# --- phase 2: dynamic tiling ------------------------------------------------
+# --- phase 2: dynamic tiling, on a shell that started with it enabled -------
 
-echo "--- waiting for the reloaded shell to settle ---"
-sleep 25
+echo "--- waiting for the session to settle ---"
+sleep 30
 
 echo "tiling status:"
-gnomarchy tiling status 2>&1 | head -5 || echo "(gnomarchy tiling status failed)"
+gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
 echo
 
 # Three windows opened one after another, so auto-tiling has something to
 # place. Opening them at once tends to race the extension.
 launch alacritty -e btop
-sleep 5
 launch gnome-terminal
-sleep 5
 launch nautilus
-sleep 8
-shot 11-tiling
+stage 11-tiling
 close_launched
 
 echo
-echo "phase 2 complete: $shots_taken taken, $shots_failed failed"
-echo
-echo "=== frames on disk ==="
-ls -la "$SHOT_DIR" 2>&1
-echo
-echo "RESULT: $([[ -n "$(ls -1 "$SHOT_DIR"/*.png 2>/dev/null)" ]] && echo SUCCESS || echo FAILURE)"
-trace "capture finished"
+echo "phase 2 complete"
+trace "phase 2 complete"
 
 echo 3 > "$PHASE_FILE"
-sync
-
-sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
+power_off
