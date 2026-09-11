@@ -291,6 +291,22 @@ jobs:
           sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
           sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
 
+          # The verify script logged nothing at all last time, so establish
+          # whether it was ever installed and scheduled before interpreting
+          # anything else.
+          echo "--- autostart entries ---"
+          sudo ls -la /mnt/gnomarchy/home/citest/.config/autostart/ 2>&1 || echo "(no autostart dir)"
+          echo "--- verify script on the image ---"
+          sudo ls -la /mnt/gnomarchy/usr/local/bin/gnomarchy-verify-session 2>&1 || echo "(not installed)"
+          echo "--- first-run stamp ---"
+          sudo ls -la /mnt/gnomarchy/home/citest/.local/state/gnomarchy/ 2>&1 || echo "(no state dir)"
+          echo "--- gnome-session autostart decisions ---"
+          if sudo test -d /mnt/gnomarchy/var/log/journal; then
+            sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager 2>/dev/null |
+              grep -iE "zz-verify|gnomarchy-verify|first-run|autostart" | tail -20 ||
+              echo "(nothing about autostart in the journal)"
+          fi
+
           echo "--- verification trace ---"
           if sudo test -d /mnt/gnomarchy/var/log/journal; then
             sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager               -t gnomarchy-verify 2>/dev/null || echo "(no trace recorded)"
