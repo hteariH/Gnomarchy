@@ -66,6 +66,18 @@ power_off() {
   sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
 }
 
+# first-run announces itself with notify-send, and a banner raised while the
+# overview is up never times out - one sat across the top of every frame of the
+# last run. Turning banners off covers anything that has not fired yet, and
+# closing ids one by one covers whatever is already on screen.
+dismiss_notifications() {
+  gsettings set org.gnome.desktop.notifications show-banners false 2>/dev/null || true
+  local id
+  for id in $(seq 1 30); do
+    gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.CloseNotification "$id" >/dev/null 2>&1 || true
+  done
+}
+
 # Announce an arrangement and hold it. The timestamps are the whole point:
 # they are what tells the host which frames are worth keeping.
 stage() {
@@ -93,6 +105,8 @@ close_launched() {
   sleep 4
 }
 
+dismiss_notifications
+
 if [[ "$phase" == "1" ]]; then
   # first-run is an autostart entry too, and everything worth photographing -
   # the theme, the dock, the keybindings - is what it writes. Composing before
@@ -107,6 +121,9 @@ if [[ "$phase" == "1" ]]; then
   else
     echo "WARNING: first-run never completed; frames will show an unconfigured desktop"
   fi
+
+  # Whatever first-run raised on its way past.
+  dismiss_notifications
 
   # The dock, the wallpaper and the extensions all land a little after the
   # session is up, and this gap also has to outlast the host pressing Escape.
