@@ -36,7 +36,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **👾 Retro Terminal Screensaver (`gnomarchy screensaver`)**: Fullscreen matrix rain screensaver triggered via `<Super>Escape`.
 - **🛡️ Default Privacy Browser (Brave Origin)**: **Brave Origin** pre-configured as the default system browser—completely debloated of crypto, AI (Leo), rewards, and telemetry, delivering uncompromising speed and ad-blocking out of the box.
 - **🖥️ Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (GNOME Terminal, Brave Origin, Files, VS Code, Bazaar App Store).
-- **📝 VS Code as the Default Editor**: Preinstalled from the official Arch repository and wired up as the graphical default for source and text files. `$EDITOR` resolves to `code --wait` under a graphical session and `nvim` in a TTY or over SSH.
+- **📝 VS Code as the Default Editor**: Preinstalled from the official Arch repository and wired up as the graphical default for source and text files. `$EDITOR` resolves to `code --wait` under a graphical session and `nano` in a TTY or over SSH. Neovim stays installed and themed for those who prefer it.
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
 - **💻 Curated Hardware Profiles**: Out-of-the-box fixes for Apple T2 Macs, Asus ROG laptops, Framework 13/16, Intel Panther Lake, and Nvidia hybrid graphics.
 

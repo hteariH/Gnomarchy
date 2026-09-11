@@ -10,10 +10,14 @@ export PATH="$HOME/.local/share/gnomarchy/bin:$HOME/.local/bin:$HOME/.cargo/bin:
 #
 # VS Code needs --wait, or git sees the editor return immediately and treats
 # the commit message as empty. In a TTY or over SSH there is no display for it
-# to open on, so fall back to Neovim rather than hanging.
+# to open on, so fall back to nano, which anyone can drive without knowing it.
+# Neovim stays installed and configured for those who want it.
 if [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]] && command -v code >/dev/null 2>&1; then
   export EDITOR="code --wait"
   export VISUAL="code --wait"
+elif command -v nano >/dev/null 2>&1; then
+  export EDITOR="nano"
+  export VISUAL="nano"
 elif command -v nvim >/dev/null 2>&1; then
   export EDITOR="nvim"
   export VISUAL="nvim"

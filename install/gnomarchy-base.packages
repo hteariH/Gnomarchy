@@ -66,6 +66,7 @@ flatpak
 gnome-terminal
 alacritty
 code
+nano
 neovim
 tmux
 starship

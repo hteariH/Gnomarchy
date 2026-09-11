@@ -14,7 +14,7 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
 - **Default Editor**: VS Code (`code`, text/plain and friends); `$EDITOR` is
-  `code --wait` in a graphical session, `nvim` in a TTY
+  `code --wait` in a graphical session, `nano` in a TTY
 - **Default Browser**: Brave Origin (`brave-origin` / `brave`, debloated, privacy-first)
 - **App Store & Packages**: Pacman, Flatpak (Flathub), and Bazaar
 
