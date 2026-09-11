@@ -48,8 +48,12 @@ if [[ ! -d "$ROOT/var/log" ]] || [[ -z "$(ls -A "$ROOT/var/log" 2>/dev/null)" ]]
 fi
 
 # --- The system booted-to state -------------------------------------------
+# Note on symlinks: this image is mounted under $ROOT, so an absolute symlink
+# inside it resolves against the *host* filesystem and -e reports false even
+# when the link is perfectly correct. Test with -L and read the target instead
+# of following it.
 dm_unit="$ROOT/etc/systemd/system/display-manager.service"
-if [[ -e "$dm_unit" ]]; then
+if [[ -L "$dm_unit" || -f "$dm_unit" ]]; then
   dm_target="$(readlink "$dm_unit" 2>/dev/null || cat "$dm_unit" 2>/dev/null)"
   case "$dm_target" in
     *gdm*) ok "GDM is the enabled display manager" ;;
@@ -59,12 +63,12 @@ else
   no "No display manager enabled" "expected /etc/systemd/system/display-manager.service"
 fi
 
-[[ -e "$ROOT/usr/bin/gnome-shell" ]] &&
+[[ -e "$ROOT/usr/bin/gnome-shell" || -L "$ROOT/usr/bin/gnome-shell" ]] &&
   ok "gnome-shell installed" ||
   no "gnome-shell missing"
 
 # --- Regression: whisper.cpp vs whisper-cpp (aborted the whole install) ----
-if [[ -e "$ROOT/usr/bin/whisper-cli" ]]; then
+if [[ -e "$ROOT/usr/bin/whisper-cli" || -L "$ROOT/usr/bin/whisper-cli" ]]; then
   ok "whisper-cli present (Voxtype backend)"
 else
   no "whisper-cli missing" "the whisper-cpp package did not install"
@@ -72,9 +76,11 @@ fi
 
 # --- Regression: only the dispatcher reached the session PATH --------------
 missing_links=()
+link=""
 for cmd in gnomarchy gnomarchy-first-run gnomarchy-menu gnomarchy-capture \
   gnomarchy-theme-set gnomarchy-backgrounds gnomarchy-migrate; do
-  [[ -e "$ROOT/usr/local/bin/$cmd" ]] || missing_links+=("$cmd")
+  link="$ROOT/usr/local/bin/$cmd"
+  [[ -L "$link" || -f "$link" ]] || missing_links+=("$cmd")
 done
 if ((${#missing_links[@]} == 0)); then
   ok "all session-critical commands are in /usr/local/bin"
@@ -83,10 +89,14 @@ else
 fi
 
 # --- Regression: ISO deployed without .git, so updates were impossible -----
-if [[ -d "$HOME_DIR/.local/share/gnomarchy/.git" ]]; then
+GNOMARCHY_CHECKOUT="$HOME_DIR/.local/share/gnomarchy"
+if [[ -d "$GNOMARCHY_CHECKOUT/.git" ]]; then
   ok "Gnomarchy checkout has a git repository (updates possible)"
+elif [[ -d "$GNOMARCHY_CHECKOUT" ]]; then
+  no "no .git in ~/.local/share/gnomarchy"     "checkout exists but is not a repository; contains: $(ls "$GNOMARCHY_CHECKOUT" | tr '
+' ' ')"
 else
-  no "no .git in ~/.local/share/gnomarchy" "this machine could never update"
+  no "no Gnomarchy checkout at all" "expected $GNOMARCHY_CHECKOUT"
 fi
 
 # --- Regression: flat wallpaper layout never matched the theme engine ------
