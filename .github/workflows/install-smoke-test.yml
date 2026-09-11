@@ -231,6 +231,21 @@ jobs:
             | sudo tee /mnt/gnomarchy/etc/sudoers.d/99-ci-verify > /dev/null
           sudo chmod 440 /mnt/gnomarchy/etc/sudoers.d/99-ci-verify
 
+          # Put the kernel console on the serial port for this test image
+          # only. Without it the serial log captures nothing past the EFI
+          # menu, and a boot that fails is completely opaque.
+          if sudo test -f /mnt/gnomarchy/boot/limine.conf; then
+            sudo sed -i 's/quiet splash/console=tty0 console=ttyS0,115200 systemd.log_level=info/' \
+              /mnt/gnomarchy/boot/limine.conf
+            echo "--- limine.conf ---"
+            sudo cat /mnt/gnomarchy/boot/limine.conf
+          else
+            echo "::warning::No limine.conf; cannot enable the serial console."
+          fi
+
+          # Persist the journal so a failed boot can be read offline.
+          sudo mkdir -p /mnt/gnomarchy/var/log/journal
+
           sudo umount -R /mnt/gnomarchy
           sudo qemu-nbd --disconnect /dev/nbd0
           sleep 3
@@ -266,6 +281,14 @@ jobs:
           sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
           sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
           sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
+
+          echo "--- journal from the boot attempt ---"
+          if sudo test -d /mnt/gnomarchy/var/log/journal; then
+            sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager \
+              -p warning 2>/dev/null | tail -40 || echo "(journal unreadable)"
+          else
+            echo "(no persistent journal)"
+          fi
 
           REPORT=/mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt
           if sudo test -f "$REPORT"; then
