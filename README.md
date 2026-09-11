@@ -24,7 +24,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 
 - **⌨️ Command Center (`Super + Alt + Space`)**: One keystroke to themes, web apps, screen capture, snapshots, updates and power actions—the whole system layer behind a single searchable menu.
 - **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Alacritty, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
-- **🧩 Two Tiling Models**: Manual grid tiling with Tactile (`Super + T`) by default, or Hyprland-style **dynamic auto-tiling** where new windows place themselves and neighbours resize to fit — one command apart (`gnomarchy tiling enable`).
+- **🧩 Two Tiling Models**: Manual zone tiling with Tiling Shell by default — drag to a zone, snap assist, keyboard throws — or Hyprland-style **dynamic tree tiling** with Forge, where a new window splits the focused one and both halves resize. One command apart (`gnomarchy tiling enable`).
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
 - **🌐 Web App Generator (`gnomarchy webapp`)**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles, auto-fetched favicons, and Dash to Dock pinning.
 - **📁 Nautilus Context Superpowers**: Native right-click file actions — H.264 video compression (CRF 28, no fixed size target), animated GIF conversion, MP3 extraction, WebP conversion, EXIF stripping, resize to 1080p, open in VS Code, and LocalSend sharing.
@@ -49,8 +49,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | Shortcut | Action |
 | :--- | :--- |
 | <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>Space</kbd> | **Command Center**: Themes, web apps, capture, snapshots, updates, power |
-| <kbd>Super</kbd> + <kbd>T</kbd> | **Tactile Grid Tiling**: Launch interactive grid overlay to snap windows (manual mode) |
-| <kbd>Super</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Focus window left/down/up/right (dynamic mode) |
+| <kbd>Super</kbd> + <kbd>T</kbd> | **Tiling Shell**: Cycle the active zone layout (manual mode) |
+| <kbd>Super</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Focus window left/down/up/right (dynamic mode, Forge) |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Move window in that direction (dynamic mode) |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Launch **GNOME Terminal** (themed Gnomarchy profile) |
 | <kbd>Super</kbd> + <kbd>B</kbd> | Launch default web browser (**Brave Origin**) |
@@ -60,6 +60,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | <kbd>Super</kbd> + <kbd>Up</kbd> | Maximize focused window |
 | <kbd>Super</kbd> + <kbd>Backspace</kbd> | Interactive window resize mode |
 | <kbd>Super</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Switch directly to workspace 1 through 6 |
+| <kbd>Super</kbd> + <kbd>7</kbd> – <kbd>9</kbd> | GNOME's app switcher: focus or launch the Nth pinned app |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Move focused window to workspace 1 through 6 |
 | <kbd>Super</kbd> + <kbd>D</kbd> | **Voxtype**: Toggle AI Speech-to-Text Dictation |
 | <kbd>Super</kbd> + <kbd>Escape</kbd> | **Screensaver**: Fullscreen Retro Matrix terminal screensaver |
@@ -180,11 +181,11 @@ them. See `gnomarchy manual gaming`.
 Gnomarchy ships both tiling models and lets you pick:
 
 ```bash
-# Hyprland-style dynamic auto-tiling: windows place themselves,
-# neighbours resize to fit, navigation on hjkl
+# Hyprland-style dynamic tree tiling with Forge: a new window splits
+# the focused one, both halves resize, navigation on hjkl
 gnomarchy tiling enable
 
-# Back to manual grid tiling with Tactile (the default)
+# Back to manual zone tiling with Tiling Shell (the default)
 gnomarchy tiling disable
 
 # Which mode is active?
@@ -237,6 +238,11 @@ with `Super+W` or `Super+Q`, and moves the browser and file manager to
 `Super+Shift+B` and `Super+Shift+F`. Directional focus requires dynamic tiling,
 so pair it with `gnomarchy tiling enable`.
 
+Because it claims all ten digits, that profile also takes `Super+7..9` from
+GNOME's application switcher; the default profile, with six workspaces, leaves
+those three alone. Either way each digit has exactly one handler - they used to
+have two, and did whichever the shell registered last.
+
 One deliberate departure from upstream: Omarchy puts its menu on `Super+Space`,
 which in GNOME switches the keyboard layout. Layout switching is used far more
 often than a launcher, so it keeps `Super+Space` and the menu stays on
@@ -247,10 +253,23 @@ from memory. What Hyprland does and GNOME cannot - window groups, the
 scratchpad, pseudo-tiling, pixel-step resize - is listed by
 `gnomarchy keymap status` rather than silently dropped.
 
-**Dynamic** uses Tiling Shell with auto-tiling on: a new window is placed into
-the layout automatically rather than opening floating. **Manual** uses Tactile:
-`Super+T` opens a grid overlay and you choose the zone; nothing moves on its
-own. Only one is active at a time - enabled together they fight over placement.
+**Dynamic** uses Forge, which tiles into a binary tree: opening a window splits
+the focused one and both halves resize, closing one gives its space back to its
+sibling. **Manual** uses Tiling Shell with auto-placement off: hold Ctrl while
+dragging to pick a zone, drag to the top for snap assist, `Super+Shift+arrows`
+to throw a window into the next tile; nothing moves on its own. Only one is
+active at a time - enabled together they fight over placement.
+
+Forge is bundled from [jcrussell/forge](https://github.com/jcrussell/forge),
+not from extensions.gnome.org - the Forge published there stops at GNOME 49 and
+Gnomarchy runs 50.
+
+Both modes throw windows with `Super+Shift+arrows`, so GNOME's
+`move-to-monitor` moves to `Super+Ctrl+Shift+arrows`. Dynamic mode additionally
+needs `h`, `v` and `k`: the keybindings browser moves to `Super+/`, the manual
+to `Super+Shift+/`, the notification list keeps only `Super+M`, and `minimize`
+is unbound. `gnomarchy tiling disable` puts them all back, and
+`gnomarchy keybindings` reads dconf so it always shows the truth.
 
 Switching takes effect after the shell reloads. Under Wayland that means
 logging out and back in.

@@ -8,6 +8,14 @@ gsettings set org.gnome.desktop.wm.keybindings maximize "['<Super>Up']"
 gsettings set org.gnome.desktop.wm.keybindings begin-resize "['<Super>BackSpace']"
 gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['<Shift>F11']"
 
+# Both tiling modes throw a window with Super+Shift+arrows, which is GNOME's
+# default for move-to-monitor. Move that one modifier further out rather than
+# leave two handlers on one accelerator; `gnomarchy tiling` keeps it there.
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-left "['<Super><Control><Shift>Left']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-right "['<Super><Control><Shift>Right']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-up "['<Super><Control><Shift>Up']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-down "['<Super><Control><Shift>Down']"
+
 # Workspace Switching: Super + 1-6
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-1 "['<Super>1']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-2 "['<Super>2']"
@@ -15,6 +23,18 @@ gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-3 "['<Super>3
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-4 "['<Super>4']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-5 "['<Super>5']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-6 "['<Super>6']"
+
+# GNOME Shell binds switch-to-application-1..9 to Super+1..9 by default, so
+# every Super+N above was claimed twice and did whichever handler the shell
+# registered last. Give the keys Gnomarchy claims to the workspaces and leave
+# the rest with GNOME. (Dash to Dock's own hot-keys are turned off separately;
+# that setting does not touch the Shell's.)
+for n in 1 2 3 4 5 6; do
+  gsettings set org.gnome.shell.keybindings "switch-to-application-$n" "@as []"
+done
+for n in 7 8 9; do
+  gsettings reset org.gnome.shell.keybindings "switch-to-application-$n"
+done
 
 # Move Window to Workspace: Super + Shift + 1-6
 gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-1 "['<Super><Shift>1']"

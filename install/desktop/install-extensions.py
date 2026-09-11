@@ -8,19 +8,36 @@ import subprocess
 import urllib.request
 import json
 import io
+import hashlib
 
 EXTENSIONS = [
     "dash-to-dock@micxgx.gmail.com",
-    "tactile@lundal.io",
+    "tilingshell@ferrarodomenico.com",
     "just-perfection-desktop@just-perfection",
     "blur-my-shell@aunetx",
     "space-bar@luchrioh",
     "tophat@fflewddur.github.io",
     "AlphabeticalAppGrid@stuarthayhurst",
     "appindicatorsupport@rgcjonas.gmail.com",
-    # Deployed but left disabled; `gnomarchy tiling enable` turns it on.
-    "tilingshell@ferrarodomenico.com",
+    # Deployed but left disabled; `gnomarchy tiling enable` turns it on and
+    # turns Tiling Shell off. The two fight over placement if both run.
+    "forge@jmmaranan.com",
 ]
+
+# Extensions that must NOT be fetched from extensions.gnome.org.
+#
+# The Forge published there is the unmaintained forge-ext/forge, whose
+# metadata.json stops at GNOME 49. Installing it on GNOME 50 produces an
+# extension the shell refuses to load -- dynamic tiling would appear to be
+# enabled and do nothing. The pinned fork below declares 50.
+# See default/gnome/extensions/PROVENANCE.md.
+PINNED = {
+    "forge@jmmaranan.com": {
+        "url": "https://github.com/jcrussell/forge/releases/download/"
+               "v49-90-beta.3/forge%40jmmaranan.com.zip",
+        "sha256": "a0a11ded2157286253ed70f1f966cc3b7158d1a1927bd88598ae356dea3543d8",
+    },
+}
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 bundled_dir = os.path.join(repo_root, "default", "gnome", "extensions")
@@ -46,7 +63,22 @@ def run_cmd(cmd):
         print(f"    Warning: {' '.join(cmd)} raised: {e}")
         return False
 
+def download_pinned(uuid):
+    """Fetch a pinned build from its own release, verifying the checksum."""
+    spec = PINNED[uuid]
+    req = urllib.request.Request(spec["url"], headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = resp.read()
+    digest = hashlib.sha256(data).hexdigest()
+    if digest != spec["sha256"]:
+        raise RuntimeError(
+            f"checksum mismatch for {uuid}: got {digest}, expected {spec['sha256']}"
+        )
+    return data
+
 def download_extension(uuid):
+    if uuid in PINNED:
+        return download_pinned(uuid)
     url = f"https://extensions.gnome.org/extension-info/?uuid={uuid}&shell_version=50"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:

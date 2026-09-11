@@ -13,6 +13,7 @@ set -eEo pipefail
 
 MK="org.gnome.settings-daemon.plugins.media-keys"
 BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+FORGE_KEYS="org.gnome.shell.extensions.forge.keybindings"
 TS="org.gnome.shell.extensions.tilingshell"
 
 # Re-exec into a terminal when launched from a keybinding, which has no tty.
@@ -115,8 +116,47 @@ dump_custom() {
   fi
 }
 
-# Tiling Shell's directional bindings only apply in dynamic tiling mode.
+# Forge's bindings only apply in dynamic tiling mode.
 dump_tiling() {
+  gsettings list-schemas 2>/dev/null | grep -qx "$FORGE_KEYS" || return 0
+
+  local enabled
+  enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo '')"
+  [[ "$enabled" == *"forge@jmmaranan.com"* ]] || return 0
+
+  local rows="" key label value pretty
+  for key in window-focus-left window-focus-down window-focus-up window-focus-right     window-move-left window-move-down window-move-up window-move-right     window-swap-left window-swap-down window-swap-up window-swap-right     window-toggle-float window-toggle-always-float con-split-layout-toggle     con-tabbed-layout-toggle con-stacked-layout-toggle     window-expand window-shrink window-reset-sizes     window-gap-size-increase window-gap-size-decrease prefs-tiling-toggle; do
+    value="$(gsettings get "$FORGE_KEYS" "$key" 2>/dev/null || true)"
+    pretty="$(prettify_key "$value")" || continue
+    [[ -z "$pretty" ]] && continue
+    case "$key" in
+      window-focus-*) label="Focus window ${key##*-}" ;;
+      window-move-*) label="Move window ${key##*-} in the tree" ;;
+      window-swap-*) label="Swap window with the one ${key##*-}" ;;
+      window-toggle-float) label="Float the focused window" ;;
+      window-toggle-always-float) label="Always float this window" ;;
+      con-split-layout-toggle) label="Flip the split direction" ;;
+      con-tabbed-layout-toggle) label="Tabbed layout for this container" ;;
+      con-stacked-layout-toggle) label="Stacked layout for this container" ;;
+      window-expand) label="Expand the focused window" ;;
+      window-shrink) label="Shrink the focused window" ;;
+      window-reset-sizes) label="Reset every window to an even split" ;;
+      window-gap-size-increase) label="Increase the gap" ;;
+      window-gap-size-decrease) label="Decrease the gap" ;;
+      prefs-tiling-toggle) label="Suspend or resume tiling" ;;
+    esac
+    rows+="$(emit "$pretty" "$label")"$'\n'
+  done
+
+  if [[ -n "$rows" ]]; then
+    printf '\nDynamic Tiling (Forge)\n'
+    printf '%s' "$rows"
+  fi
+}
+
+# Tiling Shell's bindings only apply in manual tiling mode, which is the
+# default. Its auto-placement is deliberately off there; dynamic mode is Forge.
+dump_manual_tiling() {
   gsettings list-schemas 2>/dev/null | grep -qx "$TS" || return 0
 
   local enabled
@@ -124,22 +164,24 @@ dump_tiling() {
   [[ "$enabled" == *tilingshell* ]] || return 0
 
   local rows="" key label value pretty
-  for key in focus-window-left focus-window-down focus-window-up focus-window-right \
-    move-window-left move-window-down move-window-up move-window-right move-window-center; do
+  for key in move-window-left move-window-down move-window-up move-window-right \
+    untile-window cycle-layouts; do
     value="$(gsettings get "$TS" "$key" 2>/dev/null || true)"
     pretty="$(prettify_key "$value")" || continue
     [[ -z "$pretty" ]] && continue
     case "$key" in
-      focus-window-*) label="Focus window ${key##*-}" ;;
-      move-window-center) label="Centre window" ;;
-      move-window-*) label="Move window ${key##*-}" ;;
+      move-window-*) label="Throw the window into the tile ${key##*-}" ;;
+      untile-window) label="Untile, back to the original size" ;;
+      cycle-layouts) label="Cycle the zone layout" ;;
     esac
     rows+="$(emit "$pretty" "$label")"$'\n'
   done
 
   if [[ -n "$rows" ]]; then
-    printf '\nDynamic Tiling\n'
+    printf '\nManual Tiling (Tiling Shell)\n'
     printf '%s' "$rows"
+    emit "Ctrl + drag" "Pick a zone for the window being dragged"
+    emit "drag to top" "Snap assist"
   fi
 }
 
@@ -156,14 +198,7 @@ collect() {
   dump_schema org.gnome.shell.keybindings "Shell"
   dump_schema org.gnome.mutter.keybindings "Mutter"
 
-  if gsettings list-schemas 2>/dev/null | grep -qx org.gnome.shell.extensions.tactile; then
-    local tiles
-    tiles="$(prettify_key "$(gsettings get org.gnome.shell.extensions.tactile show-tiles 2>/dev/null || echo '')" || true)"
-    if [[ -n "$tiles" ]]; then
-      printf '\nManual Tiling (Tactile)\n'
-      emit "$tiles" "Open the tiling grid overlay"
-    fi
-  fi
+  dump_manual_tiling
 
   printf '\nSwitch layouts with: gnomarchy keymap <omarchy|gnome>\n'
 }

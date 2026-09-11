@@ -86,7 +86,7 @@ report_extensions() {
   echo "--- extensions the shell is running ---"
   gnome-extensions list --enabled 2>&1 || echo "(gnome-extensions list failed)"
   local uuid
-  for uuid in tilingshell@ferrarodomenico.com tactile@lundal.io dash-to-dock@micxgx.gmail.com; do
+  for uuid in forge@jmmaranan.com tilingshell@ferrarodomenico.com dash-to-dock@micxgx.gmail.com; do
     echo "$uuid: $(gnome-extensions info "$uuid" 2>&1 | tr "
 " " " | sed -e "s/  */ /g")"
   done
@@ -222,19 +222,20 @@ sleep 30
 
 report_extensions
 
-# An experiment, not a fix. Tiling Shell skips any window that is already
-# maximized: _autoTile returns early on maximizedHorizontally or
-# maximizedVertically. Mutter auto-maximize defaults to true and nothing in
-# the distribution turns it off, so a window large enough to be auto-maximized
-# is never placed into the layout. If turning it off makes the frame tile,
-# that is the cause and the fix belongs in gnomarchy-tiling.
+# The experiment that was here found the cause and it is now fixed in
+# gnomarchy-tiling: a window that opens maximized is not part of the tree, and
+# Mutter's auto-maximize defaults to true, so the first window of a session
+# escaped tiling. `gnomarchy tiling enable` turns auto-maximize off. Printing
+# these is how we know the fix is actually in effect on the frame we capture,
+# rather than assuming it from the source.
 echo "--- tiling preconditions ---"
-echo "auto-maximize:    $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
-echo "selected-layouts: $(gsettings get org.gnome.shell.extensions.tilingshell selected-layouts 2>&1)"
-echo "layouts-json:     $(gsettings get org.gnome.shell.extensions.tilingshell layouts-json 2>&1 | cut -c1-120)"
-gsettings set org.gnome.mutter auto-maximize false 2>&1 ||
-  echo "could not turn auto-maximize off"
-echo "auto-maximize is now: $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
+echo "auto-maximize:   $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
+echo "tiling-mode:     $(gsettings get org.gnome.shell.extensions.forge tiling-mode-enabled 2>&1)"
+echo "auto-split:      $(gsettings get org.gnome.shell.extensions.forge auto-split-enabled 2>&1)"
+echo "unmaximize:      $(gsettings get org.gnome.shell.extensions.forge auto-unmaximize-for-tiling 2>&1)"
+if [[ "$(gsettings get org.gnome.mutter auto-maximize 2>&1)" != "false" ]]; then
+  echo "auto-maximize is still on -- gnomarchy tiling enable did not apply"
+fi
 echo
 
 echo "tiling status:"
