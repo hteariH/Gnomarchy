@@ -32,6 +32,8 @@ Commands:
   manual [page|--grep <text>]  Read the Gnomarchy manual
   gaming <install|status|proton>
                                Steam, Proton-GE, Wine and launchers in one go
+  asus <status|charge|profile|keyboard|graphics>
+                               Asus ROG/TUF laptop controls
   backgrounds [--list|--verify]
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
@@ -89,6 +91,10 @@ case "$command_group" in
   gaming | games)
     shift
     exec gnomarchy-gaming "$@"
+    ;;
+  asus | rog)
+    shift
+    exec gnomarchy-asus "$@"
     ;;
   theme)
     case "$subcommand" in

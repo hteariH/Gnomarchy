@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# Asus laptop controls (ROG and TUF)
+#
+# A thin front end over asusctl and supergfxctl for the settings worth changing
+# day to day. Everything here is also available from those tools directly;
+# this exists so the common cases are one obvious command.
+set -eEo pipefail
+
+info() { echo -e "\033[1;36m$1\033[0m"; }
+good() { echo -e "\033[1;32m  $1\033[0m"; }
+warn() { echo -e "\033[1;33m  $1\033[0m"; }
+
+require_asusctl() {
+  if ! command -v asusctl >/dev/null 2>&1; then
+    echo "asusctl is not installed." >&2
+    echo "On an Asus laptop: sudo pacman -S asusctl && sudo systemctl enable --now asusd" >&2
+    exit 1
+  fi
+  if ! systemctl is-active --quiet asusd 2>/dev/null; then
+    warn "asusd is not running; most settings will not apply."
+    warn "Start it with: sudo systemctl enable --now asusd"
+  fi
+}
+
+show_status() {
+  local model vendor
+  model="$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo unknown)"
+  vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || echo unknown)"
+  echo "Laptop: $vendor $model"
+  echo
+
+  if command -v asusctl >/dev/null 2>&1; then
+    printf '  asusctl   %s\n' "$(asusctl --version 2>/dev/null | head -1 || echo installed)"
+    printf '  asusd     %s\n' "$(systemctl is-active asusd 2>/dev/null || echo inactive)"
+  else
+    printf '  asusctl   not installed\n'
+  fi
+
+  if command -v supergfxctl >/dev/null 2>&1; then
+    printf '  graphics  %s\n' "$(supergfxctl -g 2>/dev/null || echo unknown)"
+  else
+    printf '  graphics  supergfxctl not installed\n'
+  fi
+
+  # The charge limit is the one setting worth checking often; asusctl's own
+  # output format moves between versions, so read the kernel attribute.
+  local limit_file=/sys/class/power_supply/BAT0/charge_control_end_threshold
+  [[ -r "$limit_file" ]] && printf '  charge    stops at %s%%\n' "$(<"$limit_file")"
+
+  local profile_file=/sys/firmware/acpi/platform_profile
+  [[ -r "$profile_file" ]] && printf '  profile   %s\n' "$(<"$profile_file")"
+}
+
+case "${1:-status}" in
+  status)
+    show_status
+    ;;
+
+  charge)
+    # Keeping a laptop permanently at 100% is what kills the battery; 60-80 is
+    # the useful range for a machine that lives on mains power.
+    require_asusctl
+    limit="${2:-}"
+    if [[ -z "$limit" ]]; then
+      echo "Usage: gnomarchy asus charge <20-100>"
+      echo "  80 is a reasonable limit for a laptop that is usually plugged in."
+      exit 1
+    fi
+    if ! [[ "$limit" =~ ^[0-9]+$ ]] || ((limit < 20 || limit > 100)); then
+      echo "The charge limit must be a number between 20 and 100." >&2
+      exit 1
+    fi
+    asusctl -c "$limit"
+    good "Charging now stops at ${limit}%"
+    ;;
+
+  profile)
+    require_asusctl
+    if [[ -z "${2:-}" ]]; then
+      info "Platform profiles"
+      asusctl profile -l 2>/dev/null || echo "  (could not list profiles)"
+      echo
+      echo "Current: $(cat /sys/firmware/acpi/platform_profile 2>/dev/null || echo unknown)"
+      echo "Set one with: gnomarchy asus profile <name>"
+      exit 0
+    fi
+    asusctl profile -P "$2"
+    good "Profile set to $2"
+    ;;
+
+  keyboard | kbd)
+    require_asusctl
+    level="${2:-}"
+    if [[ -z "$level" ]]; then
+      echo "Usage: gnomarchy asus keyboard <off|low|med|high>"
+      exit 1
+    fi
+    asusctl -k "$level"
+    good "Keyboard backlight: $level"
+    ;;
+
+  fan)
+    require_asusctl
+    info "Fan curves"
+    asusctl fan-curve -g 2>/dev/null || {
+      warn "This model does not expose fan curves, or asusd is not running."
+      exit 1
+    }
+    ;;
+
+  graphics | gfx)
+    if ! command -v supergfxctl >/dev/null 2>&1; then
+      echo "supergfxctl is not installed." >&2
+      echo "It is AUR-only: paru -S supergfxctl" >&2
+      exit 1
+    fi
+    mode="${2:-}"
+    if [[ -z "$mode" ]]; then
+      echo "Current: $(supergfxctl -g 2>/dev/null || echo unknown)"
+      echo "Supported: $(supergfxctl -s 2>/dev/null || echo unknown)"
+      echo
+      echo "Set one with: gnomarchy asus graphics <Integrated|Hybrid|AsusMuxDgpu>"
+      echo "  Integrated uses the iGPU only and saves the most battery."
+      echo "  Hybrid runs the dGPU on demand."
+      exit 0
+    fi
+    supergfxctl -m "$mode"
+    good "Graphics mode set to $mode"
+    warn "Log out and back in for the change to take effect."
+    ;;
+
+  *)
+    cat <<'EOF'
+Usage: gnomarchy asus <command>
+
+  status              laptop model, asusd, graphics mode, charge limit
+  charge <20-100>     stop charging at a percentage, to spare the battery
+  profile [name]      platform profile (quiet / balanced / performance)
+  keyboard <level>    backlight: off, low, med, high
+  fan                 show the fan curves
+  graphics [mode]     switch between the integrated and discrete GPU
+
+Works on both ROG and TUF laptops; they share the same asus_wmi interface.
+EOF
+    exit 1
+    ;;
+esac

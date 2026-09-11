@@ -40,7 +40,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🎮 One-Command Gaming Stack**: `gnomarchy gaming install` sets up Steam, Proton-GE, Wine, Lutris, Faugus Launcher, gamescope, GameMode and MangoHud, with the 32-bit Vulkan driver matched to your GPU.
 - **💬 Telegram & Discord Preinstalled**
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
-- **💻 Curated Hardware Profiles**: Out-of-the-box fixes for Apple T2 Macs, Asus ROG laptops, Framework 13/16, Intel Panther Lake, and Nvidia hybrid graphics.
+- **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
 
 ---
 
@@ -142,6 +142,23 @@ gnomarchy backgrounds
 gnomarchy backgrounds --list
 gnomarchy backgrounds --verify
 ```
+
+### Asus Laptops (ROG and TUF)
+
+Detected automatically at install time; both lines share the same `asus_wmi`
+interface, so one profile covers them.
+
+```bash
+gnomarchy asus status            # model, asusd, graphics mode, charge limit
+gnomarchy asus charge 80         # stop charging at 80% to spare the battery
+gnomarchy asus profile           # quiet / balanced / performance
+gnomarchy asus keyboard med      # backlight
+gnomarchy asus graphics          # switch integrated / hybrid GPU
+```
+
+`asusctl` comes from the official `extra` repository and coexists with
+power-profiles-daemon. `supergfxctl` is AUR-only and is installed only on
+machines with a discrete NVIDIA GPU to switch to.
 
 ### Gaming
 
