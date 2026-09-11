@@ -78,6 +78,21 @@ dismiss_notifications() {
   done
 }
 
+# Whether the shell actually loaded the extensions, as opposed to dconf simply
+# saying it should have. gnomarchy tiling status reads the setting, so it
+# reports "dynamic" either way; three windows that overlapped instead of
+# tiling is what made the difference worth printing.
+report_extensions() {
+  echo "--- extensions the shell is running ---"
+  gnome-extensions list --enabled 2>&1 || echo "(gnome-extensions list failed)"
+  local uuid
+  for uuid in tilingshell@ferrarodomenico.com tactile@lundal.io dash-to-dock@micxgx.gmail.com; do
+    echo "$uuid: $(gnome-extensions info "$uuid" 2>&1 | tr "
+" " " | sed -e "s/  */ /g")"
+  done
+  echo
+}
+
 # Announce an arrangement and hold it. The timestamps are the whole point:
 # they are what tells the host which frames are worth keeping.
 stage() {
@@ -144,6 +159,7 @@ if [[ "$phase" == "1" ]]; then
   sleep 45
 
   echo
+  report_extensions
   echo "--- stages ---"
   stage 01-desktop
 
@@ -203,6 +219,8 @@ fi
 
 echo "--- waiting for the session to settle ---"
 sleep 30
+
+report_extensions
 
 echo "tiling status:"
 gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
