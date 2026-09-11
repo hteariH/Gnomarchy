@@ -21,7 +21,20 @@ export PATH="$GNOMARCHY_PATH/bin:$PATH"
 AUTOSTART_FILE="$HOME/.config/autostart/gnomarchy-first-run.desktop"
 STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/gnomarchy/first-run.done"
 
+# Launched from an autostart entry there is no terminal, so anything printed
+# here is lost. Mirror progress into the journal, which is where anyone
+# debugging "my shortcuts did not apply" will actually look:
+#
+#   journalctl --user -t gnomarchy-first-run
+trace() { logger -t gnomarchy-first-run -- "$*" 2>/dev/null || true; }
+
+# Report where it died rather than exiting silently mid-way.
+trap 'rc=$?; ((rc)) && trace "aborted with status $rc"' EXIT
+
+trace "starting (session=${XDG_SESSION_TYPE:-unknown}, user=$(id -un))"
+
 if ! command -v gsettings >/dev/null 2>&1; then
+  trace "gsettings unavailable; cannot configure the desktop"
   echo "gsettings is unavailable; cannot configure the desktop." >&2
   exit 1
 fi
@@ -29,6 +42,7 @@ fi
 # Refuse to run without a session bus: writing here would silently do nothing,
 # and we would then delete the autostart entry and never retry.
 if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && ! -S "/run/user/$(id -u)/bus" ]]; then
+  trace "no D-Bus session bus; skipping, will retry at next login"
   echo "No D-Bus session bus; skipping (will retry at next login)." >&2
   exit 0
 fi
@@ -42,9 +56,16 @@ gnomarchy_header "Applying Gnomarchy Desktop Configuration"
 for step in set-gnome-settings set-gnome-extensions set-gnome-terminal \
   set-gnome-favorites set-gnome-hotkeys; do
   script="$GNOMARCHY_INSTALL/desktop/$step.sh"
-  [[ -f "$script" ]] || continue
+  [[ -f "$script" ]] || {
+    trace "step $step: script missing at $script"
+    continue
+  }
+  trace "step $step: running"
   # shellcheck source=/dev/null
-  source "$script" || gnomarchy_warn "Step $step reported an error; continuing."
+  source "$script" || {
+    trace "step $step: FAILED"
+    gnomarchy_warn "Step $step reported an error; continuing."
+  }
 done
 
 # Re-apply the active theme so the terminal palette, GTK colours and wallpaper
@@ -57,11 +78,14 @@ if command -v gnomarchy-theme-set >/dev/null 2>&1; then
     gnomarchy_warn "Could not apply theme $theme."
 fi
 
+trace "applying theme"
 mkdir -p "$(dirname "$STAMP")"
 date -Iseconds > "$STAMP"
+trace "wrote stamp $STAMP"
 
 # Remove the autostart entry so this runs only once per user.
 rm -f "$AUTOSTART_FILE"
+trace "completed successfully"
 
 gnomarchy_step "Desktop configuration applied"
 

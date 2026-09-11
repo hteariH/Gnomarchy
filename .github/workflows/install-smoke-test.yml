@@ -307,6 +307,11 @@ jobs:
               echo "(nothing about autostart in the journal)"
           fi
 
+          echo "--- first-run trace ---"
+          if sudo test -d /mnt/gnomarchy/var/log/journal; then
+            sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager               -t gnomarchy-first-run 2>/dev/null || echo "(no trace recorded)"
+          fi
+
           echo "--- verification trace ---"
           if sudo test -d /mnt/gnomarchy/var/log/journal; then
             sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager               -t gnomarchy-verify 2>/dev/null || echo "(no trace recorded)"
