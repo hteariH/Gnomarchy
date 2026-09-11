@@ -160,6 +160,7 @@ jobs:
           if sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy; then
             sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
             sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
+            sudo mount -o ro /dev/nbd0p2 /mnt/gnomarchy/boot
             echo "mounted=true" >> "$GITHUB_OUTPUT"
             echo "--- root ---";     sudo ls /mnt/gnomarchy
             echo "--- home ---";     sudo ls /mnt/gnomarchy/home
@@ -197,6 +198,9 @@ jobs:
           sudo umount -R /mnt/gnomarchy
           sudo mount -o subvol=@ /dev/nbd0p3 /mnt/gnomarchy
           sudo mount -o subvol=@home /dev/nbd0p3 /mnt/gnomarchy/home
+          # /boot is the EFI partition, not part of the @ subvolume; limine.conf
+          # lives there and is invisible without this.
+          sudo mount /dev/nbd0p2 /mnt/gnomarchy/boot
 
           # Autologin, so a real graphical session starts and the first-run
           # autostart entry fires. That is the only path by which the dconf
@@ -240,7 +244,12 @@ jobs:
             echo "--- limine.conf ---"
             sudo cat /mnt/gnomarchy/boot/limine.conf
           else
-            echo "::warning::No limine.conf; cannot enable the serial console."
+            # A warning here only becomes an annotation, which is easy to miss;
+            # without the serial console the session test cannot be diagnosed
+            # at all, so fail rather than run blind.
+            echo "::error::No limine.conf at /mnt/gnomarchy/boot - is the EFI partition mounted?"
+            sudo ls -la /mnt/gnomarchy/boot || true
+            exit 1
           fi
 
           # Persist the journal so a failed boot can be read offline.
