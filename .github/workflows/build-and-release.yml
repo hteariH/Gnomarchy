@@ -94,6 +94,7 @@ jobs:
           - **Tactile Grid Tiling**: instant keyboard window management with \`Super + T\`.
           - **Btrfs + Snapper Rollbacks**: automated boot snapshots integrated with Limine.
           - **Migrations**: \`gnomarchy update\` applies configuration changes to machines that are already installed.
+          - **Verified install**: every release is cut from a commit where the QEMU install smoke test is green - the ISO is installed and the resulting desktop checked, not merely built.
 
           ### Wallpapers
           Theme wallpapers are downloaded at install time from the upstream Omarchy repository (pinned commit, every file checksum-verified). Gnomarchy does not redistribute them; each theme ships a generated SVG as an offline fallback. See BACKGROUNDS.md.
