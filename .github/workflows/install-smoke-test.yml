@@ -479,10 +479,23 @@ jobs:
           sleep 5
           sudo mkdir -p /mnt/gnomarchy
           sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
+          # The journal is its own subvolume; without this it is an empty
+          # directory and every question asked of it answers nothing.
+          sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
 
           mkdir -p screenshots
           sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-capture.txt screenshots/ 2>/dev/null || true
+          cp capture-phase1-serial.log capture-phase2-serial.log screenshots/ 2>/dev/null || true
           sudo chown -R "$USER:$USER" screenshots
+
+          # A session that dies mid-shoot photographs as a login screen, and
+          # the transcript does not notice: the script goes on announcing
+          # stages into a session that is no longer there. This is the only
+          # place that difference is visible.
+          echo "=== session and shell trouble during the capture boots ==="
+          sudo journalctl -D /mnt/gnomarchy/var/log/journal --no-pager -p warning 2>/dev/null |
+            grep -iE "gnome-shell|gdm|gnome-session|segfault|core-dump|oom" | tail -50 ||
+            echo "(nothing, or the journal is unreadable)"
 
           # The transcript says when each arrangement was on screen, which is
           # what pairs a frame with the thing it is a picture of.
