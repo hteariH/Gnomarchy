@@ -187,20 +187,6 @@ if [[ "$phase" == "1" ]]; then
 
   gnomarchy theme set tokyo-night >/dev/null 2>&1 || true
 
-  # Brave Origin greets a fresh profile with a welcome window of its own,
-  # which --no-first-run does not suppress - it is Origin, not Chromium first
-  # run. It sat on top of the tiled frame last time. Letting it happen here,
-  # between stages and off camera, leaves an initialised profile behind for
-  # phase 2, which boots into the same home directory.
-  warm="$(browser_command)"
-  if [[ -n "$warm" ]]; then
-    echo "warming the browser profile"
-    setsid $warm --no-first-run --password-store=basic >/dev/null 2>&1 &
-    sleep 30
-    pkill -f brave >/dev/null 2>&1 || true
-    sleep 5
-  fi
-
   echo
   echo "--- enabling dynamic tiling for the phase 2 boot ---"
   gnomarchy tiling enable 2>&1 | tail -5 || echo "gnomarchy tiling enable failed"
@@ -234,16 +220,47 @@ if __name__ == "__main__":
     main()
 PYEOF
 
-# Opened slowest first, and one at a time: auto-tiling places each window as
-# it appears, and opening them together races the extension.
-#
-# VS Code wants its workspace-trust dialog out of the way, and the browser its
-# first-run onboarding; both would otherwise cover the window they are meant
-# to be showing.
-launch code --disable-workspace-trust --password-store=basic "$HELLO"
+# Neither application can be talked out of its welcome screen by a flag, so
+# each is started once here, off stage, and killed. What they want to say on
+# a fresh profile they say to nobody, and the profile they leave behind is
+# the one the photographed window opens with.
+browser="$(browser_command)"
+echo "warming profiles"
+if [[ -n "$browser" ]]; then
+  setsid $browser --no-first-run --password-store=basic >/dev/null 2>&1 &
+  sleep 25
+  pkill -f brave >/dev/null 2>&1 || true
+fi
+setsid code --disable-workspace-trust --password-store=basic >/dev/null 2>&1 &
+sleep 25
+  pkill -f "code --disable-workspace-trust" >/dev/null 2>&1 || true
+pkill -x code >/dev/null 2>&1 || true
+sleep 5
+
+# VS Code opens on a welcome tab and asks about Copilot on a fresh profile.
+# The first is a setting; the second belongs to an extension, so the
+# extension is what has to be off - by name, because --disable-extensions
+# would take the language grammars with it and leave the file grey.
+mkdir -p "$HOME/.config/Code/User"
+cat > "$HOME/.config/Code/User/settings.json" <<'JSONEOF'
+{
+  "workbench.startupEditor": "none",
+  "telemetry.telemetryLevel": "off",
+  "update.mode": "none",
+  "workbench.tips.enabled": false
+}
+JSONEOF
+
+# btop refuses to draw below 80 columns, and the pane it was given last time
+# was 395px - 52 columns even at font size 9. No font size fixes that; the
+# terminal has to be the large pane instead, and auto-tiling gives that to
+# whichever window arrives first.
+launch alacritty -o font.size=9 -e btop
+sleep 10
+
+launch code --disable-workspace-trust --password-store=basic --disable-extension GitHub.copilot --disable-extension GitHub.copilot-chat "$HELLO"
 sleep 20
 
-browser="$(browser_command)"
 if [[ -n "$browser" ]]; then
   # Unquoted on purpose: the Flatpak route is three words, not one.
   launch $browser --new-window --no-first-run --no-default-browser-check --password-store=basic https://gnomarchy.pages.dev
@@ -252,9 +269,6 @@ else
   echo "MISS  browser -- no brave-origin, brave or com.brave.Browser found"
   launch nautilus
 fi
-
-launch alacritty -o font.size=9 -e btop
-sleep 10
 
 stage 11-tiling
 close_launched
