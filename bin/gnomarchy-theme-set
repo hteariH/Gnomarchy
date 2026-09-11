@@ -29,10 +29,16 @@ mkdir -p "$CURRENT_DIR"
 echo "$THEME_NAME" > "$CURRENT_DIR/theme.name"
 
 # 1. Apply GNOME Color Mode (Dark vs Light)
+# The icon theme moves with the mode. Papirus ships three variants that differ
+# in their panel and folder tones, so a dark theme on Papirus-Light reads as a
+# mismatch. A missing key here should not abandon a theme switch half applied,
+# which is why these tolerate failure.
 if [[ -f "$THEME_DIR/light.mode" ]]; then
   gsettings set org.gnome.desktop.interface color-scheme 'prefer-light' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Light' 2>/dev/null || true
 else
   gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark' 2>/dev/null || true
 fi
 
 # 2. Apply GNOME Accent Color (GNOME 47+)
