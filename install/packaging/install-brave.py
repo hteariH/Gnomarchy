@@ -139,7 +139,10 @@ def ensure_executables(root):
             log(f"Warning: could not configure chrome-sandbox: {e}")
 
 def setup_binaries_and_symlinks():
-    possible_bins = ["brave", "brave-browser", "brave-origin"]
+    # brave-origin is a small wrapper that launches the browser in Origin mode;
+    # brave is the 300 MB binary it execs. Preferring "brave" pointed every
+    # launcher at the raw binary and bypassed the wrapper entirely.
+    possible_bins = ["brave-origin", "brave", "brave-browser"]
     main_bin = None
 
     for name in possible_bins:
@@ -180,25 +183,57 @@ def setup_binaries_and_symlinks():
 
     return True
 
-def setup_desktop_and_icons():
-    icon_source = None
+def install_icons():
+    """Install each product_logo_<size>.png into the matching hicolor directory.
+
+    The previous version took whichever logo os.walk happened to return first
+    and copied that single file into hicolor/128x128, so a 16x16 image was
+    routinely presented as a 128x128 icon and rendered as a blurry mess.
+    """
+    sizes = {}
     for root, _, files in os.walk(INSTALL_DIR):
         for f in files:
-            if f.startswith("product_logo_") and f.endswith(".png"):
-                icon_source = os.path.join(root, f)
-                break
-        if icon_source:
-            break
+            if not (f.startswith("product_logo_") and f.endswith(".png")):
+                continue
+            stem = f[len("product_logo_"):-len(".png")]
+            if stem.isdigit():
+                sizes[int(stem)] = os.path.join(root, f)
 
-    if icon_source:
+    if not sizes:
+        log("Warning: no product_logo_*.png found; the launcher icon will be missing.")
+        return
+
+    installed = 0
+    for size, source in sorted(sizes.items()):
+        target_dir = f"/usr/share/icons/hicolor/{size}x{size}/apps"
         try:
-            os.makedirs(ICON_DIR, exist_ok=True)
-            os.makedirs(PIXMAPS_DIR, exist_ok=True)
-            shutil.copy2(icon_source, os.path.join(ICON_DIR, "brave-origin.png"))
-            shutil.copy2(icon_source, os.path.join(PIXMAPS_DIR, "brave-origin.png"))
-            shutil.copy2(icon_source, os.path.join(PIXMAPS_DIR, "brave-browser.png"))
-        except Exception as e:
-            log(f"Error copying desktop icons: {e}")
+            os.makedirs(target_dir, exist_ok=True)
+            shutil.copy2(source, os.path.join(target_dir, "brave-origin.png"))
+            installed += 1
+        except OSError as e:
+            log(f"Warning: could not install the {size}px icon: {e}")
+
+    # Pixmaps is the fallback for anything that does not consult the theme.
+    largest = sizes[max(sizes)]
+    try:
+        os.makedirs(PIXMAPS_DIR, exist_ok=True)
+        shutil.copy2(largest, os.path.join(PIXMAPS_DIR, "brave-origin.png"))
+        shutil.copy2(largest, os.path.join(PIXMAPS_DIR, "brave-browser.png"))
+    except OSError as e:
+        log(f"Warning: could not install fallback pixmaps: {e}")
+
+    # Without a cache refresh the shell keeps showing the old or missing icon.
+    try:
+        subprocess.run(["gtk-update-icon-cache", "-qtf", "/usr/share/icons/hicolor"],
+                       check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except Exception:
+        pass
+
+    log(f"Installed {installed} icon size(s): {', '.join(str(s) for s in sorted(sizes))}")
+
+
+def setup_desktop_and_icons():
+    install_icons()
 
     desktop_content = """[Desktop Entry]
 Version=1.0

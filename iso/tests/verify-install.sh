@@ -140,6 +140,43 @@ done
   ok "exactly $visible_browsers visible Brave entry" ||
   no "$visible_browsers visible Brave entries" "the dash will show duplicates"
 
+# --- Regression: the dock entry launched nothing and had a broken icon -----
+#
+# The desktop entry is only useful if its Exec target exists and its Icon
+# resolves. Both were wrong: Exec pointed at the raw browser binary rather than
+# the Origin wrapper, and a single arbitrary logo size was installed into the
+# 128x128 directory, so a 16x16 image was scaled up into a blur.
+BRAVE_DESKTOP="$ROOT/usr/share/applications/brave-origin.desktop"
+if [[ -f "$BRAVE_DESKTOP" ]]; then
+  exec_target="$(awk -F= '/^Exec=/ {print $2; exit}' "$BRAVE_DESKTOP" | awk '{print $1}')"
+  if [[ -n "$exec_target" ]]; then
+    # Resolve through the image, not the host.
+    resolved="$ROOT${exec_target}"
+    if [[ -L "$resolved" ]]; then
+      link_dest="$(readlink "$resolved")"
+      resolved="$ROOT${link_dest}"
+    fi
+    if [[ -f "$resolved" ]]; then
+      ok "Brave desktop entry points at a real binary ($(basename "$exec_target"))"
+    else
+      no "Brave Exec target does not exist" "$exec_target -> ${resolved#"$ROOT"}"
+    fi
+  fi
+
+  icon_name="$(awk -F= '/^Icon=/ {print $2; exit}' "$BRAVE_DESKTOP")"
+  icon_sizes=0
+  for dir in "$ROOT/usr/share/icons/hicolor"/*/apps; do
+    [[ -f "$dir/$icon_name.png" ]] && icon_sizes=$((icon_sizes + 1))
+  done
+  if ((icon_sizes >= 4)); then
+    ok "Brave icon installed in $icon_sizes sizes"
+  elif ((icon_sizes > 0)); then
+    no "Brave icon installed in only $icon_sizes size(s)" "the shell will scale it badly"
+  else
+    no "Brave icon '$icon_name' is not installed" "the launcher shows a broken icon"
+  fi
+fi
+
 # --- Regression: extensions shipped without their compiled schemas ---------
 #
 # GNOME Shell reads an extension's settings from
