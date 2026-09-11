@@ -39,7 +39,7 @@ add_first_available \
 
 add_first_available "org.gnome.Terminal.desktop" "alacritty.desktop"
 add_first_available "org.gnome.Nautilus.desktop"
-add_first_available "micro.desktop"
+add_first_available "code-oss.desktop" "visual-studio-code.desktop" "code.desktop"
 add_first_available "io.github.kolunmi.Bazaar.desktop"
 add_first_available "org.gnome.Settings.desktop"
 

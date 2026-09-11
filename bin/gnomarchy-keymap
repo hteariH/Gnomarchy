@@ -121,7 +121,7 @@ apply_omarchy() {
   set_custom custom5 'System Menu' 'gnomarchy-menu' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
   set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
-  set_custom custom8 'Editor' 'gnome-terminal -- nvim' '<Super><Shift>n'
+  set_custom custom8 'Editor' 'code' '<Super><Shift>n'
   set_custom custom9 'Manual' 'gnomarchy-manual' '<Super><Shift>k'
 
   # Omarchy puts its apps menu on Super+Alt+Space, but that is the Gnomarchy

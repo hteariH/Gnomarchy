@@ -25,6 +25,9 @@ left untouched and no LazyVim bootstrap was written.
 
 ## The editor for quick edits
 
-`micro` is the default `$EDITOR` and `$VISUAL`, and what opens for text files
-from the file manager. Neovim is the development editor, not the one that opens
-when Git wants a commit message.
+VS Code is the graphical default and what opens for text files from the file
+manager. Neovim is what you get in a TTY or over SSH.
+
+`$EDITOR` follows the same split: `code --wait` under a graphical session,
+`nvim` without one. The `--wait` is not optional - without it git sees the
+editor exit immediately and treats your commit message as empty.

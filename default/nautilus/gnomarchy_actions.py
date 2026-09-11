@@ -107,10 +107,10 @@ class GnomarchyMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             else:
                 subprocess.Popen(["flatpak", "run", "org.localsend.localsend_app"] + paths)
 
-    def _cb_edit_micro(self, menu, files):
+    def _cb_edit_code(self, menu, files):
         paths = [self._get_path(f) for f in files if self._get_path(f)]
         if paths:
-            subprocess.Popen(["gnome-terminal", "--", "micro"] + paths)
+            subprocess.Popen(["code"] + paths)
 
     def get_file_items(self, files):
         if not files:
@@ -157,9 +157,9 @@ class GnomarchyMenuProvider(GObject.GObject, Nautilus.MenuProvider):
             submenu.append_item(item_resize)
 
         # General items
-        item_micro = Nautilus.MenuItem(name="Gnomarchy::EditMicro", label="Edit in Micro (Terminal)")
-        item_micro.connect("activate", self._cb_edit_micro, files)
-        submenu.append_item(item_micro)
+        item_code = Nautilus.MenuItem(name="Gnomarchy::EditCode", label="Open in VS Code")
+        item_code.connect("activate", self._cb_edit_code, files)
+        submenu.append_item(item_code)
 
         item_localsend = Nautilus.MenuItem(name="Gnomarchy::LocalSend", label="Share via LocalSend")
         item_localsend.connect("activate", self._cb_localsend, files)

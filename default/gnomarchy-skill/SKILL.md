@@ -13,7 +13,8 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Tiling**: Tactile Grid Tiling (`<Super>T`)
 - **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
-- **Default Editor**: Micro (`$EDITOR`, `$VISUAL`, Git, and text/plain)
+- **Default Editor**: VS Code (`code`, text/plain and friends); `$EDITOR` is
+  `code --wait` in a graphical session, `nvim` in a TTY
 - **Default Browser**: Brave Origin (`brave-origin` / `brave`, debloated, privacy-first)
 - **App Store & Packages**: Pacman, Flatpak (Flathub), and Bazaar
 
@@ -107,7 +108,7 @@ gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT'
 
 # Pin or reorder favorite applications in the dock
 gsettings get org.gnome.shell favorite-apps
-gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'micro.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
+gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'code-oss.desktop', 'io.github.kolunmi.Bazaar.desktop', 'org.gnome.Settings.desktop']"
 ```
 
 ---
@@ -160,12 +161,12 @@ gnomarchy gnome hotkeys
 
 To add a new custom shortcut, register under `/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/`:
 ```bash
-# Example: Bind Super+N to open Micro in terminal
+# Example: Bind Super+N to open the editor
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4"
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
   "$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings | sed "s/]/, '$BINDING_PATH\/']/ \")"
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ name 'Micro Editor'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ command 'gnome-terminal -- micro'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ name 'Editor'
+gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ command 'code'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/ binding '<Super>n'
 ```
 

@@ -65,7 +65,7 @@ flatpak
 # Developer CLI & Terminal Environment
 gnome-terminal
 alacritty
-micro
+code
 neovim
 tmux
 starship

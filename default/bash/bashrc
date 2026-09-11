@@ -6,9 +6,18 @@ fi
 # PATH additions
 export PATH="$HOME/.local/share/gnomarchy/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
-# Default Editor
-export EDITOR="micro"
-export VISUAL="micro"
+# Default editor
+#
+# VS Code needs --wait, or git sees the editor return immediately and treats
+# the commit message as empty. In a TTY or over SSH there is no display for it
+# to open on, so fall back to Neovim rather than hanging.
+if [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]] && command -v code >/dev/null 2>&1; then
+  export EDITOR="code --wait"
+  export VISUAL="code --wait"
+elif command -v nvim >/dev/null 2>&1; then
+  export EDITOR="nvim"
+  export VISUAL="nvim"
+fi
 
 # Enable bash completion
 if [ -f /usr/share/bash-completion/bash_completion ]; then

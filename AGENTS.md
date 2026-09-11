@@ -98,8 +98,10 @@ that is already running Gnomarchy, add a migration:
 - `gnomarchy update` applies pending migrations after the git pull.
 
 ### 5. Text Editor & Default Applications
-- Default text editor is **Micro**.
-- CLI: `micro <file>` (also `$EDITOR` and `$VISUAL`).
+- Default graphical editor is **VS Code** (`code`, desktop id `code-oss.desktop`).
+- `$EDITOR`/`$VISUAL` is `code --wait` under a graphical session and `nvim` in a
+  TTY or over SSH. The `--wait` matters: without it git sees an immediate
+  return and treats the commit message as empty.
 - Default web browser is **Brave Origin** (`brave-origin` / `brave`).
 - File manager: `nautilus`.
 - Terminal: **gnome-terminal** is the default. Its colors live in dconf under the
