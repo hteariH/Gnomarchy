@@ -54,7 +54,7 @@ gnomarchy_header "Applying Gnomarchy Desktop Configuration"
 # The desktop steps are plain scripts that call gsettings; with a session bus
 # present they now actually take effect.
 for step in set-gnome-settings set-gnome-extensions set-gnome-terminal \
-  set-gnome-favorites set-gnome-hotkeys; do
+  set-gnome-favorites set-gnome-hotkeys set-hardware-session; do
   script="$GNOMARCHY_INSTALL/desktop/$step.sh"
   [[ -f "$script" ]] || {
     trace "step $step: script missing at $script"

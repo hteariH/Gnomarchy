@@ -40,7 +40,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🎮 One-Command Gaming Stack**: `gnomarchy gaming install` sets up Steam, Proton-GE, Wine, Lutris, Faugus Launcher, gamescope, GameMode and MangoHud, with the 32-bit Vulkan driver matched to your GPU.
 - **💬 Telegram & Discord Preinstalled**
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
-- **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl and ROG Control Center: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
+- **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl and ROG Control Center: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Framework 13/16** (keyboard RGB access and the AMD microphone profile), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
 
 ---
 
