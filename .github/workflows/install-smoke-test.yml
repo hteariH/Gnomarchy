@@ -154,10 +154,16 @@ jobs:
           lsblk /dev/nbd0
 
           sudo mkdir -p /mnt/gnomarchy
-          # Root lives on the @ btrfs subvolume on the third partition.
+          # The installer splits the filesystem into subvolumes. Mounting only
+          # @ leaves /home and /var/log as empty directories, which silently
+          # turns every check against them into a false failure.
           if sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy; then
+            sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
+            sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
             echo "mounted=true" >> "$GITHUB_OUTPUT"
-            sudo ls /mnt/gnomarchy
+            echo "--- root ---";     sudo ls /mnt/gnomarchy
+            echo "--- home ---";     sudo ls /mnt/gnomarchy/home
+            echo "--- var/log ---";  sudo ls /mnt/gnomarchy/var/log
           else
             echo "mounted=false" >> "$GITHUB_OUTPUT"
             echo "::error::Could not mount the installed root - the install never completed."
@@ -188,8 +194,9 @@ jobs:
       - name: Prepare the image for the session test
         if: always() && steps.mount.outputs.mounted == 'true'
         run: |
-          sudo umount /mnt/gnomarchy
+          sudo umount -R /mnt/gnomarchy
           sudo mount -o subvol=@ /dev/nbd0p3 /mnt/gnomarchy
+          sudo mount -o subvol=@home /dev/nbd0p3 /mnt/gnomarchy/home
 
           # Autologin, so a real graphical session starts and the first-run
           # autostart entry fires. That is the only path by which the dconf
@@ -224,7 +231,7 @@ jobs:
             | sudo tee /mnt/gnomarchy/etc/sudoers.d/99-ci-verify > /dev/null
           sudo chmod 440 /mnt/gnomarchy/etc/sudoers.d/99-ci-verify
 
-          sudo umount /mnt/gnomarchy
+          sudo umount -R /mnt/gnomarchy
           sudo qemu-nbd --disconnect /dev/nbd0
           sleep 3
 
@@ -257,6 +264,8 @@ jobs:
           sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
           sleep 5
           sudo mount -o subvol=@,ro /dev/nbd0p3 /mnt/gnomarchy
+          sudo mount -o subvol=@home,ro /dev/nbd0p3 /mnt/gnomarchy/home
+          sudo mount -o subvol=@var_log,ro /dev/nbd0p3 /mnt/gnomarchy/var/log
 
           REPORT=/mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt
           if sudo test -f "$REPORT"; then
@@ -316,5 +325,5 @@ jobs:
       - name: Clean up
         if: always()
         run: |
-          sudo umount /mnt/gnomarchy 2>/dev/null || true
+          sudo umount -R /mnt/gnomarchy 2>/dev/null || true
           sudo qemu-nbd --disconnect /dev/nbd0 2>/dev/null || true

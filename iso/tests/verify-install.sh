@@ -30,6 +30,23 @@ no() {
 echo "=== Offline verification of installed system ==="
 echo
 
+# The installer puts /home and /var/log on their own btrfs subvolumes. If the
+# caller mounted only @, those are empty directories and every check against
+# them fails for a reason that has nothing to do with the install. Refuse to
+# report that as a result.
+if [[ ! -d "$HOME_DIR" ]]; then
+  echo "  ABORT  \$HOME_DIR does not exist."
+  echo "         The @home subvolume is probably not mounted; mount it before"
+  echo "         running this, or every home check below is meaningless."
+  exit 2
+fi
+
+if [[ ! -d "$ROOT/var/log" ]] || [[ -z "$(ls -A "$ROOT/var/log" 2>/dev/null)" ]]; then
+  echo "  NOTE   $ROOT/var/log is empty - the @var_log subvolume may not be"
+  echo "         mounted, so the install log will not be visible."
+  echo
+fi
+
 # --- The system booted-to state -------------------------------------------
 dm_unit="$ROOT/etc/systemd/system/display-manager.service"
 if [[ -e "$dm_unit" ]]; then
