@@ -222,6 +222,21 @@ sleep 30
 
 report_extensions
 
+# An experiment, not a fix. Tiling Shell skips any window that is already
+# maximized: _autoTile returns early on maximizedHorizontally or
+# maximizedVertically. Mutter auto-maximize defaults to true and nothing in
+# the distribution turns it off, so a window large enough to be auto-maximized
+# is never placed into the layout. If turning it off makes the frame tile,
+# that is the cause and the fix belongs in gnomarchy-tiling.
+echo "--- tiling preconditions ---"
+echo "auto-maximize:    $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
+echo "selected-layouts: $(gsettings get org.gnome.shell.extensions.tilingshell selected-layouts 2>&1)"
+echo "layouts-json:     $(gsettings get org.gnome.shell.extensions.tilingshell layouts-json 2>&1 | cut -c1-120)"
+gsettings set org.gnome.mutter auto-maximize false 2>&1 ||
+  echo "could not turn auto-maximize off"
+echo "auto-maximize is now: $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
+echo
+
 echo "tiling status:"
 gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
 echo
