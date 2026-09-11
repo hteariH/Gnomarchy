@@ -58,7 +58,14 @@ fi
 # 4. Synchronize current repository into ISO root for offline/local install
 echo "Syncing Gnomarchy files into live ISO filesystem..."
 mkdir -p "$PROFILE_DIR/airootfs/root/gnomarchy"
-rsync -a --exclude=".git" --exclude="out" --exclude="iso/work" "$REPO_ROOT/" "$PROFILE_DIR/airootfs/root/gnomarchy/"
+# Exclude anything a CI job may leave in the repo root; the whole tree is
+# copied into the image, and the smoke test shipped its OVMF_VARS.fd this way.
+rsync -a \
+  --exclude=".git" --exclude="out" --exclude="iso/work" \
+  --exclude="*.fd" --exclude="*.qcow2" --exclude="*.img" --exclude="*.iso" \
+  --exclude="answers" --exclude="artifacts" --exclude="*.log" \
+  --exclude="node_modules" --exclude=".wrangler" --exclude="__pycache__" \
+  "$REPO_ROOT/" "$PROFILE_DIR/airootfs/root/gnomarchy/"
 
 # Ensure installer script permissions inside profile
 chmod 755 "$PROFILE_DIR/airootfs/root/.automated_script.sh" 2>/dev/null || true
