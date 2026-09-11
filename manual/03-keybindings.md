@@ -28,7 +28,7 @@ gnomarchy keymap status
     Super + W                 close window
     Super + Up                maximize
     Super + 1..6              workspaces
-    Super + T                 Tactile grid
+    Super + T                 cycle the zone layout (Tiling Shell)
 
 ### Omarchy profile
 
@@ -58,3 +58,11 @@ profiles.
 Hyprland features with no GNOME equivalent: window groups, the scratchpad,
 pseudo-tiling, pixel-step window resize, moving a workspace between monitors.
 `gnomarchy keymap status` lists them rather than pretending they exist.
+
+## Dynamic tiling borrows two keys
+
+`gnomarchy tiling enable` needs `K` and `Shift+K` for Forge's `hjkl`
+navigation, so while dynamic tiling is on the keybindings browser moves to
+`Super + /` and the manual to `Super + Shift + /`. `gnomarchy tiling disable`
+moves them back, and `gnomarchy keybindings` reads dconf, so it always shows
+whichever is really bound.

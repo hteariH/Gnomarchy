@@ -1,6 +1,6 @@
 ---
 name: gnomarchy
-description: Control and reconfigure the Gnomarchy Linux operating system, including GNOME settings, extensions, Tactile tiling, Dash to Dock, themes, flatpaks, and Btrfs snapshots.
+description: Control and reconfigure the Gnomarchy Linux operating system, including GNOME settings, extensions, window tiling, Dash to Dock, themes, flatpaks, and Btrfs snapshots.
 ---
 
 # Gnomarchy OS Agent Skill
@@ -10,7 +10,7 @@ Use this skill whenever the user asks you to customize, reconfigure, automate, o
 Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Desktop**: GNOME 50 (Wayland) + GDM
 - **Dock**: Dash to Dock (Ubuntu-style left edge panel)
-- **Tiling**: Tactile Grid Tiling (`<Super>T`)
+- **Tiling**: Tiling Shell zones by default; Forge tree tiling via `gnomarchy tiling enable`
 - **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
 - **Default Editor**: VS Code (`code`, text/plain and friends); `$EDITOR` is
@@ -113,25 +113,40 @@ gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'org.gnome
 
 ---
 
-## 4. Tiling Management (Tactile)
+## 4. Tiling Management
 
-Tactile provides modal keyboard-driven window snapping on `<Super>T`.
+Two modes, switched with `gnomarchy tiling <enable|disable|status>`.
 
-Configuration schema: `org.gnome.shell.extensions.tactile`
+**Manual (default)** is Tiling Shell with `enable-autotiling` off: hold Ctrl
+while dragging to pick a zone, drag to the top for snap assist,
+`<Super><Shift>` + arrows to throw a window into the next tile, `<Super>T` to
+cycle the zone layout.
+
+Configuration schema: `org.gnome.shell.extensions.tilingshell`
+
+**Dynamic** is Forge, which tiles into a binary tree: a new window splits the
+focused one and both halves resize. Navigation is `<Super>` + `hjkl`.
+
+Configuration schemas: `org.gnome.shell.extensions.forge` and
+`org.gnome.shell.extensions.forge.keybindings`
+
+Never enable both at once; they fight over placement. Do not turn Tiling
+Shell's `enable-autotiling` on -- it places windows into fixed tiles without
+resizing the ones already on screen, which is what Forge exists to replace.
 
 ```bash
-# Adjust window gap size (in pixels)
-gsettings set org.gnome.shell.extensions.tactile gap-size 20
+# Which mode is active, and whether the shell actually loaded the extension
+gnomarchy tiling status
 
-# Change grid layout (columns & rows)
-gsettings set org.gnome.shell.extensions.tactile col-0 1
-gsettings set org.gnome.shell.extensions.tactile col-1 2
-gsettings set org.gnome.shell.extensions.tactile col-2 1
-gsettings set org.gnome.shell.extensions.tactile row-0 1
-gsettings set org.gnome.shell.extensions.tactile row-1 1
+# Manual mode: gaps, and the key that throws a window into the next tile
+gsettings set org.gnome.shell.extensions.tilingshell inner-gaps 8
+gsettings set org.gnome.shell.extensions.tilingshell outer-gaps 8
+gsettings set org.gnome.shell.extensions.tilingshell move-window-left "['<Super><Shift>Left']"
 
-# Change trigger hotkey
-gsettings set org.gnome.shell.extensions.tactile show-tiles "['<Super>t']"
+# Dynamic mode: gap, split behaviour, and directional focus
+gsettings set org.gnome.shell.extensions.forge window-gap-size 8
+gsettings set org.gnome.shell.extensions.forge auto-split-enabled true
+gsettings set org.gnome.shell.extensions.forge.keybindings window-focus-left "['<Super>h']"
 ```
 
 ---

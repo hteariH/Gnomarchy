@@ -129,6 +129,63 @@ else
   no "icon theme is not a Papirus variant" "got: ${icons:-unset}"
 fi
 
+# --- Regression: two commands on one accelerator ---------------------------
+#
+# Gnomarchy binds Super+K to the keybindings browser and Super+Shift+K to the
+# manual, and dynamic tiling needs K and Shift+K for hjkl navigation. Both were
+# set at once for a whole release: the key did whichever the shell happened to
+# register last. Whatever the mode, no Gnomarchy custom keybinding may share an
+# accelerator with a tiling extension's.
+collect_custom_bindings() {
+  local list slot path binding
+  list="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings 2>/dev/null || echo '')"
+  while read -r slot; do
+    [[ -n "$slot" ]] || continue
+    path="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/$slot/"
+    binding="$(gsettings get "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$path" binding 2>/dev/null || echo '')"
+    binding="${binding//\'/}"
+    [[ -n "$binding" && "$binding" != "@as"* ]] && echo "$binding"
+  done < <(grep -oE 'custom[0-9]+' <<<"$list" | sort -u)
+}
+
+collect_tiling_bindings() {
+  local schema key value
+  if gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q forge; then
+    schema="org.gnome.shell.extensions.forge.keybindings"
+  elif gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q tilingshell; then
+    schema="org.gnome.shell.extensions.tilingshell"
+  else
+    return 0
+  fi
+  gsettings list-schemas 2>/dev/null | grep -qx "$schema" || return 0
+
+  while read -r key; do
+    [[ -n "$key" ]] || continue
+    value="$(gsettings get "$schema" "$key" 2>/dev/null || echo '')"
+    # Only the keybinding keys are lists of accelerators.
+    [[ "$value" == "["*"<"* ]] || continue
+    tr ',' '\n' <<<"$value" | tr -d "[]' " | grep -v '^$'
+  done < <(gsettings list-keys "$schema" 2>/dev/null)
+}
+
+mapfile -t custom_keys < <(collect_custom_bindings)
+mapfile -t tiling_keys < <(collect_tiling_bindings)
+
+clashes=()
+for a in "${custom_keys[@]}"; do
+  for b in "${tiling_keys[@]}"; do
+    [[ "$a" == "$b" ]] && clashes+=("$a")
+  done
+done
+
+if ((${#tiling_keys[@]} == 0)); then
+  echo "INFO  no tiling extension bindings to compare against"
+elif ((${#clashes[@]} == 0)); then
+  ok "no Gnomarchy command shares a key with the tiling extension (${#tiling_keys[@]} checked)"
+else
+  no "${#clashes[@]} accelerator(s) bound twice" "${clashes[*]}"
+fi
+
 # Not a check, a question this test is the right place to answer: which icon
 # the editor entry actually asks for, and whether anything provides it. The
 # icon looked wrong in a screenshot and the cause was guessed at rather than

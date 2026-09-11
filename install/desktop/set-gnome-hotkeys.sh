@@ -8,6 +8,14 @@ gsettings set org.gnome.desktop.wm.keybindings maximize "['<Super>Up']"
 gsettings set org.gnome.desktop.wm.keybindings begin-resize "['<Super>BackSpace']"
 gsettings set org.gnome.desktop.wm.keybindings toggle-fullscreen "['<Shift>F11']"
 
+# Both tiling modes throw a window with Super+Shift+arrows, which is GNOME's
+# default for move-to-monitor. Move that one modifier further out rather than
+# leave two handlers on one accelerator; `gnomarchy tiling` keeps it there.
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-left "['<Super><Control><Shift>Left']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-right "['<Super><Control><Shift>Right']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-up "['<Super><Control><Shift>Up']"
+gsettings set org.gnome.desktop.wm.keybindings move-to-monitor-down "['<Super><Control><Shift>Down']"
+
 # Workspace Switching: Super + 1-6
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-1 "['<Super>1']"
 gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-2 "['<Super>2']"

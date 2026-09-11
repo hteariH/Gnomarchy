@@ -25,7 +25,7 @@ Commands:
   first-run                    Re-apply desktop settings, shortcuts and favorites
   theme <set|list|current>     Manage system and desktop color themes
   tiling <enable|disable|status>
-                               Dynamic auto-tiling (Hyprland-style) or manual grid
+                               Tree tiling with Forge, or manual zones
   keymap <omarchy|gnome|status>
                                Switch between Omarchy and Gnomarchy key layouts
   keybindings [--list]         Search the keybindings that are actually active

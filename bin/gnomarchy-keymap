@@ -20,7 +20,7 @@
 # `gnomarchy keymap status` instead of being silently dropped.
 set -eEo pipefail
 
-TS="org.gnome.shell.extensions.tilingshell"
+FORGE_KEYS="org.gnome.shell.extensions.forge.keybindings"
 WM="org.gnome.desktop.wm.keybindings"
 MK="org.gnome.settings-daemon.plugins.media-keys"
 BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
@@ -54,6 +54,27 @@ register_slots() {
 
 BROWSER_CMD='sh -c "command -v brave-origin >/dev/null && exec brave-origin || command -v brave >/dev/null && exec brave || exec xdg-open https://"'
 
+# Dynamic tiling needs K and Shift+K for hjkl navigation, so `gnomarchy tiling
+# enable` moves the keybindings browser and the manual onto Super+/ and
+# Super+Shift+/. Switching keymap profile must not quietly put them back on top
+# of Forge -- that is how two handlers end up on one accelerator.
+dynamic_tiling_active() {
+  local enabled
+  enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo '')"
+  [[ "$enabled" == *"forge@jmmaranan.com"* ]]
+}
+
+KEYS_BINDING='<Super>k'
+MANUAL_BINDING='<Super><Shift>k'
+KEYS_LABEL='Super + K'
+MANUAL_LABEL='Super + Shift + K'
+if dynamic_tiling_active; then
+  KEYS_BINDING='<Super>slash'
+  MANUAL_BINDING='<Super><Shift>slash'
+  KEYS_LABEL='Super + /'
+  MANUAL_LABEL='Super + Shift + /'
+fi
+
 apply_omarchy() {
   info "Applying the Omarchy keyboard layout"
 
@@ -86,6 +107,9 @@ apply_omarchy() {
   gsettings set "$WM" toggle-maximized "['<Super><Alt>f']"
   gsettings set "$WM" begin-resize "['<Super>BackSpace']"
   gsettings set "$WM" maximize "@as []"
+  # Super+Up and Super+Down go to directional focus on this profile, so the
+  # maximize pair gives them up. Alt+F5 still unmaximizes.
+  gsettings set "$WM" unmaximize "['<Alt>F5']"
 
   # Super+Space stays with GNOME's input-source switching. Omarchy puts its
   # menu there, but a keyboard layout toggle is used far more often than a
@@ -95,20 +119,21 @@ apply_omarchy() {
   gsettings set org.gnome.desktop.wm.preferences mouse-button-modifier "'<Super>'"
 
   # --- Directional focus and movement --------------------------------------
-  # These live in Tiling Shell, so they only do anything in dynamic mode.
-  if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
-    gsettings set "$TS" focus-window-left "['<Super>Left']"
-    gsettings set "$TS" focus-window-right "['<Super>Right']"
-    gsettings set "$TS" focus-window-up "['<Super>Up']"
-    gsettings set "$TS" focus-window-down "['<Super>Down']"
+  # These live in Forge, so they only do anything in dynamic mode. Omarchy
+  # navigates with the arrows; hjkl is kept as an alternate because this
+  # profile leaves `maximize` unbound, so Super+Up is free and both can coexist.
+  if gsettings list-schemas 2>/dev/null | grep -q "^$FORGE_KEYS$"; then
+    gsettings set "$FORGE_KEYS" window-focus-left "['<Super>Left', '<Super>h']"
+    gsettings set "$FORGE_KEYS" window-focus-right "['<Super>Right', '<Super>l']"
+    gsettings set "$FORGE_KEYS" window-focus-up "['<Super>Up', '<Super>k']"
+    gsettings set "$FORGE_KEYS" window-focus-down "['<Super>Down', '<Super>j']"
 
-    gsettings set "$TS" move-window-left "['<Super><Shift>Left']"
-    gsettings set "$TS" move-window-right "['<Super><Shift>Right']"
-    gsettings set "$TS" move-window-up "['<Super><Shift>Up']"
-    gsettings set "$TS" move-window-down "['<Super><Shift>Down']"
-    gsettings set "$TS" move-window-center "['<Super><Shift>c']"
+    gsettings set "$FORGE_KEYS" window-move-left "['<Super><Shift>Left', '<Super><Shift>h']"
+    gsettings set "$FORGE_KEYS" window-move-right "['<Super><Shift>Right', '<Super><Shift>l']"
+    gsettings set "$FORGE_KEYS" window-move-up "['<Super><Shift>Up', '<Super><Shift>k']"
+    gsettings set "$FORGE_KEYS" window-move-down "['<Super><Shift>Down', '<Super><Shift>j']"
   else
-    warn "Tiling Shell is not installed; directional focus needs 'gnomarchy tiling enable'."
+    warn "Forge is not installed; directional focus needs 'gnomarchy tiling enable'."
   fi
 
   # --- Applications and menus ----------------------------------------------
@@ -120,9 +145,9 @@ apply_omarchy() {
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
   set_custom custom5 'System Menu' 'gnomarchy-menu' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
-  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
+  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' "$KEYS_BINDING"
   set_custom custom8 'Editor' 'code' '<Super><Shift>n'
-  set_custom custom9 'Manual' 'gnomarchy-manual' '<Super><Shift>k'
+  set_custom custom9 'Manual' 'gnomarchy-manual' "$MANUAL_BINDING"
 
   # Omarchy puts its apps menu on Super+Alt+Space, but that is the Gnomarchy
   # menu here, so the app grid keeps GNOME's own Super+A.
@@ -166,18 +191,21 @@ apply_gnome() {
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
   set_custom custom5 'Retro Screensaver' 'gnomarchy screensaver' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
-  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' '<Super>k'
-  set_custom custom8 'Manual' 'gnomarchy-manual' '<Super><Shift>k'
+  set_custom custom7 'Keybindings' 'gnomarchy-keybindings' "$KEYS_BINDING"
+  set_custom custom8 'Manual' 'gnomarchy-manual' "$MANUAL_BINDING"
 
-  if gsettings list-schemas 2>/dev/null | grep -q "^$TS$"; then
-    gsettings set "$TS" focus-window-left "['<Super>h']"
-    gsettings set "$TS" focus-window-down "['<Super>j']"
-    gsettings set "$TS" focus-window-up "['<Super>k']"
-    gsettings set "$TS" focus-window-right "['<Super>l']"
-    gsettings set "$TS" move-window-left "['<Super><Shift>h']"
-    gsettings set "$TS" move-window-down "['<Super><Shift>j']"
-    gsettings set "$TS" move-window-up "['<Super><Shift>k']"
-    gsettings set "$TS" move-window-right "['<Super><Shift>l']"
+  # hjkl only on this profile: Super+Up is `maximize` here, so the arrow
+  # alternates Forge ships by default would be a second handler on that key.
+  if gsettings list-schemas 2>/dev/null | grep -q "^$FORGE_KEYS$"; then
+    gsettings set "$FORGE_KEYS" window-focus-left "['<Super>h']"
+    gsettings set "$FORGE_KEYS" window-focus-down "['<Super>j']"
+    gsettings set "$FORGE_KEYS" window-focus-up "['<Super>k']"
+    gsettings set "$FORGE_KEYS" window-focus-right "['<Super>l']"
+    gsettings set "$FORGE_KEYS" window-move-left "['<Super><Shift>h']"
+    gsettings set "$FORGE_KEYS" window-move-down "['<Super><Shift>j']"
+    gsettings set "$FORGE_KEYS" window-move-up "['<Super><Shift>k']"
+    gsettings set "$FORGE_KEYS" window-move-right "['<Super><Shift>l']"
+    gsettings set "$FORGE_KEYS" window-toggle-float "['<Super>c']"
   fi
 
   echo gnome > "$HOME/.config/gnomarchy/current/keymap" 2>/dev/null || true
@@ -194,7 +222,7 @@ show_status() {
   echo
 
   if [[ "$current" == "omarchy" ]]; then
-    cat <<'EOF'
+    cat <<EOF
   Super + Return            terminal
   Super + Shift + B         browser
   Super + Shift + F         file manager
@@ -203,8 +231,8 @@ show_status() {
   Super + Space             switch keyboard layout (GNOME default)
   Super + A                 app grid
   Super + Escape            system menu
-  Super + K                 this list
-  Super + Shift + K         the manual
+  $(printf '%-24s' "$KEYS_LABEL")this list
+  $(printf '%-24s' "$MANUAL_LABEL")the manual
 
   Super + W / Super + Q     close window
   Super + F                 fullscreen
@@ -227,15 +255,15 @@ Not translatable to GNOME, so deliberately unbound:
   per-monitor workspace moves.
 EOF
   else
-    cat <<'EOF'
+    cat <<EOF
   Super + Return            terminal
   Super + B                 browser
   Super + E                 file manager
   Super + Alt + Space       Gnomarchy menu
   Super + Escape            screensaver
-  Super + K                 searchable keybindings
-  Super + Shift + K         the manual
-  Super + T                 Tactile grid (manual tiling)
+  $(printf '%-24s' "$KEYS_LABEL")searchable keybindings
+  $(printf '%-24s' "$MANUAL_LABEL")the manual
+  Super + T                 cycle the zone layout (manual tiling)
 
   Super + W                 close window
   Super + Up                maximize

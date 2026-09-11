@@ -198,14 +198,16 @@
     },
     tiling: {
       cmd: 'gnomarchy tiling enable',
-      output: `Enabling dynamic tiling (Tiling Shell)
+      output: `Enabling dynamic tiling (Forge)
   Dynamic tiling enabled
 
   Super + h/j/k/l           focus window left/down/up/right
-  Super + Shift + h/j/k/l   move window in that direction
-  Super + Shift + c         centre the window
-  Super + Ctrl (hold)       temporarily suspend tiling while dragging
+  Super + Shift + h/j/k/l   move window within the tree
+  Super + Ctrl + h/j/k/l    swap window with its neighbour
+  Super + G                 flip the split direction
+  Super + Alt + T           tiling on or off, without disabling it
 
+  Super + / now opens the keybindings and Super + Shift + / the manual.
   Log out and back in to load the change (Wayland cannot restart the shell in place).`,
       note: 'Enabling one mode disables the other. With both extensions live ' +
             'they fight over window placement.'
@@ -240,7 +242,7 @@ Snapshot created successfully.`,
   Super + Escape            screensaver
   Super + K                 searchable keybindings
   Super + Shift + K         the manual
-  Super + T                 Tactile grid (manual tiling)
+  Super + T                 cycle the zone layout (manual tiling)
 
   Super + W                 close window
   Super + Up                maximize
