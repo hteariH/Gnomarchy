@@ -22,7 +22,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 
 ## Highlights & Features
 
-- **⌨️ Command Center (`Super + Alt + Space`)**: One keystroke to themes, web apps, screen capture, snapshots, updates and power actions—the whole system layer behind a single searchable menu.
+- **⌨️ Command Center (`Super + Alt + Space`)**: A GTK application with three pages—Menu, Keybindings and Manual—covering themes, web apps, screen capture, snapshots, updates and power actions, rebindable shortcuts, and the full manual. Also opens on `Super + K` (Keybindings) and `Super + Shift + K` (Manual).
 - **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Alacritty, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
 - **🧩 Two Tiling Models**: Manual grid tiling with Tactile (`Super + T`) by default, or Hyprland-style **dynamic auto-tiling** where new windows place themselves and neighbours resize to fit — one command apart (`gnomarchy tiling enable`).
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
@@ -49,6 +49,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | Shortcut | Action |
 | :--- | :--- |
 | <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>Space</kbd> | **Command Center**: Themes, web apps, capture, snapshots, updates, power |
+| <kbd>Super</kbd> + <kbd>K</kbd> | **Command Center**: Keybindings page (view and rebind shortcuts) |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | **Command Center**: Manual page (search and read) |
 | <kbd>Super</kbd> + <kbd>T</kbd> | **Tactile Grid Tiling**: Launch interactive grid overlay to snap windows (manual mode) |
 | <kbd>Super</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Focus window left/down/up/right (dynamic mode) |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd> | Move window in that direction (dynamic mode) |
@@ -194,27 +196,36 @@ gnomarchy tiling status
 ### The Manual
 
 ```bash
-gnomarchy manual                    # browse and search
-gnomarchy manual 04                 # open a page by number
-gnomarchy manual tiling             # or by name
-gnomarchy manual --grep whisper     # search every page
+gnomarchy manual                    # opens the command center's Manual page
+gnomarchy manual 04                 # open a page by number, as plain text
+gnomarchy manual tiling             # or by name, as plain text
+gnomarchy manual --grep whisper     # search every page, as plain text
 ```
 
-Sixteen pages covering keybindings, tiling, themes, backgrounds, the menu,
+Seventeen pages covering keybindings, tiling, themes, backgrounds, the menu,
 terminal, Neovim, web apps, dictation, screenshots, updates and migrations,
-snapshots, the Windows VM, and troubleshooting. Also on `Super + Shift + K`
-and under **Manual** in the command center.
+snapshots, the Windows VM, gaming, and troubleshooting. With no arguments the
+command opens the control center's Manual page, which full-text searches all
+seventeen and renders the one you pick; `--list`, `--grep` and opening a page
+by number or name stay plain text so the manual keeps working over SSH and in
+scripts. Also on `Super + Shift + K`.
 
 Unlike Omarchy's, which is a website, this manual is local: it works in a TTY,
 with no network, and on the half-installed system where the troubleshooting
-page is most needed.
+page is most needed—the GUI falls back to the same text output whenever there
+is no display or no `gjs`.
 
 ### Keybindings Search
 
 ```bash
-gnomarchy keybindings          # searchable list (also Super+K, or from the menu)
+gnomarchy keybindings          # opens the command center's Keybindings page
 gnomarchy keybindings --list   # plain text, for grepping
 ```
+
+Bindings can be changed from that page: press Enter on a row to capture a new
+combination, Backspace to unbind, or Esc to cancel. A conflict names the
+action that currently holds the key and offers to replace it. Also on
+`Super + K`.
 
 The list is **derived from dconf**, not hand-maintained, so it always shows the
 bindings that are actually in effect - including whichever keymap profile and
