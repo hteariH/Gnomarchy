@@ -37,7 +37,11 @@ jobs:
 
       - name: Build ISO via Arch Linux Container
         run: |
+          # Recorded into the image so the installed tree aligns to the commit it
+          # was actually built from; git cannot be asked inside the container,
+          # which sees the bind-mounted repository as dubious ownership.
           docker run --rm --privileged \
+            -e "GNOMARCHY_BUILD_COMMIT=${{ github.sha }}" \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             archlinux:latest \

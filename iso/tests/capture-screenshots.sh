@@ -167,21 +167,28 @@ if [[ "$phase" == "1" ]]; then
   # screenshot interface is, and the host now presses Escape early to clear
   # the overview GNOME opens on its own - so what follows is a desktop.
 
-  # gnomarchy-menu re-execs itself into a terminal when it has no tty, which
-  # is exactly the case here, so it must be backgrounded.
-  launch gnomarchy menu
-  stage 03-command-center
+  # The three commands open the control center on their own page and fall
+  # back to a re-exec into a terminal when there is no tty, so each is
+  # backgrounded the same way the old single-page menu was.
+  launch gnomarchy-menu
+  stage 03-control-center-menu
+
+  launch gnomarchy-keybindings
+  stage 04-control-center-keybindings
+
+  launch gnomarchy-manual
+  stage 05-control-center-manual
   close_launched
 
   launch alacritty -e btop
-  stage 04-terminal-btop
+  stage 06-terminal-btop
 
   launch alacritty -e nvim "$HOME/.local/share/gnomarchy/README.md"
-  stage 05-neovim
+  stage 07-neovim
   close_launched
 
   launch nautilus
-  stage 06-files
+  stage 08-files
   close_launched
 
   # The theme engine is the headline feature and the one that photographs
@@ -189,7 +196,7 @@ if [[ "$phase" == "1" ]]; then
   # both of which the switch repaints.
   launch alacritty -e btop
   launch nautilus
-  n=7
+  n=9
   for theme in kanagawa gruvbox rose-pine catppuccin-latte; do
     if gnomarchy theme set "$theme" >/dev/null 2>&1; then
       sleep 6
@@ -304,7 +311,7 @@ else
   launch nautilus
 fi
 
-stage 11-tiling
+stage 13-tiling
 close_launched
 
 echo

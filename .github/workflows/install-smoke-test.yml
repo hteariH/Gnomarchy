@@ -13,6 +13,7 @@ on:
       - 'install/**'
       - 'bin/**'
       - 'default/**'
+      - 'gui/**'
       - '.github/workflows/install-smoke-test.yml'
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - 'install/**'
       - 'bin/**'
       - 'default/**'
+      - 'gui/**'
       - '.github/workflows/install-smoke-test.yml'
   workflow_dispatch:
     inputs:
@@ -50,6 +52,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Cheap, and it guards the one stage that can invalidate everything below
+      # it: repository.sh used to reset the installed tree to main, so the rest
+      # of this job verified main instead of the branch under test.
+      - name: Verify the repository stage preserves the branch under test
+        run: bash iso/tests/verify-repository-stage.sh
 
       - name: Free disk space
         run: |
@@ -87,8 +95,14 @@ jobs:
 
       - name: Build ISO
         run: |
+          # The commit is passed in rather than read from .git: the repository is
+          # bind-mounted into the container under another uid, so git inside it
+          # refuses the directory as dubious ownership. Without this the image
+          # records nothing, repository.sh assumes main, and this job verifies
+          # main instead of the branch under test.
           docker run --rm --privileged \
             -v "${{ github.workspace }}:/workspace" -w /workspace \
+            -e "GNOMARCHY_BUILD_COMMIT=${{ github.sha }}" \
             archlinux:latest \
             bash -c "
               pacman -Syu --noconfirm archlinux-keyring &&
