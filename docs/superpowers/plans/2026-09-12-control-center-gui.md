@@ -717,9 +717,17 @@ Create `gui/data/gnomarchy-gui.css`. It carries only what the theme variables ca
   min-height: 14px;
 }
 
-.gnomarchy-swatch-strip {
-  border-radius: 4px;
-  overflow: hidden;
+/* GTK4 CSS has no `overflow` property -- setting it logs a parser warning and
+   clips nothing -- so the strip's rounded ends come from its end children
+   rather than from clipping the container. */
+.gnomarchy-swatch-strip > box:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.gnomarchy-swatch-strip > box:last-child {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 ```
 
@@ -968,7 +976,10 @@ application.connect('command-line', (_app, commandLine) => {
   return 0;
 });
 
-application.run([system.programInvocationName, ...system.programArgs]);
+// GJS does not propagate Gio.Application.run()'s return value to the process
+// exit code, so a rejected --page= would still exit 0. Pass it on explicitly.
+const status = application.run([system.programInvocationName, ...system.programArgs]);
+system.exit(status);
 ```
 
 - [ ] **Step 5: Write placeholder pages so the shell runs**
