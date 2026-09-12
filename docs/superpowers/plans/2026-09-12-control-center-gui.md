@@ -48,7 +48,7 @@ wsl -d Ubuntu -e bash -lc 'export REPO=/mnt/c/Users/aberk/claude/Gnomarchy/.clau
 Node is on the Windows host (v26) and runs the pure-module tests directly:
 
 ```bash
-node --test gui/tests/
+node --test gui/tests/*.test.js
 ```
 
 ---
@@ -2720,7 +2720,7 @@ Expected: `PASS  every manual page is within the renderable subset`.
 
 - [ ] **Step 5: Run every test once more**
 
-Run: `node --test gui/tests/`
+Run: `node --test gui/tests/*.test.js`
 Expected: all suites pass — accel (6), markdown (10), themes (6), manual (5), conflicts (4).
 
 - [ ] **Step 6: Commit**
@@ -2736,7 +2736,7 @@ git commit -m "docs: describe the control center in the README, manual and agent
 
 Before opening a pull request:
 
-- [ ] `node --test gui/tests/` — every suite passes
+- [ ] `node --test gui/tests/*.test.js` — every suite passes
 - [ ] `node iso/tests/verify-manual-subset.js manual` — passes
 - [ ] `bash -n` over every bash file this plan touched — all parse
 - [ ] `git status --short` is empty and `git diff --stat main...HEAD` shows only intended files
