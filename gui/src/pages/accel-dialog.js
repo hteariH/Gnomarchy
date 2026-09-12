@@ -39,7 +39,11 @@ export function presentAccelDialog(window, binding, { onAccel }) {
   const current = new Gtk.Label({ label: formatAccel(binding.accel) });
   current.add_css_class('dim-label');
 
-  const typed = new Adw.EntryRow({ title: 'Or type it, e.g. <Super>q' });
+  // Adw.EntryRow's title defaults to use-markup: true, and "<Super>q" is
+  // itself invalid Pango markup -- left escaped, the row rendered with no
+  // label at all, which is fatal here since this entry is the entire
+  // fallback path for a shortcut the compositor grabs before the dialog does.
+  const typed = new Adw.EntryRow({ title: 'Or type it, e.g. &lt;Super&gt;q' });
   const typedList = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE });
   typedList.add_css_class('boxed-list');
   typedList.append(typed);
@@ -91,6 +95,7 @@ export function presentAccelDialog(window, binding, { onAccel }) {
     if (accel !== null && isValidAccel(accel)) onAccel(accel);
   });
 
+  window.trackDialog(dialog);
   dialog.present(window);
 
   // Ask the compositor to stop eating Super/Alt combinations while this is up.

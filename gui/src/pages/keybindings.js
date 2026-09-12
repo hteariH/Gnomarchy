@@ -37,6 +37,7 @@ export class KeybindingsPage {
       dialog.connect('response', (_d, response) => {
         if (response === 'reset') run(['gnomarchy-keybindings', 'reset']);
       });
+      this._window.trackDialog(dialog);
       dialog.present(this._window);
     });
     column.append(reset);
@@ -119,9 +120,13 @@ export class KeybindingsPage {
   }
 
   _confirmReplace(binding, accel, clash) {
+    // Adw.AlertDialog's body-use-markup defaults to false (unlike ActionRow
+    // and PreferencesGroup titles), so this must stay raw text -- escaping it
+    // like the rows below would show the user a literal "&amp;" instead of
+    // "&" in a description like "Switch & focus".
     const dialog = new Adw.AlertDialog({
       heading: 'Already in use',
-      body: `${escapePango(formatAccel(accel))} is bound to “${escapePango(clash.description)}”.\n`
+      body: `${formatAccel(accel)} is bound to “${clash.description}”.\n`
         + 'Replacing it will leave that action with no shortcut.',
     });
     dialog.add_response('cancel', 'Cancel');
@@ -134,6 +139,7 @@ export class KeybindingsPage {
       writeBinding(binding, accel);
       this._reload();
     });
+    this._window.trackDialog(dialog);
     dialog.present(this._window);
   }
 }

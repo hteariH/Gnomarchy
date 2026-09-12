@@ -153,6 +153,7 @@ export class MenuPage {
     dialog.connect('response', (_d, response) => {
       if (response === 'go') runAndQuit(this._window, action.argv);
     });
+    this._window.trackDialog(dialog);
     dialog.present(this._window);
   }
 
@@ -171,6 +172,7 @@ export class MenuPage {
     dialog.connect('response', (_d, response) => {
       if (response === 'go') action.perform(entries.map((entry) => entry.get_text()));
     });
+    this._window.trackDialog(dialog);
     dialog.present(this._window);
     entries[0].grab_focus();
   }
@@ -185,6 +187,7 @@ export class MenuPage {
     const toolbar = new Adw.ToolbarView({ content: scroller });
     toolbar.add_top_bar(new Adw.HeaderBar());
     dialog.set_child(toolbar);
+    this._window.trackDialog(dialog);
     dialog.present(this._window);
 
     runForOutput(

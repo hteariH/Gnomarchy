@@ -9,6 +9,7 @@ import Adw from 'gi://Adw?version=1';
 import { parsePalette, swatchColors, prettyThemeName } from '../lib/themes.js';
 import { GNOMARCHY_PATH, listDir, readTextFile } from '../lib/paths.js';
 import { run } from '../lib/actions.js';
+import { escapePango } from '../lib/markdown.js';
 
 function themeDirectories() {
   const roots = [
@@ -47,7 +48,10 @@ export function presentThemeGallery(window) {
   list.add_css_class('boxed-list');
 
   for (const [name, palette] of themeDirectories()) {
-    const row = new Adw.ActionRow({ title: prettyThemeName(name), activatable: true });
+    // The title comes from a user theme directory name, unescaped like every
+    // other row-building site -- a directory named "light&dark" would blank
+    // this row (Adw.ActionRow's title defaults to use-markup: true).
+    const row = new Adw.ActionRow({ title: escapePango(prettyThemeName(name)), activatable: true });
     row.add_suffix(swatchStrip(palette));
     row.gnomarchyTheme = name;
     list.append(row);
@@ -66,6 +70,7 @@ export function presentThemeGallery(window) {
     dialog.close();
   });
 
+  window.trackDialog(dialog);
   dialog.present(window);
   list.grab_focus();
 }

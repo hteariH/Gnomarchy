@@ -42,9 +42,15 @@ export const ControlWindow = GObject.registerClass(
         row.add_prefix(new Gtk.Image({ iconName: icon }));
         this._sidebarList.append(row);
       }
+      // The single place that reacts to the sidebar's selection, whether it
+      // changed because the user clicked/arrowed to a row or because
+      // showPage() selected one programmatically -- so the content title
+      // never falls out of step with the visible page (as it did when
+      // showPage() duplicated this update only for its own callers).
       this._sidebarList.connect('row-selected', (_list, row) => {
         if (row === null) return;
-        const { name } = PAGES[row.get_index()];
+        const { name, title } = PAGES[row.get_index()];
+        this._contentPage.set_title(title);
         this._stack.set_visible_child_name(name);
         this._pages[name].focusSearch();
       });
@@ -66,6 +72,8 @@ export const ControlWindow = GObject.registerClass(
         maxSidebarWidth: 220,
       }));
 
+      this._openDialogCount = 0;
+
       this._installKeyboardModel();
       this._watchTheme();
       this.showPage('menu');
@@ -75,13 +83,22 @@ export const ControlWindow = GObject.registerClass(
       const index = PAGES.findIndex((page) => page.name === name);
       const target = index === -1 ? 0 : index;
       this._sidebarList.select_row(this._sidebarList.get_row_at_index(target));
-      this._contentPage.set_title(PAGES[target].title);
-      this._stack.set_visible_child_name(PAGES[target].name);
-      this._pages[PAGES[target].name].focusSearch();
     }
 
     get currentPage() {
       return this._pages[this._stack.get_visible_child_name()];
+    }
+
+    // Every dialog site in the app (theme gallery, confirm, web-app form,
+    // output pane, shortcuts help, accel capture) must call this before
+    // present(). It is the only thing that lets the window's key controller
+    // know a dialog is up, since Adw.Dialog.get_root() returns this window --
+    // the dialog lives inside our widget tree, not a separate top-level.
+    trackDialog(dialog) {
+      this._openDialogCount += 1;
+      dialog.connect('closed', () => {
+        this._openDialogCount -= 1;
+      });
     }
 
     // Esc unwinds the innermost active state and only closes the window when
@@ -94,6 +111,14 @@ export const ControlWindow = GObject.registerClass(
       // has the focus.
       controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
       controller.connect('key-pressed', (_c, keyval, _code, state) => {
+        // A dialog presented on this window satisfies get_root() === this, so
+        // it sits inside our widget tree rather than behind a separate
+        // top-level -- meaning this CAPTURE-phase controller would otherwise
+        // steal every key (Esc included) before the dialog's own controller,
+        // deeper in the tree, ever saw it. While any dialog tracked via
+        // trackDialog() is open, let all of our shortcuts propagate past us.
+        if (this._openDialogCount > 0) return Gdk.EVENT_PROPAGATE;
+
         const ctrl = (state & Gdk.ModifierType.CONTROL_MASK) !== 0;
 
         if (ctrl && keyval >= Gdk.KEY_1 && keyval <= Gdk.KEY_3) {
@@ -141,6 +166,7 @@ export const ControlWindow = GObject.registerClass(
         ].join('\n'),
       });
       dialog.add_response('close', 'Close');
+      this.trackDialog(dialog);
       dialog.present(this);
     }
 
