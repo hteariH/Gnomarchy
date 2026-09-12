@@ -16,16 +16,6 @@ set -eEo pipefail
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
 MANUAL_DIR="$GNOMARCHY_PATH/manual"
 
-# Launched from a keybinding there is no terminal attached; re-exec into one.
-if [[ -z "${GNOMARCHY_MANUAL_TTY:-}" ]] && ! [[ -t 1 ]]; then
-  export GNOMARCHY_MANUAL_TTY=1
-  if command -v gnome-terminal >/dev/null 2>&1; then
-    exec gnome-terminal --title="Gnomarchy Manual" --geometry=96x40 -- "$0" "$@"
-  elif command -v alacritty >/dev/null 2>&1; then
-    exec alacritty --title "Gnomarchy Manual" -e "$0" "$@"
-  fi
-fi
-
 if [[ ! -d "$MANUAL_DIR" ]]; then
   echo "No manual found at $MANUAL_DIR" >&2
   echo "Run 'gnomarchy update' to fetch it." >&2
@@ -148,6 +138,9 @@ case "${1:-browse}" in
     ;;
 
   browse | "")
+    source "$GNOMARCHY_PATH/install/helpers/gui.sh"
+    # Non-zero means no display or no gjs; fall through to the text browser.
+    gnomarchy_launch_gui manual || true
     browse
     ;;
 

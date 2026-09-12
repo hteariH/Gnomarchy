@@ -15,16 +15,6 @@ MK="org.gnome.settings-daemon.plugins.media-keys"
 BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 TS="org.gnome.shell.extensions.tilingshell"
 
-# Re-exec into a terminal when launched from a keybinding, which has no tty.
-if [[ -z "${GNOMARCHY_KEYS_TTY:-}" ]] && ! [[ -t 1 ]]; then
-  export GNOMARCHY_KEYS_TTY=1
-  if command -v gnome-terminal >/dev/null 2>&1; then
-    exec gnome-terminal --title="Gnomarchy Keybindings" --geometry=88x32 -- "$0" "$@"
-  elif command -v alacritty >/dev/null 2>&1; then
-    exec alacritty --title "Gnomarchy Keybindings" -e "$0" "$@"
-  fi
-fi
-
 command -v gsettings >/dev/null 2>&1 || {
   echo "gsettings is unavailable." >&2
   exit 1
@@ -174,21 +164,11 @@ case "${1:-search}" in
     ;;
 
   search | "")
+    source "${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}/install/helpers/gui.sh"
+    # Non-zero means no display or no gjs; fall through to the text list.
+    gnomarchy_launch_gui keybindings || true
     output="$(collect)"
-    if command -v gum >/dev/null 2>&1 && [[ -t 0 ]]; then
-      # Blank lines and headers are kept out of the filter so only real
-      # bindings are selectable.
-      selection="$(grep -E '^[A-Za-z]' <<<"$output" | grep -E '  +' |
-        gum filter --header "Search keybindings" --height 20 --placeholder "type to filter..." || true)"
-      [[ -n "$selection" ]] && {
-        echo
-        echo "  $selection"
-        echo
-      }
-    else
-      echo "$output"
-      [[ -t 0 ]] && read -rp "Press Enter to close..." _
-    fi
+    echo "$output"
     ;;
 
   reset)

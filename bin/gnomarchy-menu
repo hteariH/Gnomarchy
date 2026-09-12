@@ -10,23 +10,10 @@ set -eEo pipefail
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
 export PATH="$GNOMARCHY_PATH/bin:$PATH"
 
-# When launched from a keybinding there is no terminal attached, so re-exec
-# into one. GNOMARCHY_MENU_TTY marks the inner run.
-if [[ -z "$GNOMARCHY_MENU_TTY" ]] && ! [[ -t 0 ]]; then
-  export GNOMARCHY_MENU_TTY=1
-  if command -v gnome-terminal >/dev/null 2>&1; then
-    exec gnome-terminal \
-      --class=Gnomarchy \
-      --title="Gnomarchy" \
-      --geometry=76x24 \
-      -- "$0" "$@"
-  elif command -v alacritty >/dev/null 2>&1; then
-    exec alacritty --class Gnomarchy,Gnomarchy \
-      -o 'window.dimensions.columns=76' \
-      -o 'window.dimensions.lines=24' \
-      -e "$0" "$@"
-  fi
-fi
+# The GUI is the face of this command; the gum menu below is the fallback for
+# a TTY or a machine without gjs.
+source "$GNOMARCHY_PATH/install/helpers/gui.sh"
+gnomarchy_launch_gui menu || true
 
 if ! command -v gum >/dev/null 2>&1; then
   echo "gum is required for the Gnomarchy menu (pacman -S gum)." >&2
