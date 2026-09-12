@@ -95,8 +95,14 @@ jobs:
 
       - name: Build ISO
         run: |
+          # The commit is passed in rather than read from .git: the repository is
+          # bind-mounted into the container under another uid, so git inside it
+          # refuses the directory as dubious ownership. Without this the image
+          # records nothing, repository.sh assumes main, and this job verifies
+          # main instead of the branch under test.
           docker run --rm --privileged \
             -v "${{ github.workspace }}:/workspace" -w /workspace \
+            -e "GNOMARCHY_BUILD_COMMIT=${{ github.sha }}" \
             archlinux:latest \
             bash -c "
               pacman -Syu --noconfirm archlinux-keyring &&

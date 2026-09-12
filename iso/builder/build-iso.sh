@@ -77,11 +77,19 @@ rsync -a \
 # have and reverted every file the branch changed -- so the smoke test was
 # verifying main rather than the branch under test, and the installer was
 # rewriting its own scripts while bash was still reading them.
-if git -C "$REPO_ROOT" rev-parse HEAD >/dev/null 2>&1; then
-  git -C "$REPO_ROOT" rev-parse HEAD > "$PROFILE_DIR/airootfs/root/gnomarchy/install/.build-commit"
-  echo "Image records build commit $(git -C "$REPO_ROOT" rev-parse --short HEAD)"
+# GNOMARCHY_BUILD_COMMIT wins over asking git, because this script usually runs
+# inside a container with the repository bind-mounted: .git is present but owned
+# by another uid, so git refuses it as dubious ownership and reports nothing.
+BUILD_COMMIT="${GNOMARCHY_BUILD_COMMIT:-}"
+if [[ -z "$BUILD_COMMIT" ]] && git -C "$REPO_ROOT" rev-parse HEAD >/dev/null 2>&1; then
+  BUILD_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+fi
+
+if [[ -n "$BUILD_COMMIT" ]]; then
+  printf '%s\n' "$BUILD_COMMIT" > "$PROFILE_DIR/airootfs/root/gnomarchy/install/.build-commit"
+  echo "Image records build commit ${BUILD_COMMIT:0:7}"
 else
-  echo "No git metadata in $REPO_ROOT; the installed repository will track main."
+  echo "Build commit unknown; the installed repository will track main."
 fi
 
 # Ensure installer script permissions inside profile
