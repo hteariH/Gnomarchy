@@ -50,7 +50,7 @@ gnomarchy keymap status
     Super + W                 close window
     Super + Up                maximize
     Super + 1..6              workspaces
-    Super + T                 Tactile grid
+    Super + T                 cycle the zone layout (Tiling Shell)
 
 ### Omarchy profile
 
@@ -68,6 +68,24 @@ gnomarchy keymap status
     Super + drag              move window
     Super + right-drag        resize window
 
+## Super + digits belong to the workspaces
+
+GNOME binds `switch-to-application-1` to `Super + 1` and so on up to
+`Super + 9`: press one and it focuses, or launches, the Nth pinned app in the
+dock. Gnomarchy puts the workspaces on those same keys, so each of them used to
+have two handlers and did whichever the shell registered last.
+
+The workspaces win, because that is what both profiles advertise:
+
+| profile | workspaces | still switches applications |
+|---|---|---|
+| Gnomarchy defaults | `Super + 1..6` | `Super + 7`, `8`, `9` |
+| Omarchy | `Super + 1..0` (ten) | nothing — all nine are workspaces |
+
+Switching back from the Omarchy profile hands `Super + 7..9` to the
+application switcher again. `gnomarchy keybindings` reads dconf, so it always
+lists what is really bound.
+
 ## One deliberate difference from Omarchy
 
 Omarchy puts its menu on `Super + Space`. In GNOME that switches the keyboard
@@ -80,3 +98,11 @@ profiles.
 Hyprland features with no GNOME equivalent: window groups, the scratchpad,
 pseudo-tiling, pixel-step window resize, moving a workspace between monitors.
 `gnomarchy keymap status` lists them rather than pretending they exist.
+
+## Dynamic tiling borrows two keys
+
+`gnomarchy tiling enable` needs `K` and `Shift+K` for Forge's `hjkl`
+navigation, so while dynamic tiling is on the keybindings browser moves to
+`Super + /` and the manual to `Super + Shift + /`. `gnomarchy tiling disable`
+moves them back, and `gnomarchy keybindings` reads dconf, so it always shows
+whichever is really bound.

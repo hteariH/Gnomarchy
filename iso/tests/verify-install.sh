@@ -204,6 +204,39 @@ else
   no "${#uncompiled[@]} extension(s) have uncompiled schemas" "${uncompiled[*]}"
 fi
 
+# --- Regression: a Forge built for the wrong GNOME, or not deployed --------
+#
+# Dynamic tiling is Forge, bundled from the jcrussell fork. The Forge on
+# extensions.gnome.org is the unmaintained upstream and its metadata.json stops
+# at GNOME 49: installed on GNOME 50 it sits in enabled-extensions and never
+# loads, so `gnomarchy tiling enable` appears to work and tiles nothing.
+forge_meta=""
+for ext_base in "$ROOT/usr/share/gnome-shell/extensions" "$HOME_DIR/.local/share/gnome-shell/extensions"; do
+  candidate="$ext_base/forge@jmmaranan.com/metadata.json"
+  [[ -f "$candidate" ]] && forge_meta="$candidate" && break
+done
+
+if [[ -z "$forge_meta" ]]; then
+  no "Forge is not deployed" "dynamic tiling has no backend to enable"
+elif grep -q '"50"' "$forge_meta"; then
+  ok "Forge is deployed and declares GNOME 50"
+else
+  no "the deployed Forge does not declare GNOME 50"     "the shell will refuse to load it; see default/gnome/extensions/PROVENANCE.md"
+fi
+
+# --- Regression: dynamic tiling that only ever placed windows --------------
+#
+# Tiling Shell is the manual mode now. Its enable-autotiling drops a new window
+# into a fixed tile of a static layout and never resizes the windows already on
+# screen -- which is what the distribution used to ship as "dynamic tiling".
+# The installer must leave it off.
+TS_OVERRIDE="$ROOT/usr/share/glib-2.0/schemas/org.gnome.shell.extensions.tilingshell.gschema.xml"
+if [[ -f "$TS_OVERRIDE" ]]; then
+  ok "Tiling Shell's schema is installed system-wide"
+else
+  no "Tiling Shell's schema is missing from the system schema directory"     "manual tiling cannot be configured"
+fi
+
 # --- Regression: Brave binaries extracted without the executable bit -------
 #
 # zipfile.extractall() drops Unix modes, and only the main binary was chmodded,

@@ -4,7 +4,7 @@ gnomarchy_header "Installing & Configuring GNOME Extensions"
 
 EXTENSIONS=(
   "dash-to-dock@micxgx.gmail.com"
-  "tactile@lundal.io"
+  "tilingshell@ferrarodomenico.com"
   "just-perfection-desktop@just-perfection"
   "blur-my-shell@aunetx"
   "space-bar@luchrioh"
@@ -25,17 +25,43 @@ if command -v gnome-extensions >/dev/null 2>&1; then
   done
 fi
 
-# 3. Configure Tactile (Option A: Omakub Grid Tiling)
-if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tactile"; then
-  echo "  Configuring Tactile tiling grid..."
-  gsettings set org.gnome.shell.extensions.tactile col-0 1 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile col-1 2 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile col-2 1 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile col-3 0 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile row-0 1 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile row-1 1 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile gap-size 18 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tactile show-tiles "['<Super>t']" 2>/dev/null || true
+# 3. Configure Tiling Shell as the default, non-automatic tiling mode
+#
+# enable-autotiling stays OFF here. With it on, Tiling Shell drops each new
+# window into a fixed tile of a static layout and never touches the windows
+# already on screen -- which is not tiling, and is what `gnomarchy tiling
+# enable` (Forge) is for. With it off, Tiling Shell is a good manual tiler:
+# hold Ctrl while dragging to pick a zone, drag to the top for snap assist,
+# Super+Shift+arrows to throw a window into the next tile.
+if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tilingshell"; then
+  echo "  Configuring Tiling Shell (manual zones, no auto-placement)..."
+  TS="org.gnome.shell.extensions.tilingshell"
+
+  gsettings set "$TS" enable-autotiling false
+  gsettings set "$TS" enable-tiling-system true
+  gsettings set "$TS" enable-snap-assist true
+  gsettings set "$TS" active-screen-edges true
+  gsettings set "$TS" resize-complementing-windows true
+  gsettings set "$TS" enable-span-multiple-tiles true
+  gsettings set "$TS" restore-window-original-size true
+  gsettings set "$TS" enable-move-keybindings true
+  gsettings set "$TS" show-indicator false
+
+  gsettings set "$TS" inner-gaps 8
+  gsettings set "$TS" outer-gaps 8
+
+  # Super+arrows is GNOME's (Super+Up maximizes), so window movement goes on
+  # Super+Shift+arrows and directional focus is left to Alt+Tab. Dynamic mode
+  # is where hjkl navigation lives.
+  gsettings set "$TS" move-window-left "['<Super><Shift>Left']"
+  gsettings set "$TS" move-window-right "['<Super><Shift>Right']"
+  gsettings set "$TS" move-window-up "['<Super><Shift>Up']"
+  gsettings set "$TS" move-window-down "['<Super><Shift>Down']"
+  gsettings set "$TS" untile-window "['<Super><Shift>u']"
+
+  # Super+T opened Tactile's grid overlay before Tiling Shell replaced it.
+  # The nearest thing here is cycling which zone layout is active.
+  gsettings set "$TS" cycle-layouts "['<Super>t']"
 fi
 
 # 4. Configure Just Perfection

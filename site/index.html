@@ -246,37 +246,40 @@ Commands:
         <div class="install-grid">
           <div class="install-box">
             <span class="install-tag">gnomarchy tiling enable</span>
-            <h3 class="card-h3">Dynamic — Tiling Shell</h3>
+            <h3 class="card-h3">Dynamic — Forge</h3>
             <p class="card-p">
-              New windows are placed into the layout automatically and their neighbours resize to
-              fit. This is the Hyprland-style behaviour, and it is opt-in.
+              Windows are tiled into a binary tree. Opening a window splits the focused one and
+              both halves resize; closing one gives its space back to its sibling. This is the
+              Hyprland model, and it is opt-in.
             </p>
             <div class="key-list">
               <div class="key-row"><kbd>Super + h j k l</kbd><span>focus window</span></div>
-              <div class="key-row"><kbd>Super + Shift + h j k l</kbd><span>move window</span></div>
-              <div class="key-row"><kbd>Super + Shift + C</kbd><span>centre window</span></div>
+              <div class="key-row"><kbd>Super + Shift + h j k l</kbd><span>move within the tree</span></div>
+              <div class="key-row"><kbd>Super + Ctrl + h j k l</kbd><span>swap with the neighbour</span></div>
+              <div class="key-row"><kbd>Super + G</kbd><span>flip the split direction</span></div>
             </div>
             <p class="card-p" style="font-size:0.82rem;color:var(--text-muted);margin-top:auto;">
-              hjkl rather than the arrows, so Super + Up stays maximize and GNOME's edge tiling
-              keeps working.
+              Forge needs K for hjkl, so while it is on the keybindings browser moves to
+              Super + / and the manual to Super + Shift + /.
             </p>
           </div>
 
           <div class="install-box">
             <span class="install-tag">default</span>
-            <h3 class="card-h3">Manual — Tactile grid</h3>
+            <h3 class="card-h3">Manual — Tiling Shell</h3>
             <p class="card-p">
-              <kbd>Super + T</kbd> opens a grid overlay and you pick the zone with a letter.
-              Nothing is ever moved for you, which is what you want the moment a dialogue or a
-              picture-in-picture window appears.
+              Zones you pick, applied when you say so. Nothing is ever moved for you, which is
+              what you want the moment a dialogue or a picture-in-picture window appears.
             </p>
             <div class="key-list">
-              <div class="key-row"><kbd>Super + T</kbd><span>open the grid overlay</span></div>
-              <div class="key-row"><kbd>Super + Up</kbd><span>maximize</span></div>
-              <div class="key-row"><kbd>Super + Left / Right</kbd><span>GNOME edge tiling</span></div>
+              <div class="key-row"><kbd>Ctrl + drag</kbd><span>pick a zone while dragging</span></div>
+              <div class="key-row"><kbd>drag to the top</kbd><span>snap assist</span></div>
+              <div class="key-row"><kbd>Super + Shift + arrows</kbd><span>throw into the next tile</span></div>
+              <div class="key-row"><kbd>Super + T</kbd><span>cycle the zone layout</span></div>
             </div>
             <p class="card-p" style="font-size:0.82rem;color:var(--text-muted);margin-top:auto;">
-              The grid is set up at install time: three columns with relative widths 1:2:1, two equal rows, 18 px gaps.
+              Its auto-placement is deliberately off: it drops a window into a free tile without
+              resizing the ones already there. That job belongs to Forge.
             </p>
           </div>
         </div>
@@ -602,7 +605,7 @@ umu-launcher · ttf-liberation</div>
           <div class="shortcut-pill"><kbd>Super + D</kbd><span class="shortcut-desc">Voxtype dictation</span></div>
           <div class="shortcut-pill"><kbd>Super + K</kbd><span class="shortcut-desc">Search keybindings</span></div>
           <div class="shortcut-pill"><kbd>Super + Shift + K</kbd><span class="shortcut-desc">The manual</span></div>
-          <div class="shortcut-pill"><kbd>Super + T</kbd><span class="shortcut-desc">Tactile grid overlay</span></div>
+          <div class="shortcut-pill"><kbd>Super + T</kbd><span class="shortcut-desc">Cycle the zone layout</span></div>
           <div class="shortcut-pill"><kbd>Super + Esc</kbd><span class="shortcut-desc">Matrix screensaver</span></div>
           <div class="shortcut-pill"><kbd>Super + W</kbd><span class="shortcut-desc">Close window</span></div>
           <div class="shortcut-pill"><kbd>Super + Up</kbd><span class="shortcut-desc">Maximize</span></div>

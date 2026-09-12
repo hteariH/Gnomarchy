@@ -4,21 +4,37 @@
 #
 # Switches between two window management models:
 #
-#   dynamic  Tiling Shell with auto-tiling. New windows are placed into the
-#            layout automatically and neighbours resize to fit, which is the
-#            Hyprland-style behaviour. Navigation and movement are on hjkl.
+#   dynamic  Forge. Windows are tiled into a binary tree: opening a window
+#            splits the focused one and both halves resize, closing a window
+#            gives its space back to its sibling. Nothing overlaps and nothing
+#            is left floating. This is the Hyprland model.
 #
-#   manual   Tactile. Super+T opens a grid overlay and you pick the zone.
-#            Nothing moves unless you move it. This is the default.
+#   manual   Tiling Shell with auto-tiling off. Zones you choose: hold Ctrl
+#            while dragging, or drag to the top for snap assist, or throw the
+#            window with Super+Shift+arrows. Nothing moves unless you move it.
+#            This is the default.
 #
 # Only one is active at a time: with both enabled they fight over placement.
+#
+# Forge is bundled from https://github.com/jcrussell/forge, not from
+# extensions.gnome.org -- the listing there stops at GNOME 49 and Gnomarchy
+# runs 50. See default/gnome/extensions/PROVENANCE.md.
 set -eEo pipefail
 
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
 
-DYNAMIC_UUID="tilingshell@ferrarodomenico.com"
-MANUAL_UUID="tactile@lundal.io"
+DYNAMIC_UUID="forge@jmmaranan.com"
+MANUAL_UUID="tilingshell@ferrarodomenico.com"
+LEGACY_UUID="tactile@lundal.io"
+
+FORGE="org.gnome.shell.extensions.forge"
 TS="org.gnome.shell.extensions.tilingshell"
+FORGE_KEYS="org.gnome.shell.extensions.forge.keybindings"
+MK="org.gnome.settings-daemon.plugins.media-keys"
+SLOT="$MK.custom-keybinding"
+BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+
+STATE_DIR="$HOME/.config/gnomarchy/current"
 
 info() { echo -e "\033[1;36m$1\033[0m"; }
 good() { echo -e "\033[1;32m  $1\033[0m"; }
@@ -37,7 +53,8 @@ extension_installed() {
 }
 
 # Extensions whose zip ships no compiled schema fail to load with GLib.FileError,
-# so make sure the schema is compiled before enabling anything.
+# so make sure the schema is compiled before enabling anything. Forge's own zip
+# does ship one; a copy fetched some other way might not.
 ensure_schema_compiled() {
   local uuid="$1" dir
   for dir in "$HOME/.local/share/gnome-shell/extensions/$uuid" \
@@ -46,68 +63,215 @@ ensure_schema_compiled() {
     compgen -G "$dir/schemas/*.gschema.xml" >/dev/null 2>&1 || continue
     [[ -f "$dir/schemas/gschemas.compiled" ]] && continue
     if [[ -w "$dir/schemas" ]]; then
-      glib-compile-schemas "$dir/schemas" 2>/dev/null || true
+      glib-compile-schemas "$dir/schemas"
     else
-      sudo glib-compile-schemas "$dir/schemas" 2>/dev/null || true
+      sudo glib-compile-schemas "$dir/schemas"
     fi
+  done
+}
+
+# A Forge built for GNOME 49 installs fine and then never loads. Say so rather
+# than leaving the user with a tiling mode that silently does nothing.
+check_shell_version_support() {
+  local dir meta
+  for dir in "$HOME/.local/share/gnome-shell/extensions/$DYNAMIC_UUID" \
+    "/usr/share/gnome-shell/extensions/$DYNAMIC_UUID"; do
+    meta="$dir/metadata.json"
+    [[ -f "$meta" ]] || continue
+
+    local shell_major
+    shell_major="$(gnome-shell --version 2>/dev/null | grep -oE '[0-9]+' | head -1)"
+    [[ -n "$shell_major" ]] || return 0
+
+    if ! grep -q "\"$shell_major\"" "$meta"; then
+      warn "This Forge build does not declare GNOME $shell_major; the shell will refuse to load it."
+      warn "Reinstall from the bundled zip: see default/gnome/extensions/PROVENANCE.md"
+      return 1
+    fi
+    return 0
   done
 }
 
 install_dynamic() {
   extension_installed "$DYNAMIC_UUID" && return 0
 
-  info "Installing Tiling Shell..."
+  info "Installing Forge..."
   local zip="$GNOMARCHY_PATH/default/gnome/extensions/$DYNAMIC_UUID.zip"
   local dest="$HOME/.local/share/gnome-shell/extensions/$DYNAMIC_UUID"
   mkdir -p "$dest"
 
   if [[ -f "$zip" ]]; then
     unzip -oq "$zip" -d "$dest"
-  elif command -v gnome-extensions >/dev/null 2>&1; then
-    warn "Bundled copy missing; fetching from extensions.gnome.org"
-    local tmp
+  else
+    # Deliberately not extensions.gnome.org: the Forge published there is the
+    # unmaintained upstream and stops at GNOME 49.
+    warn "Bundled copy missing; fetching the pinned release from GitHub"
+    local tmp url
+    url="https://github.com/jcrussell/forge/releases/download/v49-90-beta.3/forge%40jmmaranan.com.zip"
     tmp="$(mktemp --suffix=.zip)"
-    curl -fsSL -o "$tmp" \
-      "https://extensions.gnome.org/download-extension/$DYNAMIC_UUID.shell-extension.zip?version_tag=latest" ||
-      { echo "Could not download Tiling Shell." >&2; rm -f "$tmp"; exit 1; }
+    if ! curl -fsSL -o "$tmp" "$url"; then
+      rm -f "$tmp"
+      echo "Could not download Forge from $url" >&2
+      exit 1
+    fi
     unzip -oq "$tmp" -d "$dest"
     rm -f "$tmp"
-  else
-    echo "Tiling Shell is not available and cannot be fetched." >&2
-    exit 1
   fi
 }
 
+# Gnomarchy owns Super+K and Super+Shift+K, and Forge needs k/K for hjkl
+# navigation. Dynamic mode moves the two Gnomarchy commands onto Super+/ and
+# Super+Shift+/; `gnomarchy tiling disable` puts them back. Leaving both on the
+# same key is not an option -- two handlers on one accelerator is how Super+K
+# ended up doing whichever of the two the shell happened to register last.
+move_cheatsheet_keys() {
+  local mode="$1" keys manual
+  case "$mode" in
+    dynamic) keys='<Super>slash'; manual='<Super><Shift>slash' ;;
+    manual) keys='<Super>k'; manual='<Super><Shift>k' ;;
+  esac
+
+  # Find the slots by what they run, not by number: `gnomarchy keymap omarchy`
+  # and the default layout put them in different slots.
+  local list slot path cmd
+  list="$(gsettings get "$MK" custom-keybindings 2>/dev/null || echo '')"
+  while read -r slot; do
+    [[ -n "$slot" ]] || continue
+    path="$BINDINGS/$slot/"
+    cmd="$(gsettings get "$SLOT:$path" command 2>/dev/null || echo "''")"
+    cmd="${cmd//\'/}"
+    case "$cmd" in
+      gnomarchy-keybindings) gsettings set "$SLOT:$path" binding "$keys" ;;
+      gnomarchy-manual) gsettings set "$SLOT:$path" binding "$manual" ;;
+    esac
+  done < <(grep -o 'custom[0-9]\+' <<<"$list" | sort -u)
+}
+
 configure_dynamic() {
-  # Auto-tiling is the whole point: without it this is just another
-  # snap-assistant and new windows still open floating.
-  gsettings set "$TS" enable-autotiling true
+  gsettings set "$FORGE" tiling-mode-enabled true
+
+  # Quarter-tiling on the shorter side, which is what makes a fresh split go
+  # vertical on a wide window and horizontal on a tall one -- Hyprland's
+  # dwindle, rather than always splitting the same way.
+  gsettings set "$FORGE" auto-split-enabled true
+
+  # A window that opened maximized is not part of the tree. Mutter's
+  # auto-maximize opens anything big enough that way, so the first window of a
+  # session routinely escaped tiling entirely.
+  gsettings set org.gnome.mutter auto-maximize false
+  gsettings set "$FORGE" auto-unmaximize-for-tiling true
+
+  gsettings set "$FORGE" window-gap-size 8
+  gsettings set "$FORGE" window-gap-hidden-on-single true
+  gsettings set "$FORGE" focus-border-toggle true
+  gsettings set "$FORGE" split-border-toggle true
+  gsettings set "$FORGE" focus-border-radius 12
+
+  # Forge's own quick-settings toggle stays (it is the discoverable way back
+  # out of tiling); its tray icon does not, the top bar is deliberately thin.
+  gsettings set "$FORGE" quick-settings-enabled true
+  gsettings set "$FORGE" tray-icon-enabled false
+
+  gsettings set "$FORGE" launch-app-command 'gnome-terminal'
+
+  # Forge turns GNOME's edge tiling off while it runs, so a drag to the screen
+  # edge goes into the tree instead of half-snapping outside it.
+  gsettings set "$FORGE" disable-edge-tiling true
+
+  # GNOME binds Super+H to `minimize` and Super+V to the notification list.
+  # Forge needs Super+H for focus-left and Super+V to split vertically, and two
+  # handlers on one accelerator is a coin toss. Minimising a window out of the
+  # tree has no meaning here; the notification list keeps Super+M.
+  gsettings set org.gnome.desktop.wm.keybindings minimize "@as []"
+  gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super>m']"
+
+  reserve_shift_arrows
+  configure_dynamic_keys
+}
+
+# Both tiling modes throw windows with Super+Shift+arrows, which is GNOME's
+# default for move-to-monitor. Move that rather than leave it double-bound;
+# it keeps working, one modifier further out.
+reserve_shift_arrows() {
+  local dir
+  for dir in left right up down; do
+    gsettings set org.gnome.desktop.wm.keybindings "move-to-monitor-$dir"       "['<Super><Control><Shift>${dir^}']"
+  done
+}
+
+configure_dynamic_keys() {
+  # hjkl focus, Shift+hjkl move, Ctrl+Shift+hjkl swap. These are Forge's own
+  # defaults; they are set explicitly so that switching keymap profiles and
+  # back lands somewhere predictable.
+  gsettings set "$FORGE_KEYS" window-focus-left "['<Super>h']"
+  gsettings set "$FORGE_KEYS" window-focus-down "['<Super>j']"
+  gsettings set "$FORGE_KEYS" window-focus-up "['<Super>k']"
+  gsettings set "$FORGE_KEYS" window-focus-right "['<Super>l']"
+
+  gsettings set "$FORGE_KEYS" window-move-left "['<Super><Shift>h']"
+  gsettings set "$FORGE_KEYS" window-move-down "['<Super><Shift>j']"
+  gsettings set "$FORGE_KEYS" window-move-up "['<Super><Shift>k']"
+  gsettings set "$FORGE_KEYS" window-move-right "['<Super><Shift>l']"
+
+  gsettings set "$FORGE_KEYS" window-swap-left "['<Super><Control>h']"
+  gsettings set "$FORGE_KEYS" window-swap-down "['<Super><Control>j']"
+  gsettings set "$FORGE_KEYS" window-swap-up "['<Super><Control>k']"
+  gsettings set "$FORGE_KEYS" window-swap-right "['<Super><Control>l']"
+
+  # --- Keys Gnomarchy already owns -----------------------------------------
+  #
+  # Forge ships defaults that collide with bindings the distribution sets in
+  # install/desktop/set-gnome-hotkeys.sh. Each one below is moved or cleared
+  # because of a specific collision, not for taste.
+
+  # <Super>w closes a window here.
+  gsettings set "$FORGE_KEYS" prefs-tiling-toggle "['<Super><Alt>t']"
+
+  # <Super>Return opens the terminal here.
+  gsettings set "$FORGE_KEYS" window-swap-last-active "['<Super><Control>Return']"
+
+  # <Super><Shift>Return would be a second terminal launcher.
+  gsettings set "$FORGE_KEYS" prefs-app-launch "@as []"
+
+  # <Super>q closes a window on the Omarchy keymap.
+  gsettings set "$FORGE_KEYS" prefs-lock-screen "@as []"
+
+  # <Super><Shift>slash is the Gnomarchy manual in dynamic mode, and
+  # `gnomarchy keybindings` already lists every binding that is in effect.
+  gsettings set "$FORGE_KEYS" prefs-cheatsheet-toggle "@as []"
+
+  move_cheatsheet_keys dynamic
+}
+
+# Manual mode is Tiling Shell with its auto-placement switched off. This has to
+# be set here as well as in install/desktop/set-gnome-extensions.sh: a machine
+# that was in dynamic mode, or that ever had enable-autotiling turned on by
+# hand, would otherwise come back to a Tiling Shell that still places windows
+# into fixed tiles on its own.
+configure_manual() {
+  gsettings list-schemas 2>/dev/null | grep -qx "$TS" || return 0
+
+  reserve_shift_arrows
+
+  gsettings set "$TS" enable-autotiling false
   gsettings set "$TS" enable-tiling-system true
   gsettings set "$TS" enable-snap-assist true
-  gsettings set "$TS" enable-wraparound-focus true
+  gsettings set "$TS" active-screen-edges true
   gsettings set "$TS" resize-complementing-windows true
-  gsettings set "$TS" enable-move-keybindings true
+  gsettings set "$TS" enable-span-multiple-tiles true
   gsettings set "$TS" restore-window-original-size true
+  gsettings set "$TS" enable-move-keybindings true
+  gsettings set "$TS" show-indicator false
 
   gsettings set "$TS" inner-gaps 8
   gsettings set "$TS" outer-gaps 8
 
-  # hjkl for focus, Shift+hjkl to move, the way a tiling WM works.
-  gsettings set "$TS" focus-window-left "['<Super>h']"
-  gsettings set "$TS" focus-window-down "['<Super>j']"
-  gsettings set "$TS" focus-window-up "['<Super>k']"
-  gsettings set "$TS" focus-window-right "['<Super>l']"
-
-  gsettings set "$TS" move-window-left "['<Super><Shift>h']"
-  gsettings set "$TS" move-window-down "['<Super><Shift>j']"
-  gsettings set "$TS" move-window-up "['<Super><Shift>k']"
-  gsettings set "$TS" move-window-right "['<Super><Shift>l']"
-  gsettings set "$TS" move-window-center "['<Super><Shift>c']"
-
-  # Tiling Shell binds the arrow keys to window movement by default, which
-  # would take over Super+Up (maximize) and GNOME's edge tiling. hjkl covers
-  # movement, so leave the arrows to GNOME.
-  gsettings set org.gnome.mutter edge-tiling true
+  gsettings set "$TS" move-window-left "['<Super><Shift>Left']"
+  gsettings set "$TS" move-window-right "['<Super><Shift>Right']"
+  gsettings set "$TS" move-window-up "['<Super><Shift>Up']"
+  gsettings set "$TS" move-window-down "['<Super><Shift>Down']"
+  gsettings set "$TS" untile-window "['<Super><Shift>u']"
+  gsettings set "$TS" cycle-layouts "['<Super>t']"
 }
 
 set_extension() {
@@ -144,29 +308,67 @@ case "${1:-status}" in
     require_session
     install_dynamic
     ensure_schema_compiled "$DYNAMIC_UUID"
+    check_shell_version_support || true
 
-    info "Enabling dynamic tiling (Tiling Shell)"
+    info "Enabling dynamic tiling (Forge)"
+    # Tiling Shell also places windows. Two placers fight over every new one.
     set_extension "$MANUAL_UUID" disable
+    # Tactile used to be the manual mode; disable it if it survived an upgrade.
+    extension_installed "$LEGACY_UUID" && set_extension "$LEGACY_UUID" disable
     set_extension "$DYNAMIC_UUID" enable
     configure_dynamic
+
+    mkdir -p "$STATE_DIR"
+    echo dynamic > "$STATE_DIR/tiling"
 
     good "Dynamic tiling enabled"
     echo
     echo "  Super + h/j/k/l           focus window left/down/up/right"
-    echo "  Super + Shift + h/j/k/l   move window in that direction"
-    echo "  Super + Shift + c         centre the window"
-    echo "  Super + Ctrl (hold)       temporarily suspend tiling while dragging"
+    echo "  Super + Shift + h/j/k/l   move window within the tree"
+    echo "  Super + Ctrl + h/j/k/l    swap window with its neighbour"
+    echo "  Super + C                 float the focused window"
+    echo "  Super + G                 flip the split direction"
+    echo "  Super + [ / Super + ]     shrink / expand the focused window"
+    echo "  Super + =                 reset every window to an even split"
+    echo "  Super + Alt + T           tiling on or off, without disabling it"
+    echo
+    warn "Keys that moved so Forge can have hjkl:"
+    warn "  Super + /  keybindings      Super + Shift + /  the manual"
+    warn "  Super + M  notifications    Super + H is now free (minimize unbound)"
+    warn "'gnomarchy tiling disable' puts all of them back."
     echo
     restart_hint
     ;;
 
   disable | manual | off)
     require_session
-    info "Returning to manual tiling (Tactile)"
-    gsettings set "$TS" enable-autotiling false 2>/dev/null || true
+    info "Returning to manual tiling (Tiling Shell)"
+
+    if gsettings list-schemas 2>/dev/null | grep -qx "$FORGE"; then
+      gsettings set "$FORGE" tiling-mode-enabled false
+    fi
     set_extension "$DYNAMIC_UUID" disable
     set_extension "$MANUAL_UUID" enable
-    good "Manual tiling restored - Super+T opens the grid overlay"
+    configure_manual
+
+    # Hand back what dynamic mode borrowed.
+    move_cheatsheet_keys manual
+    gsettings reset org.gnome.mutter auto-maximize
+    gsettings reset org.gnome.desktop.wm.keybindings minimize
+    gsettings reset org.gnome.shell.keybindings toggle-message-tray
+
+    mkdir -p "$STATE_DIR"
+    echo manual > "$STATE_DIR/tiling"
+
+    good "Manual tiling restored (Tiling Shell, auto-placement off)"
+    echo
+    echo "  Ctrl + drag               pick a zone for the window"
+    echo "  drag to the top edge      snap assist"
+    echo "  Super + Shift + arrows    throw the window into the next tile"
+    echo "  Super + Shift + U         untile, back to its original size"
+    echo "  Super + T                 cycle the zone layout"
+    echo
+    good "Super+K opens the keybindings again, Super+Shift+K the manual"
     echo
     restart_hint
     ;;
@@ -175,15 +377,30 @@ case "${1:-status}" in
     mode="$(current_mode)"
     case "$mode" in
       dynamic)
-        auto="$(gsettings get "$TS" enable-autotiling 2>/dev/null || echo unknown)"
-        echo "Tiling mode: dynamic (Tiling Shell)"
-        echo "  auto-tiling: $auto"
+        tiling="$(gsettings get "$FORGE" tiling-mode-enabled 2>/dev/null || echo unknown)"
+        split="$(gsettings get "$FORGE" auto-split-enabled 2>/dev/null || echo unknown)"
+        gap="$(gsettings get "$FORGE" window-gap-size 2>/dev/null || echo unknown)"
+        echo "Tiling mode: dynamic (Forge)"
+        echo "  tiling active: $tiling"
+        echo "  auto split:    $split"
+        echo "  gap:           $gap px"
         echo "  focus:  Super + h/j/k/l"
         echo "  move:   Super + Shift + h/j/k/l"
+        echo "  swap:   Super + Ctrl + h/j/k/l"
+
+        # Loaded is not the same as enabled: a build that does not declare this
+        # shell version sits in enabled-extensions and does nothing.
+        if command -v gnome-extensions >/dev/null 2>&1; then
+          state="$(gnome-extensions info "$DYNAMIC_UUID" 2>/dev/null |
+            grep -i '^ *State:' | sed 's/.*: *//')"
+          [[ -n "$state" ]] && echo "  shell state:   $state"
+        fi
         ;;
       manual)
-        echo "Tiling mode: manual (Tactile)"
-        echo "  Super+T opens the grid overlay"
+        auto="$(gsettings get "$TS" enable-autotiling 2>/dev/null || echo unknown)"
+        echo "Tiling mode: manual (Tiling Shell)"
+        echo "  auto-placement: $auto (off is what makes this the manual mode)"
+        echo "  Ctrl + drag to pick a zone, Super+Shift+arrows to throw a window"
         ;;
       *)
         echo "Tiling mode: none - no tiling extension is enabled"
@@ -196,8 +413,8 @@ case "${1:-status}" in
   *)
     echo "Usage: gnomarchy tiling <enable|disable|status>"
     echo
-    echo "  enable    dynamic auto-tiling (Tiling Shell), Hyprland-style"
-    echo "  disable   manual grid tiling (Tactile), the default"
+    echo "  enable    dynamic tree tiling (Forge), Hyprland-style"
+    echo "  disable   manual zone tiling (Tiling Shell), the default"
     echo "  status    show which mode is active"
     exit 1
     ;;
