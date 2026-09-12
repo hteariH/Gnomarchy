@@ -1,0 +1,28 @@
+/* Only structure. Colours come from ~/.config/gtk-4.0/gnomarchy-theme.css,
+   which gnomarchy-theme-set generates and gtk.css imports. Nothing here may
+   hardcode a colour, or switching themes would stop working. */
+
+.gnomarchy-manual-body {
+  padding: 12px 18px;
+}
+
+.gnomarchy-manual-body label {
+  margin-bottom: 6px;
+}
+
+.gnomarchy-code {
+  font-family: monospace;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background-color: alpha(currentColor, 0.07);
+}
+
+.gnomarchy-swatch {
+  min-width: 14px;
+  min-height: 14px;
+}
+
+.gnomarchy-swatch-strip {
+  border-radius: 4px;
+  overflow: hidden;
+}
