@@ -150,3 +150,5 @@ export function onBindingsChanged(callback) {
     onBindingsChanged._settings.push(settings);
   }
 }
+
+export { findConflict } from './conflicts.js';
