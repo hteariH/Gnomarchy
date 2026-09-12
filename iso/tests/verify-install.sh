@@ -262,6 +262,43 @@ fi
   ok "LazyVim bootstrap deployed" ||
   no "LazyVim bootstrap missing" "per-theme neovim.lua files would be inert"
 
+# --- The control center ----------------------------------------------------
+for pkg in gjs gtk4 libadwaita; do
+  if [[ -d "$ROOT/var/lib/pacman/local" ]] &&
+    compgen -G "$ROOT/var/lib/pacman/local/$pkg-[0-9]*" >/dev/null; then
+    ok "$pkg is installed"
+  else
+    no "$pkg is not installed" "the control center cannot start without it"
+  fi
+done
+
+GUI_ENTRY="$HOME_DIR/.local/share/gnomarchy/gui/src/main.js"
+if [[ -f "$GUI_ENTRY" ]]; then
+  ok "control center source is present"
+else
+  no "no control center at $GUI_ENTRY"
+fi
+
+DESKTOP_ENTRY="$HOME_DIR/.local/share/applications/org.gnomarchy.ControlCenter.desktop"
+if [[ -f "$DESKTOP_ENTRY" ]]; then
+  ok "control center desktop entry is published"
+else
+  no "no desktop entry at $DESKTOP_ENTRY" "install/config/control-center.sh did not run"
+fi
+
+# A half-applied port -- GUI files present but the commands still spawning a
+# terminal -- would otherwise pass every check above.
+terminal_relics=0
+for cmd in gnomarchy-menu gnomarchy-manual gnomarchy-keybindings; do
+  script="$HOME_DIR/.local/share/gnomarchy/bin/$cmd"
+  [[ -f "$script" ]] || continue
+  if grep -q 'exec gnome-terminal\|exec alacritty' "$script"; then
+    terminal_relics=$((terminal_relics + 1))
+    no "$cmd still re-execs into a terminal"
+  fi
+done
+(( terminal_relics == 0 )) && ok "the three commands no longer spawn a terminal"
+
 echo
 echo "=== $pass passed, $fail failed ==="
 ((fail == 0))

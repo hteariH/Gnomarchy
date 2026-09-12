@@ -141,6 +141,32 @@ for entry in /usr/share/applications/code-oss.desktop   /usr/share/applications/
   echo "INFO  provided by: ${found:-nothing}"
 done
 
+# --- The control center ----------------------------------------------------
+# GJS has no compile step, so a syntax error or a bad import is invisible until
+# something runs the app. An application that owns its D-Bus name has parsed
+# every module and built its window, which makes this the compiler this stack
+# does not otherwise have.
+trace "launching the control center"
+setsid gnomarchy-menu >/var/tmp/gnomarchy-gui.log 2>&1 &
+gui_pid=$!
+
+owned=0
+for _ in $(seq 1 20); do
+  if busctl --user list --no-legend --no-pager | grep -q org.gnomarchy.ControlCenter; then
+    owned=1
+    break
+  fi
+  sleep 1
+done
+
+if (( owned )); then
+  ok "control center owns org.gnomarchy.ControlCenter"
+else
+  no "control center never appeared on the session bus" "$(tail -n 5 /var/tmp/gnomarchy-gui.log)"
+fi
+
+kill "$gui_pid" 2>/dev/null || true  # already gone if it crashed; not a failure
+
 echo
 echo "=== $pass passed, $fail failed ==="
 echo "RESULT: $([[ $fail -eq 0 ]] && echo SUCCESS || echo FAILURE)"
