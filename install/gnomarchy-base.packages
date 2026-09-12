@@ -13,6 +13,9 @@ extension-manager
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 gtk3
+gjs
+gtk4
+libadwaita
 nss
 libxss
 xdg-user-dirs

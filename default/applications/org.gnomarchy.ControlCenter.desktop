@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Gnomarchy
+Comment=Themes, shortcuts, capture, snapshots and the manual
+Exec=gnomarchy-menu
+Icon=preferences-desktop
+Terminal=false
+Categories=GNOME;GTK;Settings;
+Keywords=gnomarchy;theme;keybindings;manual;snapshot;
+StartupWMClass=org.gnomarchy.ControlCenter
