@@ -5,6 +5,7 @@ import Adw from 'gi://Adw?version=1';
 
 import { formatAccel } from '../lib/accel.js';
 import { readBindings, onBindingsChanged } from '../lib/keysources.js';
+import { escapePango } from '../lib/markdown.js';
 
 export class KeybindingsPage {
   constructor(window) {
@@ -64,7 +65,7 @@ export class KeybindingsPage {
     for (const binding of this._matching()) {
       if (binding.section !== currentSection) {
         currentSection = binding.section;
-        const group = new Adw.PreferencesGroup({ title: currentSection });
+        const group = new Adw.PreferencesGroup({ title: escapePango(currentSection) });
         list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE });
         list.add_css_class('boxed-list');
         group.add(list);
@@ -72,8 +73,8 @@ export class KeybindingsPage {
       }
 
       const row = new Adw.ActionRow({
-        title: binding.description,
-        subtitle: formatAccel(binding.accel),
+        title: escapePango(binding.description),
+        subtitle: escapePango(formatAccel(binding.accel)),
         activatable: true,
       });
       row.gnomarchyBinding = binding;

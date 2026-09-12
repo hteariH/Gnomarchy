@@ -8,7 +8,7 @@ import Gtk from 'gi://Gtk?version=4.0';
 import Adw from 'gi://Adw?version=1';
 import Pango from 'gi://Pango';
 
-import { renderBlocks } from '../lib/markdown.js';
+import { renderBlocks, escapePango } from '../lib/markdown.js';
 import { pageTitle, searchPages } from '../lib/manual.js';
 import { GNOMARCHY_PATH, listDir, readTextFile } from '../lib/paths.js';
 
@@ -95,8 +95,8 @@ export class ManualPage {
 
     for (const { page, snippet } of searchPages(this._pages, this._search.get_text())) {
       const actionRow = new Adw.ActionRow({
-        title: page.title,
-        subtitle: snippet,
+        title: escapePango(page.title),
+        subtitle: escapePango(snippet),
         activatable: true,
       });
       actionRow.gnomarchyPage = page;

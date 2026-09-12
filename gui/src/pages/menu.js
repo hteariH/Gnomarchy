@@ -10,6 +10,7 @@ import Adw from 'gi://Adw?version=1';
 
 import { run, runForOutput, runAndQuit } from '../lib/actions.js';
 import { presentThemeGallery } from './theme-gallery.js';
+import { escapePango } from '../lib/markdown.js';
 
 export class MenuPage {
   constructor(window) {
@@ -117,8 +118,8 @@ export class MenuPage {
       }
 
       const row = new Adw.ActionRow({
-        title: action.title,
-        subtitle: action.subtitle ?? '',
+        title: escapePango(action.title),
+        subtitle: escapePango(action.subtitle ?? ''),
         activatable: true,
       });
       row.connect('activated', () => this._perform(action));
