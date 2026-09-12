@@ -67,6 +67,23 @@ rsync -a \
   --exclude="node_modules" --exclude=".wrangler" --exclude="__pycache__" \
   "$REPO_ROOT/" "$PROFILE_DIR/airootfs/root/gnomarchy/"
 
+# Record which commit this image was built from.
+#
+# The rsync above drops .git, so the installed tree cannot tell what it is a
+# copy of. install/config/repository.sh needs that: it turns the deployed
+# directory into a git repository, and without knowing the commit it assumed
+# `main`, then ran `git clean` and `git checkout -- .` against it. On an image
+# built from any other branch that silently deleted every file main does not
+# have and reverted every file the branch changed -- so the smoke test was
+# verifying main rather than the branch under test, and the installer was
+# rewriting its own scripts while bash was still reading them.
+if git -C "$REPO_ROOT" rev-parse HEAD >/dev/null 2>&1; then
+  git -C "$REPO_ROOT" rev-parse HEAD > "$PROFILE_DIR/airootfs/root/gnomarchy/install/.build-commit"
+  echo "Image records build commit $(git -C "$REPO_ROOT" rev-parse --short HEAD)"
+else
+  echo "No git metadata in $REPO_ROOT; the installed repository will track main."
+fi
+
 # Ensure installer script permissions inside profile
 chmod 755 "$PROFILE_DIR/airootfs/root/.automated_script.sh" 2>/dev/null || true
 chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/bin"/* 2>/dev/null || true

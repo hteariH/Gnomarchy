@@ -53,6 +53,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Cheap, and it guards the one stage that can invalidate everything below
+      # it: repository.sh used to reset the installed tree to main, so the rest
+      # of this job verified main instead of the branch under test.
+      - name: Verify the repository stage preserves the branch under test
+        run: bash iso/tests/verify-repository-stage.sh
+
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
