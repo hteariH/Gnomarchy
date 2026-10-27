@@ -42,9 +42,16 @@ done
 
 Log out and back in afterwards - extensions load only when the shell starts.
 
-## Extensions do not load after switching tiling mode
+## Tiling does nothing
 
-Under Wayland the shell cannot restart in place. Log out and back in.
+```bash
+gnomarchy tiling status
+```
+
+`shell state` should read `ACTIVE`. Anything else means the shell refused the
+extension -- usually a build that does not declare the running GNOME version.
+`gnomarchy tiling enable` re-applies Gnomarchy's settings if they were changed
+by hand.
 
 ## The wallpaper is a plain gradient
 

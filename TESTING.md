@@ -104,10 +104,10 @@ sudo apt install qemu-system-x86 ovmf
 
 Once logged into the Gnomarchy desktop:
 
-1. **Test Tactile Tiling**:
-   - Press <kbd>Super</kbd> + <kbd>T</kbd>.
-   - Confirm the tiling grid overlay appears.
-   - Press a quadrant/zone key and verify the window snaps to that zone with proper gaps.
+1. **Test Tiling (Tiling Shell)**:
+   - `gnomarchy tiling status` reports `shell state: ACTIVE`.
+   - Hold <kbd>Ctrl</kbd> while dragging a window; the zones appear and the window drops into one with 8px gaps.
+   - <kbd>Super</kbd> + <kbd>Shift</kbd> + arrows throws the focused window into the next tile.
 2. **Test Keybindings**:
    - <kbd>Super</kbd> + <kbd>Return</kbd>: Launches GNOME Terminal in the Gnomarchy
      profile (JetBrains Mono 10, no scrollbar, 110x30).

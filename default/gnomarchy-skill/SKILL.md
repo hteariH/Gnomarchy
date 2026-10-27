@@ -10,7 +10,7 @@ Use this skill whenever the user asks you to customize, reconfigure, automate, o
 Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 - **Desktop**: GNOME 51 (Wayland) + GDM
 - **Dock**: Dash to Dock (Ubuntu-style left edge panel)
-- **Tiling**: Tiling Shell zones by default; Forge tree tiling via `gnomarchy tiling enable`
+- **Tiling**: Tiling Shell zones, auto-placement off; `gnomarchy tiling <enable|disable|status>`
 - **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)
 - **Filesystem & Rollbacks**: Btrfs subvolumes (`@`, `@home`, `@snapshots`) + Snapper + Limine bootloader integration
 - **Default Editor**: VS Code (`code`, text/plain and friends); `$EDITOR` is
@@ -115,38 +115,27 @@ gsettings set org.gnome.shell favorite-apps "['brave-origin.desktop', 'org.gnome
 
 ## 4. Tiling Management
 
-Two modes, switched with `gnomarchy tiling <enable|disable|status>`.
-
-**Manual (default)** is Tiling Shell with `enable-autotiling` off: hold Ctrl
-while dragging to pick a zone, drag to the top for snap assist,
-`<Super><Shift>` + arrows to throw a window into the next tile, `<Super>T` to
-cycle the zone layout.
+Tiling is Tiling Shell with `enable-autotiling` off: hold Ctrl while dragging
+to pick a zone, drag to the top for snap assist, `<Super><Shift>` + arrows to
+throw a window into the next tile, `<Super>T` to cycle the zone layout.
+`gnomarchy tiling disable` turns it off, `enable` turns it on and re-applies
+Gnomarchy's settings.
 
 Configuration schema: `org.gnome.shell.extensions.tilingshell`
 
-**Dynamic** is Forge, which tiles into a binary tree: a new window splits the
-focused one and both halves resize. Navigation is `<Super>` + `hjkl`.
-
-Configuration schemas: `org.gnome.shell.extensions.forge` and
-`org.gnome.shell.extensions.forge.keybindings`
-
-Never enable both at once; they fight over placement. Do not turn Tiling
-Shell's `enable-autotiling` on -- it places windows into fixed tiles without
-resizing the ones already on screen, which is what Forge exists to replace.
+Do not turn `enable-autotiling` on -- it places windows into fixed tiles
+without resizing the ones already on screen. Gnomarchy has no tree tiling and
+no directional focus; do not suggest Forge or another tiler alongside Tiling
+Shell, two placers fight over every new window.
 
 ```bash
-# Which mode is active, and whether the shell actually loaded the extension
+# Whether tiling is on, and whether the shell actually loaded the extension
 gnomarchy tiling status
 
-# Manual mode: gaps, and the key that throws a window into the next tile
+# Gaps, and the key that throws a window into the next tile
 gsettings set org.gnome.shell.extensions.tilingshell inner-gaps 8
 gsettings set org.gnome.shell.extensions.tilingshell outer-gaps 8
 gsettings set org.gnome.shell.extensions.tilingshell move-window-left "['<Super><Shift>Left']"
-
-# Dynamic mode: gap, split behaviour, and directional focus
-gsettings set org.gnome.shell.extensions.forge window-gap-size 8
-gsettings set org.gnome.shell.extensions.forge auto-split-enabled true
-gsettings set org.gnome.shell.extensions.forge.keybindings window-focus-left "['<Super>h']"
 ```
 
 ---

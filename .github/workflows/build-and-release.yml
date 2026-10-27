@@ -95,7 +95,7 @@ jobs:
           - **Command Center** (\`Super + Alt + Space\`): themes, web apps, capture, snapshots, updates and power in one menu.
           - **Unified Theme Engine**: 22 themes (18 dark, 4 light) syncing GNOME dark/light mode, Libadwaita accent, GTK3/GTK4 colors, GNOME Terminal, Alacritty, Neovim (LazyVim), btop and the GDM greeter.
           - **GNOME Terminal by default**, themed through a dedicated Gnomarchy dconf profile.
-          - **Tactile Grid Tiling**: instant keyboard window management with \`Super + T\`.
+          - **Zone tiling** with Tiling Shell: Ctrl + drag to a zone, \`Super + Shift + arrows\` to throw a window, \`Super + T\` to cycle layouts.
           - **Btrfs + Snapper Rollbacks**: automated boot snapshots integrated with Limine.
           - **Migrations**: \`gnomarchy update\` applies configuration changes to machines that are already installed.
           - **Verified install**: every release is cut from a commit where the QEMU install smoke test is green - the ISO is installed and the resulting desktop checked, not merely built.

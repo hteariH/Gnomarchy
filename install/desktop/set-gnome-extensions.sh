@@ -24,14 +24,14 @@ if command -v gnome-extensions >/dev/null 2>&1; then
   done
 fi
 
-# 3. Configure Tiling Shell as the default, non-automatic tiling mode
+# 3. Configure Tiling Shell, Gnomarchy's tiling, without auto-placement
 #
 # enable-autotiling stays OFF here. With it on, Tiling Shell drops each new
 # window into a fixed tile of a static layout and never touches the windows
-# already on screen -- which is not tiling, and is what `gnomarchy tiling
-# enable` (Forge) is for. With it off, Tiling Shell is a good manual tiler:
-# hold Ctrl while dragging to pick a zone, drag to the top for snap assist,
-# Super+Shift+arrows to throw a window into the next tile.
+# already on screen -- which is not tiling. With it off, Tiling Shell is a good
+# manual tiler: hold Ctrl while dragging to pick a zone, drag to the top for
+# snap assist, Super+Shift+arrows to throw a window into the next tile.
+# bin/gnomarchy-tiling writes the same values; keep the two in step.
 if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tilingshell"; then
   echo "  Configuring Tiling Shell (manual zones, no auto-placement)..."
   TS="org.gnome.shell.extensions.tilingshell"
@@ -50,8 +50,7 @@ if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tili
   gsettings set "$TS" outer-gaps 8
 
   # Super+arrows is GNOME's (Super+Up maximizes), so window movement goes on
-  # Super+Shift+arrows and directional focus is left to Alt+Tab. Dynamic mode
-  # is where hjkl navigation lives.
+  # Super+Shift+arrows and directional focus is left to Alt+Tab.
   gsettings set "$TS" move-window-left "['<Super><Shift>Left']"
   gsettings set "$TS" move-window-right "['<Super><Shift>Right']"
   gsettings set "$TS" move-window-up "['<Super><Shift>Up']"

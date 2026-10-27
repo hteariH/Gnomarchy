@@ -1058,33 +1058,6 @@ section {
   gap: 14px;
 }
 
-.tactile-slot-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.tactile-slot-btn:hover {
-  border-color: var(--border-focus);
-  color: var(--text-primary);
-  transform: translateX(4px);
-}
-
-.tactile-slot-btn.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 .tactile-canvas {
   height: 280px;
   background: var(--bg-canvas);
@@ -1622,68 +1595,6 @@ footer.gnome-footer {
 }
 
 /* ==========================================================================
-   Tiling illustration
-   ========================================================================== */
-
-.tiling-demo {
-  margin-top: 34px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  overflow: hidden;
-}
-
-.tiling-demo-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.tiling-demo-stage {
-  padding: 20px;
-}
-
-.tiling-caption {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 16px;
-  min-height: 2.8em;
-}
-
-.tiling-panes {
-  position: relative;
-  height: 260px;
-  background: var(--bg-canvas);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.tiling-pane {
-  position: absolute;
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
-  border: 1px solid var(--border-focus);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tiling-pane.is-new {
-  background: rgba(187, 154, 247, 0.16);
-  border-color: var(--color-magenta);
-  color: var(--color-magenta);
-  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.6);
-}
-
-/* ==========================================================================
    Theme reach list
    ========================================================================== */
 
@@ -1770,10 +1681,6 @@ footer.gnome-footer {
 
   .key-row kbd {
     min-width: 0;
-  }
-
-  .tiling-panes {
-    height: 200px;
   }
 }
 

@@ -1,7 +1,7 @@
 /**
  * Gnomarchy — interactive client application
  *
- * Theme switcher, tiling-mode illustration, dictation sequence and the CLI
+ * Theme switcher, dictation sequence and the CLI
  * playground. Every string in CLI_ENTRIES is what the corresponding script in
  * bin/ actually prints; anything that is commentary rather than output goes in
  * the separate `note` field so the two are never confused.
@@ -70,66 +70,6 @@
     if (e.key === 't' || e.key === 'T') cycleTheme();
   });
 
-  // --- Tiling mode illustration --------------------------------------------
-  // Two static layouts showing what each mode does with a third window, not a
-  // simulation of either extension.
-  const TILING_MODES = {
-    dynamic: {
-      caption: 'A third window opens and the other two shrink to make room. ' +
-               'You never place anything yourself.',
-      panes: [
-        { label: 'Alacritty', left: '2%', top: '4%', width: '47%', height: '92%' },
-        { label: 'Brave', left: '51%', top: '4%', width: '47%', height: '44%' },
-        { label: 'nvim', left: '51%', top: '52%', width: '47%', height: '44%', isNew: true }
-      ]
-    },
-    manual: {
-      caption: 'The third window opens floating, wherever GNOME puts it. ' +
-               'Super + T and a letter drops it into a grid zone when you decide to.',
-      panes: [
-        { label: 'Alacritty', left: '2%', top: '4%', width: '47%', height: '92%' },
-        { label: 'Brave', left: '51%', top: '4%', width: '47%', height: '92%' },
-        { label: 'nvim', left: '27%', top: '24%', width: '46%', height: '52%', isNew: true }
-      ]
-    }
-  };
-
-  function renderTiling(mode) {
-    const spec = TILING_MODES[mode];
-    const stage = document.getElementById('tilingPanes');
-    const caption = document.getElementById('tilingCaption');
-    if (!spec || !stage) return;
-
-    if (caption) caption.textContent = spec.caption;
-
-    stage.innerHTML = '';
-    spec.panes.forEach(p => {
-      const el = document.createElement('div');
-      el.className = 'tiling-pane' + (p.isNew ? ' is-new' : '');
-      el.style.left = p.left;
-      el.style.top = p.top;
-      el.style.width = p.width;
-      el.style.height = p.height;
-      el.textContent = p.label;
-      stage.appendChild(el);
-    });
-  }
-
-  function setupTiling() {
-    const buttons = document.querySelectorAll('[data-tiling-mode]');
-    if (!buttons.length) return;
-
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderTiling(btn.dataset.tilingMode);
-      });
-    });
-
-    renderTiling('dynamic');
-  }
-
   // --- Dictation sequence ---------------------------------------------------
   function setupVoxtypeSequence() {
     const btn = document.getElementById('simulateVoiceBtn');
@@ -197,20 +137,15 @@
             'all generated from the theme’s alacritty.toml.'
     },
     tiling: {
-      cmd: 'gnomarchy tiling enable',
-      output: `Enabling dynamic tiling (Forge)
-  Dynamic tiling enabled
+      cmd: 'gnomarchy tiling status',
+      output: `Tiling: on (Tiling Shell)
+  auto-placement: false (Gnomarchy keeps it off)
+  Ctrl + drag to pick a zone, Super+Shift+arrows to throw a window
+  shell state:    ACTIVE
 
-  Super + h/j/k/l           focus window left/down/up/right
-  Super + Shift + h/j/k/l   move window within the tree
-  Super + Ctrl + h/j/k/l    swap window with its neighbour
-  Super + G                 flip the split direction
-  Super + Alt + T           tiling on or off, without disabling it
-
-  Super + / now opens the keybindings and Super + Shift + / the manual.
-  Log out and back in to load the change (Wayland cannot restart the shell in place).`,
-      note: 'Enabling one mode disables the other. With both extensions live ' +
-            'they fight over window placement.'
+Switch with: gnomarchy tiling <enable|disable>`,
+      note: 'shell state is the shell’s own answer, not dconf’s: an ' +
+            'extension built for an older GNOME is enabled and does nothing.'
     },
     snapshot: {
       cmd: 'gnomarchy snapshot create "Before the kernel upgrade"',
@@ -363,7 +298,6 @@ Switch with: gnomarchy keymap <omarchy|gnome>`,
       el.addEventListener('click', () => copyText(el.getAttribute('data-copy-cmd'), el));
     });
 
-    setupTiling();
     setupVoxtypeSequence();
     setupCliPlayground();
   });

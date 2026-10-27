@@ -26,10 +26,9 @@ Your muscle memory can come with you:
 
 ```bash
 gnomarchy keymap omarchy
-gnomarchy tiling enable
 ```
 
-Log out and back in afterwards. See `gnomarchy manual 03` and `04`.
+See `gnomarchy manual 03` for what it binds and `04` for tiling.
 
 ## If you came from stock GNOME
 

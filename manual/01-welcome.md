@@ -16,7 +16,7 @@ rollbacks.
 GNOME is not Hyprland, and some things do not translate:
 
 - Window groups, the scratchpad and pseudo-tiling have no GNOME equivalent.
-- Dynamic tiling is opt-in and provided by an extension, not the compositor.
+- Tiling is zones you pick, from an extension; nothing re-tiles itself.
 - Configuration lives in dconf, not a text file you edit.
 
 Where a feature could not be carried across, it is named rather than quietly

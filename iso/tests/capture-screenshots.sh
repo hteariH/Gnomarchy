@@ -22,11 +22,9 @@
 # Frames are matched to stages by wall clock, which is why every stage prints a
 # timestamp and then holds still for HOLD seconds.
 #
-# Two phases, one boot each. Enabling dynamic tiling only takes effect once the
-# shell reloads, and under Wayland that means a new session; a fresh boot is
-# the most reliable way to get one. Logging out was tried and does not work -
-# it kills this script along with the session, so nothing survives to continue.
-# The phase is recorded in a file, which persists across the reboot.
+# One boot. There used to be a second, for dynamic tiling, which only took
+# effect once the shell reloaded. The phase file stays so that a guest which
+# boots again after the capture powers off instead of shooting it twice.
 
 REPORT="/var/tmp/gnomarchy-capture.txt"
 STATE_DIR="$HOME/.local/state/gnomarchy"
@@ -39,7 +37,7 @@ mkdir -p "$STATE_DIR"
 
 trace() { logger -t gnomarchy-capture -- "$*" 2>/dev/null || true; }
 
-# Append rather than truncate: phase 2 must not erase the phase 1 transcript.
+# Append rather than truncate: a second boot must not erase the transcript.
 exec >>"$REPORT" 2>&1
 
 phase="$(cat "$PHASE_FILE" 2>/dev/null || echo 1)"
@@ -53,7 +51,7 @@ echo "hold per stage: ${HOLD}s"
 echo
 
 # Guard against a phase file that never advances.
-if (( phase > 2 )); then
+if (( phase > 1 )); then
   echo "phase $phase is past the end - powering off"
   sudo -n systemctl poweroff 2>/dev/null || systemctl poweroff 2>/dev/null
   exit 0
@@ -79,14 +77,13 @@ dismiss_notifications() {
 }
 
 # Whether the shell actually loaded the extensions, as opposed to dconf simply
-# saying it should have. gnomarchy tiling status reads the setting, so it
-# reports "dynamic" either way; three windows that overlapped instead of
-# tiling is what made the difference worth printing.
+# saying it should have. dconf reports an extension as enabled whether or not
+# the shell could load it.
 report_extensions() {
   echo "--- extensions the shell is running ---"
   gnome-extensions list --enabled 2>&1 || echo "(gnome-extensions list failed)"
   local uuid
-  for uuid in forge@jmmaranan.com tilingshell@ferrarodomenico.com dash-to-dock@micxgx.gmail.com; do
+  for uuid in tilingshell@ferrarodomenico.com dash-to-dock@micxgx.gmail.com; do
     echo "$uuid: $(gnome-extensions info "$uuid" 2>&1 | tr "
 " " " | sed -e "s/  */ /g")"
   done
@@ -118,19 +115,6 @@ close_launched() {
   done
   launched_pids=()
   sleep 4
-}
-
-# The browser is installed by its own stage rather than from the package
-# list, and lands under any of three names depending on which route worked -
-# the official release binary, brave-bin from the AUR, or the Flatpak.
-browser_command() {
-  if command -v brave-origin >/dev/null 2>&1; then
-    echo "brave-origin"
-  elif command -v brave >/dev/null 2>&1; then
-    echo "brave"
-  elif flatpak info com.brave.Browser >/dev/null 2>&1; then
-    echo "flatpak run com.brave.Browser"
-  fi
 }
 
 dismiss_notifications
@@ -210,9 +194,6 @@ if [[ "$phase" == "1" ]]; then
 
   gnomarchy theme set tokyo-night >/dev/null 2>&1 || true
 
-  echo
-  echo "--- enabling dynamic tiling for the phase 2 boot ---"
-  gnomarchy tiling enable 2>&1 | tail -5 || echo "gnomarchy tiling enable failed"
   echo 2 > "$PHASE_FILE"
 
   echo
@@ -221,102 +202,3 @@ if [[ "$phase" == "1" ]]; then
   power_off
   exit 0
 fi
-
-# --- phase 2: dynamic tiling, on a shell that started with it enabled -------
-
-echo "--- waiting for the session to settle ---"
-sleep 30
-
-report_extensions
-
-# The experiment that was here found the cause and it is now fixed in
-# gnomarchy-tiling: a window that opens maximized is not part of the tree, and
-# Mutter's auto-maximize defaults to true, so the first window of a session
-# escaped tiling. `gnomarchy tiling enable` turns auto-maximize off. Printing
-# these is how we know the fix is actually in effect on the frame we capture,
-# rather than assuming it from the source.
-echo "--- tiling preconditions ---"
-echo "auto-maximize:   $(gsettings get org.gnome.mutter auto-maximize 2>&1)"
-echo "tiling-mode:     $(gsettings get org.gnome.shell.extensions.forge tiling-mode-enabled 2>&1)"
-echo "auto-split:      $(gsettings get org.gnome.shell.extensions.forge auto-split-enabled 2>&1)"
-echo "unmaximize:      $(gsettings get org.gnome.shell.extensions.forge auto-unmaximize-for-tiling 2>&1)"
-if [[ "$(gsettings get org.gnome.mutter auto-maximize 2>&1)" != "false" ]]; then
-  echo "auto-maximize is still on -- gnomarchy tiling enable did not apply"
-fi
-echo
-
-echo "tiling status:"
-gnomarchy tiling status 2>&1 | head -6 || echo "(gnomarchy tiling status failed)"
-echo
-
-# Something for the editor to show. A blank VS Code window photographs as a
-# grey rectangle.
-HELLO="$HOME/hello.py"
-cat > "$HELLO" <<'PYEOF'
-def main():
-    print("Hello from Gnomarchy")
-
-
-if __name__ == "__main__":
-    main()
-PYEOF
-
-# Neither application can be talked out of its welcome screen by a flag, so
-# each is started once here, off stage, and killed. What they want to say on
-# a fresh profile they say to nobody, and the profile they leave behind is
-# the one the photographed window opens with.
-browser="$(browser_command)"
-echo "warming profiles"
-if [[ -n "$browser" ]]; then
-  setsid $browser --no-first-run --password-store=basic >/dev/null 2>&1 &
-  sleep 25
-  pkill -f brave >/dev/null 2>&1 || true
-fi
-setsid code --disable-workspace-trust --password-store=basic >/dev/null 2>&1 &
-sleep 25
-  pkill -f "code --disable-workspace-trust" >/dev/null 2>&1 || true
-pkill -x code >/dev/null 2>&1 || true
-sleep 5
-
-# VS Code opens on a welcome tab and asks about Copilot on a fresh profile.
-# The first is a setting; the second belongs to an extension, so the
-# extension is what has to be off - by name, because --disable-extensions
-# would take the language grammars with it and leave the file grey.
-mkdir -p "$HOME/.config/Code/User"
-cat > "$HOME/.config/Code/User/settings.json" <<'JSONEOF'
-{
-  "workbench.startupEditor": "none",
-  "telemetry.telemetryLevel": "off",
-  "update.mode": "none",
-  "workbench.tips.enabled": false
-}
-JSONEOF
-
-# btop refuses to draw below 80 columns, and the pane it was given last time
-# was 395px - 52 columns even at font size 9. No font size fixes that; the
-# terminal has to be the large pane instead, and auto-tiling gives that to
-# whichever window arrives first.
-launch alacritty -o font.size=9 -e btop
-sleep 10
-
-launch code --disable-workspace-trust --password-store=basic --disable-extension GitHub.copilot --disable-extension GitHub.copilot-chat "$HELLO"
-sleep 20
-
-if [[ -n "$browser" ]]; then
-  # Unquoted on purpose: the Flatpak route is three words, not one.
-  launch $browser --new-window --no-first-run --no-default-browser-check --password-store=basic https://gnomarchy.pages.dev
-  sleep 20
-else
-  echo "MISS  browser -- no brave-origin, brave or com.brave.Browser found"
-  launch nautilus
-fi
-
-stage 13-tiling
-close_launched
-
-echo
-echo "phase 2 complete"
-trace "phase 2 complete"
-
-echo 3 > "$PHASE_FILE"
-power_off

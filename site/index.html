@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Gnomarchy Linux — Arch Linux with a tuned GNOME 51 desktop</title>
-  <meta name="description" content="An Arch Linux distribution: Omarchy's tooling and rolling base with a tuned GNOME 51 desktop instead of Hyprland. Btrfs rollbacks, two tiling models, 22 themes, one CLI.">
+  <meta name="description" content="An Arch Linux distribution: Omarchy's tooling and rolling base with a tuned GNOME 51 desktop instead of Hyprland. Btrfs rollbacks, zone tiling, 22 themes, one CLI.">
 
   <!-- OpenGraph & Twitter -->
   <meta property="og:site_name" content="Gnomarchy Linux">
   <meta property="og:title" content="Gnomarchy Linux — Arch Linux with a tuned GNOME 51 desktop">
-  <meta property="og:description" content="Omarchy's tooling and rolling Arch base, with GNOME 51 instead of Hyprland. Btrfs rollbacks, dynamic or manual tiling, 22 themes, one CLI.">
+  <meta property="og:description" content="Omarchy's tooling and rolling Arch base, with GNOME 51 instead of Hyprland. Btrfs rollbacks, zone tiling, 22 themes, one CLI.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://gnomarchy.pages.dev/">
   <meta property="og:image" content="https://gnomarchy.pages.dev/assets/banner.png">
@@ -141,7 +141,7 @@ Commands:
   menu                         Open the Gnomarchy command center (Super+Alt+Space)
   theme &lt;set|list|current&gt;     Manage system and desktop color themes
   tiling &lt;enable|disable|status&gt;
-                               Dynamic auto-tiling (Hyprland-style) or manual grid
+                               Zone tiling with Tiling Shell, on or off
   keymap &lt;omarchy|gnome|status&gt;
                                Switch between Omarchy and Gnomarchy key layouts
   keybindings [--list]         Search the keybindings that are actually active
@@ -190,11 +190,10 @@ Commands:
 
           <div class="gnome-card">
             <div class="card-icon">🧩</div>
-            <h3 class="card-h3">Two tiling models, one switch</h3>
+            <h3 class="card-h3">Zone tiling that stays put</h3>
             <p class="card-p">
-              Dynamic auto-tiling in the Hyprland sense, or a manual grid where nothing moves
-              unless you move it. Both are installed; <code>gnomarchy tiling</code> picks which one
-              is live, because with both enabled they fight over placement.
+              Tiling Shell with its auto-placement off: drag a window into a zone, or throw it
+              into the next tile from the keyboard. Nothing moves unless you move it.
             </p>
           </div>
 
@@ -236,74 +235,39 @@ Commands:
       <div class="container">
         <div class="section-intro">
           <span class="section-tag">Window management</span>
-          <h2 class="section-title">Dynamic tiling, or a grid you drive yourself</h2>
+          <h2 class="section-title">A grid you drive yourself</h2>
           <p class="section-subtitle">
-            Pick the model rather than the compositor. One command switches between them and
-            disables the other, and the keys follow.
+            Zones you pick, applied when you say so. Nothing is ever moved for you, which is
+            what you want the moment a dialogue or a picture-in-picture window appears.
           </p>
         </div>
 
         <div class="install-grid">
           <div class="install-box">
-            <span class="install-tag">gnomarchy tiling enable</span>
-            <h3 class="card-h3">Dynamic — Forge</h3>
-            <p class="card-p">
-              Windows are tiled into a binary tree. Opening a window splits the focused one and
-              both halves resize; closing one gives its space back to its sibling. This is the
-              Hyprland model, and it is opt-in.
-            </p>
-            <div class="key-list">
-              <div class="key-row"><kbd>Super + h j k l</kbd><span>focus window</span></div>
-              <div class="key-row"><kbd>Super + Shift + h j k l</kbd><span>move within the tree</span></div>
-              <div class="key-row"><kbd>Super + Ctrl + h j k l</kbd><span>swap with the neighbour</span></div>
-              <div class="key-row"><kbd>Super + G</kbd><span>flip the split direction</span></div>
-            </div>
-            <p class="card-p" style="font-size:0.82rem;color:var(--text-muted);margin-top:auto;">
-              Forge needs K for hjkl, so while it is on the keybindings browser moves to
-              Super + / and the manual to Super + Shift + /.
-            </p>
-          </div>
-
-          <div class="install-box">
-            <span class="install-tag">default</span>
-            <h3 class="card-h3">Manual — Tiling Shell</h3>
-            <p class="card-p">
-              Zones you pick, applied when you say so. Nothing is ever moved for you, which is
-              what you want the moment a dialogue or a picture-in-picture window appears.
-            </p>
+            <span class="install-tag">on by default</span>
+            <h3 class="card-h3">Tiling Shell</h3>
             <div class="key-list">
               <div class="key-row"><kbd>Ctrl + drag</kbd><span>pick a zone while dragging</span></div>
               <div class="key-row"><kbd>drag to the top</kbd><span>snap assist</span></div>
               <div class="key-row"><kbd>Super + Shift + arrows</kbd><span>throw into the next tile</span></div>
+              <div class="key-row"><kbd>Super + Shift + U</kbd><span>untile, back to the original size</span></div>
               <div class="key-row"><kbd>Super + T</kbd><span>cycle the zone layout</span></div>
             </div>
-            <p class="card-p" style="font-size:0.82rem;color:var(--text-muted);margin-top:auto;">
-              Its auto-placement is deliberately off: it drops a window into a free tile without
-              resizing the ones already there. That job belongs to Forge.
-            </p>
           </div>
-        </div>
 
-        <div class="tiling-demo">
-          <div class="tiling-demo-controls">
-            <button type="button" class="tactile-slot-btn active" data-tiling-mode="dynamic">
-              <span>Dynamic auto-tiling</span>
-              <kbd>gnomarchy tiling enable</kbd>
-            </button>
-            <button type="button" class="tactile-slot-btn" data-tiling-mode="manual">
-              <span>Manual grid (default)</span>
-              <kbd>gnomarchy tiling disable</kbd>
-            </button>
-          </div>
-          <div class="tiling-demo-stage">
-            <div class="tiling-caption" id="tilingCaption">
-              A third window opens and the other two shrink to make room. You never place anything.
-            </div>
-            <div class="tiling-panes" id="tilingPanes">
-              <div class="tiling-pane" style="left:2%;top:4%;width:47%;height:92%;">Alacritty</div>
-              <div class="tiling-pane" style="left:51%;top:4%;width:47%;height:44%;">Brave</div>
-              <div class="tiling-pane is-new" style="left:51%;top:52%;width:47%;height:44%;">nvim</div>
-            </div>
+          <div class="install-box">
+            <span class="install-tag">gnomarchy tiling status</span>
+            <h3 class="card-h3">What it does not do</h3>
+            <p class="card-p">
+              Its auto-placement is deliberately off: it drops a new window into a free tile
+              without resizing the ones already there, which is not tiling. There is no tree
+              tiling and no directional focus — this is an extension on top of Mutter, not a
+              tiling compositor.
+            </p>
+            <p class="card-p" style="font-size:0.82rem;color:var(--text-muted);margin-top:auto;">
+              <code>gnomarchy tiling disable</code> hands windows back to stock GNOME;
+              <code>enable</code> brings Tiling Shell back with Gnomarchy's settings.
+            </p>
           </div>
         </div>
       </div>
@@ -439,7 +403,7 @@ Commands:
           <span class="section-tag">Developer tooling</span>
           <h2 class="section-title">The <code>gnomarchy</code> dispatcher</h2>
           <p class="section-subtitle">
-            One command in front of the themes, the tiling mode, snapshots, web apps, the gaming
+            One command in front of the themes, tiling, snapshots, web apps, the gaming
             stack and the update path. Every output below is what the scripts print.
           </p>
         </div>

@@ -10,7 +10,7 @@ gnomarchy keybindings --list
 With no arguments this opens the command center's Keybindings page; `--list`
 stays plain text, for grepping and for SSH. Either way it reads every binding
 through typed `Gio.Settings`, so it always shows what is actually in effect -
-including your keymap profile and whether dynamic tiling is on. It cannot go
+including your keymap profile and whether tiling is on. It cannot go
 stale.
 
 ## Rebinding a shortcut
@@ -61,8 +61,8 @@ gnomarchy keymap status
     Super + W / Super + Q     close window
     Super + F                 fullscreen
     Super + Alt + F           maximize
-    Super + arrows            focus window
-    Super + Shift + arrows    move window
+    Super + Up / Down         maximize / unmaximize
+    Super + Shift + arrows    throw window into the next tile
     Super + 1..0              ten workspaces
     Super + Tab               next workspace
     Super + drag              move window
@@ -95,14 +95,7 @@ profiles.
 
 ## What could not be carried over
 
-Hyprland features with no GNOME equivalent: window groups, the scratchpad,
-pseudo-tiling, pixel-step window resize, moving a workspace between monitors.
+Hyprland features with no GNOME equivalent: directional window focus
+(Omarchy's `Super + arrows`), window groups, the scratchpad, pseudo-tiling,
+pixel-step window resize, moving a workspace between monitors.
 `gnomarchy keymap status` lists them rather than pretending they exist.
-
-## Dynamic tiling borrows two keys
-
-`gnomarchy tiling enable` needs `K` and `Shift+K` for Forge's `hjkl`
-navigation, so while dynamic tiling is on the keybindings browser moves to
-`Super + /` and the manual to `Super + Shift + /`. `gnomarchy tiling disable`
-moves them back, and `gnomarchy keybindings` reads dconf, so it always shows
-whichever is really bound.

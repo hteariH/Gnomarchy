@@ -232,30 +232,17 @@ else
   no "${#stale[@]} extension(s) do not declare GNOME $shell_major" "${stale[*]} -- the shell will not load them; see default/gnome/extensions/PROVENANCE.md"
 fi
 
-# --- Regression: Forge from the wrong source, or not deployed --------------
+# --- Regression: tiling that cannot be configured -------------------------
 #
-# Dynamic tiling is Forge, bundled from the jcrussell fork. The Forge on
-# extensions.gnome.org is the unmaintained upstream and its metadata.json stops
-# at GNOME 49, so it never loads and `gnomarchy tiling enable` appears to work
-# and tiles nothing. The version check above covers what it declares.
-if [[ -f "$HOME_DIR/.local/share/gnome-shell/extensions/forge@jmmaranan.com/metadata.json" ||
-  -f "$ROOT/usr/share/gnome-shell/extensions/forge@jmmaranan.com/metadata.json" ]]; then
-  ok "Forge is deployed"
-else
-  no "Forge is not deployed" "dynamic tiling has no backend to enable"
-fi
-
-# --- Regression: dynamic tiling that only ever placed windows --------------
-#
-# Tiling Shell is the manual mode now. Its enable-autotiling drops a new window
-# into a fixed tile of a static layout and never resizes the windows already on
-# screen -- which is what the distribution used to ship as "dynamic tiling".
-# The installer must leave it off.
+# Tiling Shell is Gnomarchy's tiling, configured by first-run with its
+# auto-tiling off: that drops a new window into a fixed tile of a static layout
+# and never resizes the windows already on screen. None of that configuration
+# can be written without the schema.
 TS_OVERRIDE="$ROOT/usr/share/glib-2.0/schemas/org.gnome.shell.extensions.tilingshell.gschema.xml"
 if [[ -f "$TS_OVERRIDE" ]]; then
   ok "Tiling Shell's schema is installed system-wide"
 else
-  no "Tiling Shell's schema is missing from the system schema directory"     "manual tiling cannot be configured"
+  no "Tiling Shell's schema is missing from the system schema directory"     "tiling cannot be configured"
 fi
 
 # --- Regression: Brave binaries extracted without the executable bit -------

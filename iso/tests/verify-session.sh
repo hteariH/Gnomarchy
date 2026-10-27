@@ -129,13 +129,34 @@ else
   no "icon theme is not a Papirus variant" "got: ${icons:-unset}"
 fi
 
+# --- Regression: tiling enabled but not running ----------------------------
+#
+# Tiling Shell is the only tiling Gnomarchy ships. Enabled is not the same as
+# loaded: a build that does not declare this shell's version sits in
+# enabled-extensions and does nothing, which is what GNOME 51 did to the
+# zips that were bundled for 50. Ask the shell, not dconf.
+ts_uuid="tilingshell@ferrarodomenico.com"
+ts_state="$(gnome-extensions info "$ts_uuid" 2>/dev/null | grep -i '^ *State:' | sed 's/.*: *//')"
+if [[ "$ts_state" == "ACTIVE" ]]; then
+  ok "Tiling Shell is running"
+else
+  no "Tiling Shell is not running" "shell reports state: ${ts_state:-unknown}"
+fi
+
+ts_auto="$(gsettings get org.gnome.shell.extensions.tilingshell enable-autotiling 2>/dev/null)"
+if [[ "$ts_auto" == "false" ]]; then
+  ok "Tiling Shell auto-placement is off"
+else
+  no "Tiling Shell auto-placement is not off" "enable-autotiling: ${ts_auto:-unset}"
+fi
+
 # --- Regression: two commands on one accelerator ---------------------------
 #
 # Gnomarchy binds Super+K to the keybindings browser and Super+Shift+K to the
-# manual, and dynamic tiling needs K and Shift+K for hjkl navigation. Both were
-# set at once for a whole release: the key did whichever the shell happened to
-# register last. Whatever the mode, no Gnomarchy custom keybinding may share an
-# accelerator with a tiling extension's.
+# manual, and the tiling extension Gnomarchy used to offer wanted K and Shift+K
+# for hjkl navigation. Both were set at once for a whole release: the key did
+# whichever the shell happened to register last. No Gnomarchy custom keybinding
+# may share an accelerator with Tiling Shell's.
 collect_custom_bindings() {
   local list slot path binding
   list="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings 2>/dev/null || echo '')"
@@ -149,14 +170,8 @@ collect_custom_bindings() {
 }
 
 collect_tiling_bindings() {
-  local schema key value
-  if gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q forge; then
-    schema="org.gnome.shell.extensions.forge.keybindings"
-  elif gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q tilingshell; then
-    schema="org.gnome.shell.extensions.tilingshell"
-  else
-    return 0
-  fi
+  local schema="org.gnome.shell.extensions.tilingshell" key value
+  gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q tilingshell || return 0
   gsettings list-schemas 2>/dev/null | grep -qx "$schema" || return 0
 
   while read -r key; do

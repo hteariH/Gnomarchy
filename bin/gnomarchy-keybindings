@@ -13,7 +13,6 @@ set -eEo pipefail
 
 MK="org.gnome.settings-daemon.plugins.media-keys"
 BINDINGS="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
-FORGE_KEYS="org.gnome.shell.extensions.forge.keybindings"
 TS="org.gnome.shell.extensions.tilingshell"
 
 command -v gsettings >/dev/null 2>&1 || {
@@ -106,46 +105,7 @@ dump_custom() {
   fi
 }
 
-# Forge's bindings only apply in dynamic tiling mode.
-dump_tiling() {
-  gsettings list-schemas 2>/dev/null | grep -qx "$FORGE_KEYS" || return 0
-
-  local enabled
-  enabled="$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null || echo '')"
-  [[ "$enabled" == *"forge@jmmaranan.com"* ]] || return 0
-
-  local rows="" key label value pretty
-  for key in window-focus-left window-focus-down window-focus-up window-focus-right     window-move-left window-move-down window-move-up window-move-right     window-swap-left window-swap-down window-swap-up window-swap-right     window-toggle-float window-toggle-always-float con-split-layout-toggle     con-tabbed-layout-toggle con-stacked-layout-toggle     window-expand window-shrink window-reset-sizes     window-gap-size-increase window-gap-size-decrease prefs-tiling-toggle; do
-    value="$(gsettings get "$FORGE_KEYS" "$key" 2>/dev/null || true)"
-    pretty="$(prettify_key "$value")" || continue
-    [[ -z "$pretty" ]] && continue
-    case "$key" in
-      window-focus-*) label="Focus window ${key##*-}" ;;
-      window-move-*) label="Move window ${key##*-} in the tree" ;;
-      window-swap-*) label="Swap window with the one ${key##*-}" ;;
-      window-toggle-float) label="Float the focused window" ;;
-      window-toggle-always-float) label="Always float this window" ;;
-      con-split-layout-toggle) label="Flip the split direction" ;;
-      con-tabbed-layout-toggle) label="Tabbed layout for this container" ;;
-      con-stacked-layout-toggle) label="Stacked layout for this container" ;;
-      window-expand) label="Expand the focused window" ;;
-      window-shrink) label="Shrink the focused window" ;;
-      window-reset-sizes) label="Reset every window to an even split" ;;
-      window-gap-size-increase) label="Increase the gap" ;;
-      window-gap-size-decrease) label="Decrease the gap" ;;
-      prefs-tiling-toggle) label="Suspend or resume tiling" ;;
-    esac
-    rows+="$(emit "$pretty" "$label")"$'\n'
-  done
-
-  if [[ -n "$rows" ]]; then
-    printf '\nDynamic Tiling (Forge)\n'
-    printf '%s' "$rows"
-  fi
-}
-
-# Tiling Shell's bindings only apply in manual tiling mode, which is the
-# default. Its auto-placement is deliberately off there; dynamic mode is Forge.
+# Tiling Shell's bindings only apply while it is enabled.
 dump_manual_tiling() {
   gsettings list-schemas 2>/dev/null | grep -qx "$TS" || return 0
 
@@ -168,7 +128,7 @@ dump_manual_tiling() {
   done
 
   if [[ -n "$rows" ]]; then
-    printf '\nManual Tiling (Tiling Shell)\n'
+    printf '\nTiling (Tiling Shell)\n'
     printf '%s' "$rows"
     emit "Ctrl + drag" "Pick a zone for the window being dragged"
     emit "drag to top" "Snap assist"
@@ -183,7 +143,6 @@ collect() {
   printf 'Gnomarchy Keybindings  (layout: %s)\n' "$keymap"
 
   dump_custom
-  dump_tiling
   dump_schema org.gnome.desktop.wm.keybindings "Windows & Workspaces"
   dump_schema org.gnome.shell.keybindings "Shell"
   dump_schema org.gnome.mutter.keybindings "Mutter"

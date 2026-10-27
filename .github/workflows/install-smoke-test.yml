@@ -431,8 +431,8 @@ jobs:
             "NoDisplay=true" \
             | sudo tee /mnt/gnomarchy/home/citest/.config/autostart/zz-capture.desktop > /dev/null
 
-          # The capture logs out once to reload the shell for tiling and picks
-          # its phase back up from this file, so it must start absent.
+          # The capture records in this file that it has run, so that a second
+          # boot powers off instead of shooting again; it must start absent.
           sudo rm -f /mnt/gnomarchy/home/citest/.local/state/gnomarchy/capture-phase
           sudo chown -R 1000:1000 /mnt/gnomarchy/home/citest/.config
 
@@ -443,11 +443,7 @@ jobs:
           sudo qemu-nbd --disconnect /dev/nbd0
           sleep 3
 
-      # Two boots, not one with a logout in the middle. Dynamic tiling only
-      # takes effect once the shell reloads, and under Wayland that needs a new
-      # session; logging out was tried and kills the capture script with it.
-      # The guest powers itself off at the end of each phase.
-      - name: Capture the desktop, boot 1
+      - name: Capture the desktop
         if: always() && inputs.capture_screenshots
         env:
           MOUNTED: ${{ steps.mount.outputs.mounted }}
@@ -462,22 +458,6 @@ jobs:
             export MEM=8192
           fi
           bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase1
-
-      - name: Capture the desktop, boot 2
-        if: always() && inputs.capture_screenshots
-        env:
-          MOUNTED: ${{ steps.mount.outputs.mounted }}
-          KVM: ${{ steps.kvm.outputs.available }}
-        run: |
-          if [ "$MOUNTED" != "true" ]; then
-            echo "Skipped: nothing installed to photograph."
-            exit 0
-          fi
-          if [ "$KVM" = "true" ]; then
-            export ACCEL="-accel kvm -cpu host"
-            export MEM=8192
-          fi
-          bash iso/tests/capture-host.sh disk.qcow2 ${{ steps.ovmf.outputs.code }} ./OVMF_VARS.fd frames phase2
 
       - name: Convert and collect the frames
         if: always() && inputs.capture_screenshots
@@ -499,7 +479,7 @@ jobs:
 
           mkdir -p screenshots
           sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-capture.txt screenshots/ 2>/dev/null || true
-          cp capture-phase1-serial.log capture-phase2-serial.log screenshots/ 2>/dev/null || true
+          cp capture-phase1-serial.log screenshots/ 2>/dev/null || true
           sudo chown -R "$USER:$USER" screenshots
 
           # A session that dies mid-shoot photographs as a login screen, and
@@ -538,7 +518,6 @@ jobs:
           if ! ls screenshots/*.png >/dev/null 2>&1; then
             echo "--- serial tails ---"
             tail -60 capture-phase1-serial.log 2>/dev/null || true
-            tail -60 capture-phase2-serial.log 2>/dev/null || true
             echo "::error::No screenshots were captured."
             exit 1
           fi
