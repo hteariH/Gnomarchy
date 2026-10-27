@@ -212,8 +212,11 @@ fi
 # rolls, so a GNOME release that lands between two Gnomarchy releases leaves
 # them behind -- GNOME 51 did that to seven of nine. The version comes from the
 # installed package, not from a constant, so the next GNOME trips this too.
+#
+# Arch gives gnome-shell an epoch, so the database entry is gnome-shell-1:51.1-1;
+# reading the first number off it took the epoch for the version.
 shell_pkg="$(compgen -G "$ROOT/var/lib/pacman/local/gnome-shell-[0-9]*" | head -1)"
-shell_major="$(basename "${shell_pkg:-}" | sed -nE 's/^gnome-shell-([0-9]+).*/\1/p')"
+shell_major="$(basename "${shell_pkg:-}" | sed -nE 's/^gnome-shell-([0-9]+:)?([0-9]+).*/\2/p')"
 stale=()
 meta_checked=0
 for meta in "$HOME_DIR/.local/share/gnome-shell/extensions"/*/metadata.json; do
