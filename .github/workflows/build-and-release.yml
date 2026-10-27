@@ -87,7 +87,7 @@ jobs:
             PRERELEASE_FLAG="--prerelease"
           fi
 
-          NOTES="## Gnomarchy Linux \${TAG_NAME}
+          NOTES="## Gnomarchy Linux ${TAG_NAME}
 
           **Gnomarchy** is an opinionated, developer-first Arch Linux distribution: Omarchy's tooling and rolling base, with a tuned GNOME desktop instead of Hyprland.
 
