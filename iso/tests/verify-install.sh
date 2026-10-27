@@ -204,24 +204,45 @@ else
   no "${#uncompiled[@]} extension(s) have uncompiled schemas" "${uncompiled[*]}"
 fi
 
-# --- Regression: a Forge built for the wrong GNOME, or not deployed --------
+# --- Regression: extensions built for an older GNOME ----------------------
+#
+# The shell refuses to load an extension whose metadata.json does not list its
+# major version, and says nothing about it: the extension sits in
+# enabled-extensions and does nothing. The bundled zips are pinned while Arch
+# rolls, so a GNOME release that lands between two Gnomarchy releases leaves
+# them behind -- GNOME 51 did that to seven of nine. The version comes from the
+# installed package, not from a constant, so the next GNOME trips this too.
+shell_pkg="$(compgen -G "$ROOT/var/lib/pacman/local/gnome-shell-[0-9]*" | head -1)"
+shell_major="$(basename "${shell_pkg:-}" | sed -nE 's/^gnome-shell-([0-9]+).*/\1/p')"
+stale=()
+meta_checked=0
+for meta in "$HOME_DIR/.local/share/gnome-shell/extensions"/*/metadata.json; do
+  [[ -f "$meta" ]] || continue
+  meta_checked=$((meta_checked + 1))
+  grep -q "\"$shell_major\"" "$meta" || stale+=("$(basename "$(dirname "$meta")")")
+done
+
+if [[ -z "$shell_major" ]]; then
+  no "cannot tell which GNOME is installed" "no gnome-shell entry in $ROOT/var/lib/pacman/local"
+elif ((meta_checked == 0)); then
+  no "no Gnomarchy extensions deployed" "expected them under ~/.local/share/gnome-shell/extensions"
+elif ((${#stale[@]} == 0)); then
+  ok "all $meta_checked deployed extensions declare GNOME $shell_major"
+else
+  no "${#stale[@]} extension(s) do not declare GNOME $shell_major" "${stale[*]} -- the shell will not load them; see default/gnome/extensions/PROVENANCE.md"
+fi
+
+# --- Regression: Forge from the wrong source, or not deployed --------------
 #
 # Dynamic tiling is Forge, bundled from the jcrussell fork. The Forge on
 # extensions.gnome.org is the unmaintained upstream and its metadata.json stops
-# at GNOME 49: installed on GNOME 50 it sits in enabled-extensions and never
-# loads, so `gnomarchy tiling enable` appears to work and tiles nothing.
-forge_meta=""
-for ext_base in "$ROOT/usr/share/gnome-shell/extensions" "$HOME_DIR/.local/share/gnome-shell/extensions"; do
-  candidate="$ext_base/forge@jmmaranan.com/metadata.json"
-  [[ -f "$candidate" ]] && forge_meta="$candidate" && break
-done
-
-if [[ -z "$forge_meta" ]]; then
-  no "Forge is not deployed" "dynamic tiling has no backend to enable"
-elif grep -q '"50"' "$forge_meta"; then
-  ok "Forge is deployed and declares GNOME 50"
+# at GNOME 49, so it never loads and `gnomarchy tiling enable` appears to work
+# and tiles nothing. The version check above covers what it declares.
+if [[ -f "$HOME_DIR/.local/share/gnome-shell/extensions/forge@jmmaranan.com/metadata.json" ||
+  -f "$ROOT/usr/share/gnome-shell/extensions/forge@jmmaranan.com/metadata.json" ]]; then
+  ok "Forge is deployed"
 else
-  no "the deployed Forge does not declare GNOME 50"     "the shell will refuse to load it; see default/gnome/extensions/PROVENANCE.md"
+  no "Forge is not deployed" "dynamic tiling has no backend to enable"
 fi
 
 # --- Regression: dynamic tiling that only ever placed windows --------------

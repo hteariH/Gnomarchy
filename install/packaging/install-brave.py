@@ -38,8 +38,8 @@ def get_release_urls():
         log(f"Redirect resolution failed: {e}")
         # Hardcoded baseline fallback
         return [
-            "https://github.com/brave/brave-browser/releases/download/v1.94.121/brave-origin-1.94.121-linux-amd64.zip",
-            "https://github.com/brave/brave-browser/releases/download/v1.94.121/brave-browser-1.94.121-linux-amd64.zip"
+            "https://github.com/brave/brave-browser/releases/download/v1.98.60/brave-origin-1.98.60-linux-amd64.zip",
+            "https://github.com/brave/brave-browser/releases/download/v1.98.60/brave-browser-1.98.60-linux-amd64.zip"
         ]
 
 def download_and_extract(urls):

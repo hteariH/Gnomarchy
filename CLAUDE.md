@@ -5,7 +5,7 @@ Guidance for Claude Code working in this repository.
 ## What this is
 
 Gnomarchy is an Arch Linux distribution: Omarchy's tooling and rolling base
-with a tuned GNOME 50 desktop instead of Hyprland. It ships as an installable
+with a tuned GNOME 51 desktop instead of Hyprland. It ships as an installable
 ISO and as a config repository that lives at `~/.local/share/gnomarchy` on
 installed machines.
 
@@ -69,7 +69,7 @@ no session, writes an autostart entry instead of configuring anything.
 
 ### The autostart entry must not declare a phase
 
-GNOME 50 runs XDG autostart through `systemd-xdg-autostart-generator`, which
+GNOME 50 and later run XDG autostart through `systemd-xdg-autostart-generator`, which
 **skips any entry containing `X-GNOME-Autostart-Phase`** because phases cannot
 be expressed as units. Setting it silently stopped first-run from ever
 executing — the cause of fresh installs having no keyboard shortcuts, a dock in

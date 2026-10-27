@@ -3,7 +3,7 @@
 
 [org.gnome.shell]
 disable-user-extensions=false
-enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'tactile@lundal.io', 'just-perfection-desktop@just-perfection', 'blur-my-shell@aunetx', 'space-bar@luchrioh', 'tophat@fflewddur.github.io', 'AlphabeticalAppGrid@stuarthayhurst', 'appindicatorsupport@rgcjonas.gmail.com']
+enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'tactile@lundal.io', 'just-perfection-desktop@just-perfection', 'blur-my-shell@aunetx', 'space-bar@luchrioh', 'AlphabeticalAppGrid@stuarthayhurst', 'appindicatorsupport@rgcjonas.gmail.com']
 # Recomputed from what is actually installed by set-gnome-favorites.sh; this
 # default only covers the case where that step has not run yet. Listing
 # several browser ids here produced duplicate dash icons.
@@ -48,13 +48,6 @@ smart-workspace-names=false
 [org.gnome.shell.extensions.space-bar.shortcuts]
 enable-activate-workspace-shortcuts=false
 enable-move-to-workspace-shortcuts=true
-
-[org.gnome.shell.extensions.tophat]
-show-icons=false
-show-cpu=true
-show-mem=true
-show-disk=false
-network-usage-unit='bits'
 
 [org.gnome.shell.extensions.alphabetical-app-grid]
 folder-order-position='end'

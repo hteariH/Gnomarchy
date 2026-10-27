@@ -8,7 +8,6 @@ EXTENSIONS=(
   "just-perfection-desktop@just-perfection"
   "blur-my-shell@aunetx"
   "space-bar@luchrioh"
-  "tophat@fflewddur.github.io"
   "AlphabeticalAppGrid@stuarthayhurst"
   "appindicatorsupport@rgcjonas.gmail.com"
 )
@@ -87,21 +86,12 @@ if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.spac
   gsettings set org.gnome.shell.extensions.space-bar.shortcuts enable-move-to-workspace-shortcuts true 2>/dev/null || true
 fi
 
-# 7. Configure TopHat (Minimal top bar system metrics)
-if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.tophat"; then
-  gsettings set org.gnome.shell.extensions.tophat show-icons false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tophat show-cpu true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tophat show-mem true 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tophat show-disk false 2>/dev/null || true
-  gsettings set org.gnome.shell.extensions.tophat network-usage-unit bits 2>/dev/null || true
-fi
-
-# 8. Configure Alphabetical App Grid (Clean native launcher)
+# 7. Configure Alphabetical App Grid (Clean native launcher)
 if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.alphabetical-app-grid"; then
   gsettings set org.gnome.shell.extensions.alphabetical-app-grid folder-order-position 'end' 2>/dev/null || true
 fi
 
-# 9. Configure Dash to Dock (Ubuntu-style left side panel)
+# 8. Configure Dash to Dock (Ubuntu-style left side panel)
 if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.dash-to-dock"; then
   echo "  Configuring Dash to Dock (Ubuntu style on left edge)..."
   gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'LEFT' 2>/dev/null || true
@@ -117,7 +107,7 @@ if gsettings list-schemas 2>/dev/null | grep -q "org.gnome.shell.extensions.dash
   gsettings set org.gnome.shell.extensions.dash-to-dock hot-keys false 2>/dev/null || true
 fi
 
-# 10. Configure Pinned Dock Favorites (Ubuntu / Developer layout)
+# 9. Configure Pinned Dock Favorites (Ubuntu / Developer layout)
 BROWSER_DESKTOP="brave-origin.desktop"
 if [ -f "/usr/share/applications/brave-browser-origin.desktop" ]; then
   BROWSER_DESKTOP="brave-browser-origin.desktop"

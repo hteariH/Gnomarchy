@@ -85,7 +85,7 @@ block_top = (H - block_h) / 2 - 14
 
 d.text((text_x, (block_top + name_top) * SS), "Gnomarchy", font=name, fill=TEXT)
 d.text((text_x + 6 * SS, (block_top + tag_top) * SS),
-       "Arch Linux, rolling, with a tuned GNOME 50 desktop.", font=tag, fill=MUTED)
+       "Arch Linux, rolling, with a tuned GNOME 51 desktop.", font=tag, fill=MUTED)
 d.text((text_x + 6 * SS, (block_top + tag2_top) * SS),
        "Btrfs rollbacks  ·  22 themes  ·  one CLI", font=tag, fill=MUTED)
 

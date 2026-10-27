@@ -8,7 +8,7 @@ description: Control and reconfigure the Gnomarchy Linux operating system, inclu
 Use this skill whenever the user asks you to customize, reconfigure, automate, or troubleshoot their Gnomarchy Linux operating system.
 
 Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
-- **Desktop**: GNOME 50 (Wayland) + GDM
+- **Desktop**: GNOME 51 (Wayland) + GDM
 - **Dock**: Dash to Dock (Ubuntu-style left edge panel)
 - **Tiling**: Tiling Shell zones by default; Forge tree tiling via `gnomarchy tiling enable`
 - **Theme Engine**: Unified themes (22 palettes with bundled 4K wallpapers: Tokyo Night, Catppuccin, Catppuccin Latte, Ethereal, Everforest, Flexoki Light, Gruvbox, Hackerman, Kanagawa, Last Horizon, Lumon, Lupine, Matte Black, Miasma, Nord, Osaka Jade, Retro 82, Ristretto, Rose Pine, Solitude, Vantablack, White)

@@ -101,8 +101,8 @@ pretending otherwise.
 The bundled build is <https://github.com/jcrussell/forge>, not the Forge on
 extensions.gnome.org. That one is `forge-ext/forge`, whose own metadata stops
 at GNOME 49 and whose description asks for a new maintainer; Gnomarchy runs
-GNOME 50, and that build would install and then never load. The fork is
-maintained and declares 50.
+GNOME 51, and that build would install and then never load. The fork is
+maintained and declares 51.
 
 `gnomarchy tiling status` prints the shell's own view of the extension state,
 so an incompatible build shows up as something other than `ACTIVE` rather than

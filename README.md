@@ -8,7 +8,7 @@
   <a href="https://gnomarchy.pages.dev"><img src="https://img.shields.io/badge/Website-gnomarchy.pages.dev-7aa2f7?style=for-the-badge&logo=cloudflarepages&logoColor=white" alt="Website"></a>
   <a href="https://github.com/hteariH/Gnomarchy/releases"><img src="https://img.shields.io/github/v/release/hteariH/Gnomarchy?style=for-the-badge&color=89b4fa&logo=github" alt="Release"></a>
   <img src="https://img.shields.io/badge/Arch%20Linux-Rolling-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux">
-  <img src="https://img.shields.io/badge/GNOME-50-4a86cf?style=for-the-badge&logo=gnome&logoColor=white" alt="GNOME 50">
+  <img src="https://img.shields.io/badge/GNOME-51-4a86cf?style=for-the-badge&logo=gnome&logoColor=white" alt="GNOME 51">
   <img src="https://img.shields.io/badge/Wayland-Native-f38ba8?style=for-the-badge&logo=wayland&logoColor=white" alt="Wayland">
   <img src="https://img.shields.io/badge/Btrfs-Snapper%20Rollbacks-a6e3a1?style=for-the-badge&logo=linux&logoColor=white" alt="Btrfs">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-fab387?style=for-the-badge" alt="License"></a>
@@ -16,7 +16,7 @@
 
 > **The Power of Arch Linux and Omarchy's Developer Tooling Meets the Polish of GNOME.**
 
-Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch Linux**. It takes the modern rolling base, Btrfs + Snapper atomic rollback snapshots, hardware quirk mitigations, unified theme engine, and agentic CLI developer stack from **Omarchy**—and replaces the Hyprland tiling compositor stack with a finely tuned, keyboard-friendly **GNOME 50** desktop environment and **GDM**.
+Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch Linux**. It takes the modern rolling base, Btrfs + Snapper atomic rollback snapshots, hardware quirk mitigations, unified theme engine, and agentic CLI developer stack from **Omarchy**—and replaces the Hyprland tiling compositor stack with a finely tuned, keyboard-friendly **GNOME 51** desktop environment and **GDM**.
 
 ---
 
@@ -273,7 +273,7 @@ active at a time - enabled together they fight over placement.
 
 Forge is bundled from [jcrussell/forge](https://github.com/jcrussell/forge),
 not from extensions.gnome.org - the Forge published there stops at GNOME 49 and
-Gnomarchy runs 50.
+Gnomarchy runs 51.
 
 Both modes throw windows with `Super+Shift+arrows`, so GNOME's
 `move-to-monitor` moves to `Super+Ctrl+Shift+arrows`. Dynamic mode additionally

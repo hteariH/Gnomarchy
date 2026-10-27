@@ -18,7 +18,7 @@
 #
 # Forge is bundled from https://github.com/jcrussell/forge, not from
 # extensions.gnome.org -- the listing there stops at GNOME 49 and Gnomarchy
-# runs 50. See default/gnome/extensions/PROVENANCE.md.
+# runs 51. See default/gnome/extensions/PROVENANCE.md.
 set -eEo pipefail
 
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"
@@ -107,7 +107,7 @@ install_dynamic() {
     # unmaintained upstream and stops at GNOME 49.
     warn "Bundled copy missing; fetching the pinned release from GitHub"
     local tmp url
-    url="https://github.com/jcrussell/forge/releases/download/v49-90-beta.3/forge%40jmmaranan.com.zip"
+    url="https://github.com/jcrussell/forge/releases/download/v49-90-beta.4/forge%40jmmaranan.com.zip"
     tmp="$(mktemp --suffix=.zip)"
     if ! curl -fsSL -o "$tmp" "$url"; then
       rm -f "$tmp"

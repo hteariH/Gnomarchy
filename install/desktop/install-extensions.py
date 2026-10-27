@@ -16,7 +16,6 @@ EXTENSIONS = [
     "just-perfection-desktop@just-perfection",
     "blur-my-shell@aunetx",
     "space-bar@luchrioh",
-    "tophat@fflewddur.github.io",
     "AlphabeticalAppGrid@stuarthayhurst",
     "appindicatorsupport@rgcjonas.gmail.com",
     # Deployed but left disabled; `gnomarchy tiling enable` turns it on and
@@ -27,15 +26,15 @@ EXTENSIONS = [
 # Extensions that must NOT be fetched from extensions.gnome.org.
 #
 # The Forge published there is the unmaintained forge-ext/forge, whose
-# metadata.json stops at GNOME 49. Installing it on GNOME 50 produces an
+# metadata.json stops at GNOME 49. Installing it on GNOME 51 produces an
 # extension the shell refuses to load -- dynamic tiling would appear to be
-# enabled and do nothing. The pinned fork below declares 50.
+# enabled and do nothing. The pinned fork below declares 51.
 # See default/gnome/extensions/PROVENANCE.md.
 PINNED = {
     "forge@jmmaranan.com": {
         "url": "https://github.com/jcrussell/forge/releases/download/"
-               "v49-90-beta.3/forge%40jmmaranan.com.zip",
-        "sha256": "a0a11ded2157286253ed70f1f966cc3b7158d1a1927bd88598ae356dea3543d8",
+               "v49-90-beta.4/forge%40jmmaranan.com.zip",
+        "sha256": "737b424e25e7a5447ff0e338ba93e7080366b305edf496b1272203d55195c4b8",
     },
 }
 
@@ -79,7 +78,7 @@ def download_pinned(uuid):
 def download_extension(uuid):
     if uuid in PINNED:
         return download_pinned(uuid)
-    url = f"https://extensions.gnome.org/extension-info/?uuid={uuid}&shell_version=50"
+    url = f"https://extensions.gnome.org/extension-info/?uuid={uuid}&shell_version=51"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
