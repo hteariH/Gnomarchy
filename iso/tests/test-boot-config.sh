@@ -301,6 +301,22 @@ t_false "no NVRAM work on BIOS firmware" grep -q '^efibootmgr' "$T/calls"
 t_true "bios-install still runs on BIOS firmware" grep -qx "limine bios-install /dev/fake" "$T/calls"
 rm "$T/etc/gnomarchy/boot.conf"
 t_false "install refuses without boot.conf" env PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+t_true "and says why" grep -qF "boot.conf; the installer writes it" "$T/log"
+unset GNOMARCHY_BOOT_EFIVARS
+
+echo "--- install: a failed NVRAM write is a warning"
+new_tree
+mkdir -p "$T/usr/share/limine" "$T/efivars"
+printf 'efi x64\n' >"$T/usr/share/limine/BOOTX64.EFI"
+printf 'efi ia32\n' >"$T/usr/share/limine/BOOTIA32.EFI"
+printf 'bios stage 2\n' >"$T/usr/share/limine/limine-bios.sys"
+printf 'DISK=/dev/fake\nESP_PART=2\nENCRYPTED=0\n' >"$T/etc/gnomarchy/boot.conf"
+stub limine ''
+stub efibootmgr '[[ $# -eq 0 ]] || exit 1'
+export GNOMARCHY_BOOT_EFIVARS="$T/efivars"
+t_true "the install still succeeds" env PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+t_true "and warns that the firmware boots the fallback" grep -qF "no NVRAM entry written" "$T/log"
+t_true "the fallback EFI file is in place" cmp -s "$T/usr/share/limine/BOOTX64.EFI" "$T/boot/EFI/BOOT/BOOTX64.EFI"
 unset GNOMARCHY_BOOT_EFIVARS
 
 echo "--- snapper-init: root config and snapshot 1, no D-Bus"
@@ -322,5 +338,16 @@ rm "$T/calls"
 stub snapper '[[ " $* " == *" list "* ]] && echo "Gnomarchy installed"; exit 0'
 PATH="$T/bin:$PATH" "$BOOT" snapper-init 2>"$T/log"
 t_false "a second run creates no second snapshot" grep -q " create " "$T/calls"
+
+echo "--- snapper-init adds root to an existing config list"
+new_tree
+mkdir -p "$T/usr/share/snapper/config-templates" "$T/etc/conf.d"
+printf '%s\n' 'SUBVOLUME="/"' 'FSTYPE="btrfs"' 'ALLOW_GROUPS=""' 'TIMELINE_CREATE="yes"' \
+  'NUMBER_LIMIT="50"' 'NUMBER_LIMIT_IMPORTANT="10"' >"$T/usr/share/snapper/config-templates/default"
+printf 'SNAPPER_CONFIGS="home"\n' >"$T/etc/conf.d/snapper"
+stub snapper ''
+stub systemctl ''
+PATH="$T/bin:$PATH" "$BOOT" snapper-init 2>"$T/log"
+t_true "root is added and home is kept" grep -qxF 'SNAPPER_CONFIGS="home root"' "$T/etc/conf.d/snapper"
 
 t_done

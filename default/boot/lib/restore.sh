@@ -13,16 +13,47 @@ boot_delete_subvolume() {
   btrfs subvolume delete "$top/$rel"
 }
 
+# boot_restore_stage HASH TMP — copies store file HASH to TMP and checks it.
+boot_restore_stage() {
+  local got
+  cp "$BOOT_STORE/$1" "$2" || return 1
+  got="$(boot_hash "$2")" && [[ "$got" == "$1" ]]
+}
+
+# boot_restore_unstage — removes the ESP files a restore staged but did not use.
+boot_restore_unstage() {
+  rm -f "$BOOT_ESP/restore.vmlinuz.tmp" "$BOOT_ESP/restore.initramfs.tmp"
+}
+
 boot_restore() {
-  local n="$1" kernel source top backup stamp h
+  local n="$1" kernel source top backup stamp h fstype fsroot new
   local -A e=()
+  local record=0
   [[ "$n" =~ ^[1-9][0-9]*$ ]] || boot_die "restore needs a snapshot number, got '$n'"
   [[ -d "$BOOT_SNAPSHOTS/$n/snapshot" ]] || boot_die "no snapshot $n in $BOOT_SNAPSHOTS"
 
+  # A restore already happened and nothing rebooted: the running root is the
+  # old @, parked as @restore-backup-*. Restoring again would park that one and
+  # could leave no root to come back to. An overlay root (booted from a
+  # snapshot) is not btrfs, so this does not apply there.
+  fstype="$(findmnt -no FSTYPE /)" || boot_die "cannot read the type of the running root"
+  fsroot="$(findmnt -no FSROOT /)" || boot_die "cannot read the subvolume of the running root"
+  if [[ "$fstype" == btrfs && "$fsroot" == /@restore-backup-* ]]; then
+    boot_die "a restore is already pending; reboot before restoring again"
+  fi
+
   if boot_read_kv "$BOOT_ENTRIES/$n.conf" e; then
+    record=1
+    [[ -n "${e[KERNEL]:-}" ]] || boot_die "snapshot $n's menu record has no KERNEL"
     for h in "${e[KERNEL_HASH]:-}" "${e[INITRAMFS_HASH]:-}"; do
       [[ -n "$h" && -f "$BOOT_STORE/$h" ]] || boot_die "snapshot $n's boot files are missing from $BOOT_STORE"
     done
+    # Staged before anything changes, so a full ESP stops the restore here.
+    if ! boot_restore_stage "${e[KERNEL_HASH]}" "$BOOT_ESP/restore.vmlinuz.tmp" ||
+      ! boot_restore_stage "${e[INITRAMFS_HASH]}" "$BOOT_ESP/restore.initramfs.tmp"; then
+      boot_restore_unstage
+      boot_die "could not stage snapshot $n's kernel on the ESP; nothing was changed"
+    fi
   else
     # No menu record (the ESP budget dropped it): the restored root can only
     # boot the kernel already on the ESP, so the snapshot must hold its modules.
@@ -47,14 +78,36 @@ boot_restore() {
     boot_delete_subvolume "$top" "${backup##*/}"
   done
 
+  # @ is never missing for longer than a rename: the new root is made beside
+  # it first, then the two names are swapped, and a failed swap is undone.
   stamp="$(date +%Y%m%d-%H%M%S)"
-  mv "$top/@" "$top/@restore-backup-$stamp"
-  btrfs subvolume snapshot "$top/@snapshots/$n/snapshot" "$top/@"
+  new="$top/@restore-new-$stamp"
+  if ! btrfs subvolume snapshot "$top/@snapshots/$n/snapshot" "$new"; then
+    if [[ -d "$new" ]]; then
+      btrfs subvolume delete "$new"
+    fi
+    boot_restore_unstage
+    boot_die "could not make snapshot $n into a new root; @ is unchanged"
+  fi
+  if ! mv "$top/@" "$top/@restore-backup-$stamp"; then
+    btrfs subvolume delete "$new"
+    boot_restore_unstage
+    boot_die "could not move @ aside; @ is unchanged"
+  fi
+  if ! mv "$new" "$top/@"; then
+    if mv "$top/@restore-backup-$stamp" "$top/@"; then
+      btrfs subvolume delete "$new"
+      boot_restore_unstage
+      boot_die "could not put the new root in place; @ is unchanged"
+    fi
+    boot_restore_unstage
+    boot_die "could not put the new root in place and could not move the old one back; move $top/@restore-backup-$stamp to @ by hand"
+  fi
   boot_log "snapshot $n is now @; the previous root is kept as @restore-backup-$stamp"
 
-  if [[ -n "${e[KERNEL]:-}" ]]; then
-    install -m644 "$BOOT_STORE/${e[KERNEL_HASH]}" "$BOOT_ESP/vmlinuz-${e[KERNEL]}"
-    install -m644 "$BOOT_STORE/${e[INITRAMFS_HASH]}" "$BOOT_ESP/initramfs-${e[KERNEL]}.img"
+  if ((record)); then
+    mv -f "$BOOT_ESP/restore.vmlinuz.tmp" "$BOOT_ESP/vmlinuz-${e[KERNEL]}"
+    mv -f "$BOOT_ESP/restore.initramfs.tmp" "$BOOT_ESP/initramfs-${e[KERNEL]}.img"
   fi
   boot_write_conf
 }

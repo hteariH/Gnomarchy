@@ -31,9 +31,20 @@ boot_snapper_init() {
     boot_log "wrote $config"
   fi
 
-  if [[ ! -f "$confd" ]] || ! grep -qE '^SNAPPER_CONFIGS="(.* )?root( .*)?"$' "$confd"; then
-    install -Dm644 /dev/null "$confd"
+  if [[ ! -f "$confd" ]]; then
+    mkdir -p "${confd%/*}"
     printf 'SNAPPER_CONFIGS="root"\n' >"$confd"
+  elif ! grep -qE '^SNAPPER_CONFIGS="(.* )?root( .*)?"$' "$confd"; then
+    if grep -qE '^SNAPPER_CONFIGS=' "$confd"; then
+      # Keep the configs already listed; root joins them.
+      local current configs
+      current="$(sed -n 's/^SNAPPER_CONFIGS=//p' "$confd")"
+      current="${current//\"/}"
+      configs="${current:+$current }root"
+      sed -i "s|^SNAPPER_CONFIGS=.*|SNAPPER_CONFIGS=\"$configs\"|" "$confd"
+    else
+      printf 'SNAPPER_CONFIGS="root"\n' >>"$confd"
+    fi
   fi
 
   systemctl enable snapper-cleanup.timer
