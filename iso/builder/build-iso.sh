@@ -96,9 +96,6 @@ fi
 chmod 755 "$PROFILE_DIR/airootfs/root/.automated_script.sh" 2>/dev/null || true
 chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/bin"/* 2>/dev/null || true
 chmod +x "$PROFILE_DIR/airootfs/root/gnomarchy/install.sh" 2>/dev/null || true
-# The installer is exec'd by .automated_script.sh; a lost executable bit would
-# leave the live medium at a shell prompt with nothing running.
-chmod 755 "$PROFILE_DIR/airootfs/root/gnomarchy/iso/installer/gnomarchy-install"
 
 # Pre-populate bundled wallpapers into ISO live filesystem
 echo "Installing bundled wallpapers to ISO rootfs..."

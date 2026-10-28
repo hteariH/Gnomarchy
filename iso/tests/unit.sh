@@ -23,7 +23,7 @@ echo "=== shellcheck"
 mapfile -t scripts < <(
   printf '%s\n' \
     default/boot/gnomarchy-boot default/boot/50-gnomarchy-boot default/boot/deploy.sh \
-    iso/installer/gnomarchy-install \
+    iso/installer/gnomarchy-install iso/installer/lib/run-stage.sh \
     bin/gnomarchy-snapshot-restore bin/gnomarchy-snapshot-notify \
     install/login/boot.sh install/desktop/set-keyboard-layout.sh \
     iso/tests/test-*.sh |

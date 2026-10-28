@@ -24,6 +24,7 @@ source "$INSTALLER_DIR/lib/stages.sh"
 source "$INSTALLER_DIR/lib/ui.sh"
 
 STAGE_STATE=()
+STAGE_RC=0
 for _ in "${STAGE_FNS[@]}"; do STAGE_STATE+=(wait); done
 
 copy_log_to_target() {
@@ -63,6 +64,9 @@ find_unattended_conf() {
 load_unattended() {
   # shellcheck source=/dev/null
   source "$1"
+  # Mounted by find_unattended_conf; the answers are read, and the stages
+  # must not find that device busy.
+  if mountpoint -q /run/gnomarchy-auto; then umount /run/gnomarchy-auto; fi
   installer_check_answers || installer_abort "the answers in $1 are not valid (see above)"
   DISK="$GNOMARCHY_DISK"
   FULLNAME="$GNOMARCHY_FULLNAME"
@@ -80,19 +84,18 @@ load_unattended() {
     installer_abort "GNOMARCHY_DISK $DISK is smaller than 20 GiB"
 }
 
-# run_stage INDEX — runs one stage in a subshell; returns its status.
+# run_stage INDEX — runs one stage in its own bash process. Records its exit
+# status in STAGE_RC and returns 0, so no caller needs a condition context.
 run_stage() {
   local i="$1" fn="${STAGE_FNS[$1]}" pid rc frame=0 log_size
   STAGE_STATE[i]=run
   printf '\n===== [%d/%d] %s =====\n' "$((i + 1))" "${#STAGE_FNS[@]}" "${STAGE_TITLES[i]}" >>"$LOG"
-  # The status is taken with ||: the ERR trap fires on any failing command, and
-  # a failed stage is not an unexpected error. The subshell drops the trap too.
   rc=0
   log_size="$(stat -c %s "$LOG")"
-  # A background subshell in both modes. A subshell that is the operand of
-  # if, ! or || has errexit switched off inside it, so a stage run that way
-  # would carry on past its first failing command.
-  (trap - ERR; set -Eeuo pipefail; "$fn") </dev/null >>"$LOG" 2>&1 &
+  # A fresh bash process: errexit is switched off for everything inside a
+  # function called as an operand of if, ! or ||, and a subshell inherits that.
+  # A new process starts clean whatever context run_stage is called from.
+  bash "$INSTALLER_DIR/lib/run-stage.sh" "$INSTALLER_DIR/lib" "$fn" </dev/null >>"$LOG" 2>&1 &
   pid=$!
   if ((UNATTENDED)); then
     printf '[%d/%d] %s\n' "$((i + 1))" "${#STAGE_FNS[@]}" "${STAGE_TITLES[i]}"
@@ -106,10 +109,12 @@ run_stage() {
       sleep 0.2
     done
   fi
+  # The status is taken with ||: a failed stage is not an unexpected error.
   wait "$pid" || rc=$?
+  STAGE_RC="$rc"
   if ((rc == 0)); then STAGE_STATE[i]="done"; else STAGE_STATE[i]="fail"; fi
   ((UNATTENDED)) || ui_progress "$frame"
-  return "$rc"
+  return 0
 }
 
 installer_failed() {
@@ -145,8 +150,11 @@ installer_failed() {
 installer_done() {
   echo "Installation complete." >>"$LOG"
   copy_log_to_target
-  umount -R /mnt
-  if [[ "$ENCRYPT" == y ]]; then cryptsetup close cryptroot; fi
+  if ! umount -R /mnt; then
+    # Nothing is lost: the system is installed. Say so rather than abort.
+    ui_warn "Could not unmount /mnt cleanly; the installed system is intact."
+  fi
+  if [[ "$ENCRYPT" == y ]]; then cryptsetup close cryptroot || ui_warn "Could not close the encrypted volume."; fi
   if ((UNATTENDED)); then
     echo "Installation complete. Rebooting."
     systemctl reboot
@@ -157,9 +165,8 @@ installer_done() {
   if gum confirm "Reboot now?"; then systemctl reboot; fi
 }
 
-trap 'installer_abort "unexpected error at line $LINENO"' ERR
-
 main() {
+  trap 'installer_abort "unexpected error at line $LINENO"' ERR
   local conf i
   : >"$LOG"
   ui_palette
@@ -183,11 +190,15 @@ main() {
   fi
 
   disk_layout
+  # The stages are separate processes; these are what they read.
+  export LOG UNATTENDED DISK ESP_PART ROOT_PART FS_DEV FULLNAME USERNAME PASSWORD     DISK_PASSWORD ENCRYPT TARGET_HOSTNAME TIMEZONE KEYMAP_ID     KB_XKB_LAYOUT KB_XKB_VARIANT KB_CONSOLE_KEYMAP KB_CONSOLE_FONT KB_LATIN KB_LABEL
   ((UNATTENDED)) || printf '\e[2J'
   for i in "${!STAGE_FNS[@]}"; do
-    run_stage "$i" || installer_failed "$i"
+    run_stage "$i"
+    ((STAGE_RC == 0)) || installer_failed "$i"
   done
   installer_done
 }
 
-main "$@"
+# Sourced by the tests, which call the functions without running the installer.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

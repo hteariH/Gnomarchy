@@ -163,8 +163,6 @@ stage_desktop() {
       echo "warning: Flatpak preinstall failed; Bazaar and LocalSend can be installed later from Flathub."
     fi
     rm -f /etc/flatpak/installations.d/target.conf
-    arch-chroot /mnt flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo ||
-      echo "warning: could not add Flathub on the target."
   fi
 
   # Passwordless sudo for install.sh, which calls sudo throughout with nobody

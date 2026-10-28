@@ -22,4 +22,5 @@ file_permissions=(
   ["/root/.gnupg"]="0:0:700"
   ["/usr/local/bin/choose-mirror"]="0:0:755"
   ["/root/configurator"]="0:0:755"
+  ["/root/gnomarchy/iso/installer/gnomarchy-install"]="0:0:755"
 )

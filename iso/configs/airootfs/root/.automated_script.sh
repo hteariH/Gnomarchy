@@ -6,4 +6,5 @@
 # tty1 only: archiso logs in there automatically, and a second login on
 # another console, for debugging, must not start a second installer.
 [[ "$(tty)" == /dev/tty1 ]] || exit 0
-exec /root/gnomarchy/iso/installer/gnomarchy-install
+# bash, not a direct exec: mkarchiso copies airootfs without preserving modes.
+exec bash /root/gnomarchy/iso/installer/gnomarchy-install
