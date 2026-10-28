@@ -3,8 +3,8 @@
 # Gnomarchy Command Center (Super + Alt + Space)
 #
 # The GNOME Overview covers app launching; this covers the system-action half:
-# themes, webapps, capture, snapshots, updates and power. Rendered with gum
-# inside a floating Alacritty window.
+# themes, webapps, capture, snapshots, updates and power. Without a display
+# or gjs it falls back to a gum menu in the terminal it was started from.
 set -eEo pipefail
 
 GNOMARCHY_PATH="${GNOMARCHY_PATH:-$HOME/.local/share/gnomarchy}"

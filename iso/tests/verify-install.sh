@@ -289,10 +289,21 @@ else
   no "first-run autostart entry missing" "expected $AUTOSTART"
 fi
 
+# --- Removed: Alacritty and the screensaver ---------------------------------
+# GNOME Terminal is the terminal; a second one only cost a package and a theme
+# step. The themes' alacritty.toml files stay: they are the palette format.
+if compgen -G "$ROOT/var/lib/pacman/local/alacritty-[0-9]*" >/dev/null; then
+  no "alacritty is installed" "it was dropped from gnomarchy-base.packages"
+else
+  ok "alacritty is not installed"
+fi
+if [[ -e "$ROOT/usr/local/bin/gnomarchy-screensaver" || -L "$ROOT/usr/local/bin/gnomarchy-screensaver" ]]; then
+  no "gnomarchy-screensaver is still published" "the screensaver was removed"
+else
+  ok "no gnomarchy-screensaver command"
+fi
+
 # --- Tool configs the theme engine writes into -----------------------------
-[[ -f "$HOME_DIR/.config/alacritty/alacritty.toml" ]] &&
-  ok "Alacritty base config deployed" ||
-  no "Alacritty base config missing"
 
 if [[ -f "$HOME_DIR/.config/btop/btop.conf" ]]; then
   grep -q 'color_theme *= *"current"' "$HOME_DIR/.config/btop/btop.conf" &&

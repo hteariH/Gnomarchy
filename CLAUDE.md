@@ -208,7 +208,6 @@ the installer told users to read a file that was always empty.
 `gnomarchy-theme-set` is the only thing that should write these:
 
 ```
-~/.config/alacritty/colors.toml
 ~/.config/btop/themes/current.theme
 ~/.config/nvim/lua/plugins/theme.lua
 ~/.config/nvim/lua/plugins/gnomarchy-colorscheme.lua

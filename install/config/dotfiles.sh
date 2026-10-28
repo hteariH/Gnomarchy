@@ -28,14 +28,10 @@ deploy_config() {
 
 DEFAULTS="$GNOMARCHY_PATH/default"
 
-# 1. Alacritty: font, padding and opacity. Colors come from the theme engine,
-#    which writes colors.toml alongside this file.
-deploy_config "$DEFAULTS/alacritty/alacritty.toml" "$HOME/.config/alacritty/alacritty.toml"
-
-# 2. btop: selects the "current" theme that `gnomarchy theme set` rewrites.
+# 1. btop: selects the "current" theme that `gnomarchy theme set` rewrites.
 deploy_config "$DEFAULTS/btop/btop.conf" "$HOME/.config/btop/btop.conf"
 
-# 3. Neovim: LazyVim bootstrap. Without this the per-theme neovim.lua plugin
+# 2. Neovim: LazyVim bootstrap. Without this the per-theme neovim.lua plugin
 #    specs have nothing to load them.
 if [[ -d "$DEFAULTS/nvim" ]]; then
   if [[ -f "$HOME/.config/nvim/init.lua" ]] && ! grep -q "config.lazy" "$HOME/.config/nvim/init.lua" 2>/dev/null; then

@@ -19,12 +19,6 @@ knows which one to recolour:
 Colours live in dconf, not a config file. Do not set them by hand; a theme
 switch will overwrite them.
 
-## Alacritty
-
-Still installed as a secondary terminal and themed alongside GNOME Terminal.
-Its config is at `~/.config/alacritty/alacritty.toml`, and `colors.toml` next
-to it is owned by the theme engine.
-
 ## Shell
 
 Bash with starship, zoxide and mise. Aliases live in

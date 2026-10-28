@@ -106,25 +106,7 @@ if [[ -n "$WALLPAPER" ]]; then
   gsettings set org.gnome.desktop.screensaver picture-uri-dark "file://$REAL_WALLPAPER" 2>/dev/null || true
 fi
 
-# 4. Apply Alacritty Terminal Theme
-if [[ -f "$THEME_DIR/alacritty.toml" ]]; then
-  mkdir -p "$HOME/.config/alacritty"
-  cp "$THEME_DIR/alacritty.toml" "$HOME/.config/alacritty/colors.toml"
-
-  # Ensure alacritty.toml imports colors.toml. Gnomarchy ships a base config
-  # that already does; this only covers a hand-rolled or missing one.
-  # `general.import` is the current Alacritty key (bare `import` is deprecated).
-  ALACRITTY_CONF="$HOME/.config/alacritty/alacritty.toml"
-  IMPORT_LINE='general.import = ["~/.config/alacritty/colors.toml"]'
-  if [[ -f "$ALACRITTY_CONF" ]]; then
-    # Match an actual import directive, not merely a mention in a comment.
-    grep -qE '^[[:space:]]*(general\.)?import' "$ALACRITTY_CONF"       || sed -i "1i $IMPORT_LINE" "$ALACRITTY_CONF"
-  else
-    echo "$IMPORT_LINE" > "$ALACRITTY_CONF"
-  fi
-fi
-
-# 5. Apply GNOME Terminal Theme
+# 4. Apply GNOME Terminal Theme
 #
 # GNOME Terminal keeps colors in dconf, not a config file, so the palette is
 # pushed into the Gnomarchy profile created by the installer. The 16 ANSI
@@ -168,7 +150,7 @@ if [[ -f "$THEME_DIR/alacritty.toml" ]] && command -v gsettings >/dev/null 2>&1;
 fi
 
 
-# 6. Apply Neovim Theme
+# 5. Apply Neovim Theme
 #
 # The per-theme neovim.lua is a lazy.nvim plugin spec. Alongside it we pin
 # LazyVim's own `colorscheme` option, otherwise LazyVim applies its default
@@ -189,7 +171,7 @@ EOF
   fi
 fi
 
-# 7. Apply btop Theme
+# 6. Apply btop Theme
 if [[ -f "$THEME_DIR/btop.theme" ]]; then
   mkdir -p "$HOME/.config/btop/themes"
   cp "$THEME_DIR/btop.theme" "$HOME/.config/btop/themes/current.theme" 2>/dev/null || true
@@ -212,7 +194,7 @@ BTOPEOF
   fi
 fi
 
-# 8. Apply GTK / libadwaita colors
+# 7. Apply GTK / libadwaita colors
 #
 # GNOME's accent-color setting only offers a fixed set of named hues, so the
 # terminal palette is projected onto libadwaita's named colors to carry the
@@ -284,7 +266,7 @@ EOF
   fi
 fi
 
-# 9. Apply the theme to the GDM login screen
+# 8. Apply the theme to the GDM login screen
 #
 # GDM has its own dconf profile; this is the supported way to style the greeter.
 # Patching GNOME's gresource bundles would also work but breaks on every shell
@@ -328,7 +310,7 @@ if [[ -n "$DISPLAY" || -n "$WAYLAND_DISPLAY" ]]; then
   notify-send -i preferences-desktop-theme "Gnomarchy Theme" "Active theme switched to $THEME_NAME" 2>/dev/null || true
 fi
 
-# 10. Recolour the Limine boot menu
+# 9. Recolour the Limine boot menu
 #
 # /etc/gnomarchy/boot-theme.conf is group-writable by wheel, so no sudo is
 # needed; a path unit regenerates limine.conf as root when it changes. On a
@@ -345,7 +327,7 @@ if [[ -w "$BOOT_THEME_FILE" ]]; then
   fi
 fi
 
-# 11. Run on-theme-change Hook if defined
+# 10. Run on-theme-change Hook if defined
 if command -v gnomarchy-hook-run >/dev/null 2>&1; then
   gnomarchy-hook-run on-theme-change "$THEME_NAME" || true
 fi

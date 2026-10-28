@@ -64,7 +64,8 @@ The offline and session layers:
   GDM enabled, whisper backend installed, every `gnomarchy-*` command in
   `/usr/local/bin`, a real git checkout, per-theme wallpaper layout with the
   upstream images downloaded, exactly one visible Brave entry, an autostart
-  entry with an absolute `Exec`, and the Alacritty/btop/LazyVim configs.
+  entry with an absolute `Exec`, the btop/LazyVim configs, and no Alacritty
+  or screensaver left behind.
 - **In session** (`iso/tests/verify-session.sh`, run inside a real autologin
   session): `gnomarchy-first-run` completed, the custom keybindings are in
   dconf, `Super+W` and `Super+1` work, the dock is on the left, exactly one
@@ -141,7 +142,7 @@ Once logged into the Gnomarchy desktop:
    - <kbd>Super</kbd> + <kbd>W</kbd>: Closes active window.
 3. **Test the Command Center**:
    - Press <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>Space</kbd>.
-   - Confirm a floating Alacritty window opens with the gum menu.
+   - Confirm the control center window opens on its Menu page.
    - Walk into Theme, pick a theme with the filter, and confirm it applies.
    - Confirm `Exit` and <kbd>Esc</kbd> both close the menu cleanly.
 4. **Test Screen Capture**:
@@ -162,9 +163,6 @@ Once logged into the Gnomarchy desktop:
      - GNOME accent color updates (e.g. Purple for Catppuccin, Orange for Gruvbox, Blue for Tokyo Night).
      - A running GNOME Terminal repaints: background, foreground and all 16 ANSI
        colors (check with `gsettings get        "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/" palette`).
-     - Alacritty window background and foreground update (in a *running* window;
-       the base config at `~/.config/alacritty/alacritty.toml` must show
-       JetBrains Mono at 10pt with 14px padding).
      - `btop` opens in the new palette (verify `color_theme = "current"` in
        `~/.config/btop/btop.conf`).
      - Neovim theme updates on launch, and
