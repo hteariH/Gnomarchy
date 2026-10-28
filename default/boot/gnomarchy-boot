@@ -13,11 +13,14 @@ BOOT_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
 source "$BOOT_LIB/common.sh"
 # shellcheck source=lib/menu.sh
 source "$BOOT_LIB/menu.sh"
-for lib in snapshots install snapper restore; do
-  # Later tasks add these; until then their subcommands are unavailable.
-  # shellcheck source=/dev/null
-  [[ -f "$BOOT_LIB/$lib.sh" ]] && source "$BOOT_LIB/$lib.sh"
-done
+# shellcheck source=lib/snapshots.sh
+source "$BOOT_LIB/snapshots.sh"
+# shellcheck source=lib/install.sh
+source "$BOOT_LIB/install.sh"
+# shellcheck source=lib/snapper.sh
+source "$BOOT_LIB/snapper.sh"
+# shellcheck source=lib/restore.sh
+source "$BOOT_LIB/restore.sh"
 
 usage() {
   cat <<'EOF'

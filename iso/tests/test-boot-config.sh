@@ -266,4 +266,61 @@ t_true "delete-snapshot-post removes" bash "$PLUGIN" delete-snapshot-post / btrf
 t_false "the entry is gone" grep -q '^///5 | ' "$T/boot/limine.conf"
 unset GNOMARCHY_BOOT_BIN
 
+# stub NAME SCRIPT — a fake command in $T/bin that logs its arguments.
+stub() {
+  mkdir -p "$T/bin"
+  printf '#!/bin/bash\necho "%s $*" >>"%s/calls"\n%s\n' "$1" "$T" "$2" >"$T/bin/$1"
+  chmod +x "$T/bin/$1"
+}
+
+echo "--- install: Limine onto the ESP and the disk"
+new_tree
+mkdir -p "$T/usr/share/limine" "$T/efivars"
+printf 'efi x64\n' >"$T/usr/share/limine/BOOTX64.EFI"
+printf 'efi ia32\n' >"$T/usr/share/limine/BOOTIA32.EFI"
+printf 'bios stage 2\n' >"$T/usr/share/limine/limine-bios.sys"
+printf 'DISK=/dev/fake\nESP_PART=2\nENCRYPTED=0\n' >"$T/etc/gnomarchy/boot.conf"
+stub limine ''
+stub efibootmgr ''
+export GNOMARCHY_BOOT_EFIVARS="$T/efivars"
+PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+t_true "fallback EFI path" cmp -s "$T/usr/share/limine/BOOTX64.EFI" "$T/boot/EFI/BOOT/BOOTX64.EFI"
+t_true "32-bit EFI path" cmp -s "$T/usr/share/limine/BOOTIA32.EFI" "$T/boot/EFI/BOOT/BOOTIA32.EFI"
+t_true "NVRAM target path" cmp -s "$T/usr/share/limine/BOOTX64.EFI" "$T/boot/EFI/limine/BOOTX64.EFI"
+t_true "BIOS stage 2 on the ESP" cmp -s "$T/usr/share/limine/limine-bios.sys" "$T/boot/limine-bios.sys"
+t_true "limine bios-install ran on the disk" grep -qx "limine bios-install /dev/fake" "$T/calls"
+t_true "an NVRAM entry was created" \
+  grep -qxF 'efibootmgr --create --disk /dev/fake --part 2 --loader \EFI\limine\BOOTX64.EFI --label Gnomarchy' "$T/calls"
+rm "$T/calls"
+stub efibootmgr '[[ $# -eq 0 ]] && printf "Boot0001* Gnomarchy\tHD(2,GPT)\n"; exit 0'
+PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+t_false "an existing NVRAM entry is kept" grep -q -- "--create" "$T/calls"
+rm -rf "$T/efivars" "$T/calls"
+PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+t_false "no NVRAM work on BIOS firmware" grep -q '^efibootmgr' "$T/calls"
+t_true "bios-install still runs on BIOS firmware" grep -qx "limine bios-install /dev/fake" "$T/calls"
+rm "$T/etc/gnomarchy/boot.conf"
+t_false "install refuses without boot.conf" env PATH="$T/bin:$PATH" "$BOOT" install 2>"$T/log"
+unset GNOMARCHY_BOOT_EFIVARS
+
+echo "--- snapper-init: root config and snapshot 1, no D-Bus"
+new_tree
+mkdir -p "$T/usr/share/snapper/config-templates"
+printf '%s\n' 'SUBVOLUME="/"' 'FSTYPE="btrfs"' 'ALLOW_GROUPS=""' 'TIMELINE_CREATE="yes"' \
+  'NUMBER_LIMIT="50"' 'NUMBER_LIMIT_IMPORTANT="10"' >"$T/usr/share/snapper/config-templates/default"
+stub snapper ''
+stub systemctl ''
+PATH="$T/bin:$PATH" "$BOOT" snapper-init 2>"$T/log"
+for kv in 'TIMELINE_CREATE="no"' 'NUMBER_LIMIT="10"' 'NUMBER_LIMIT_IMPORTANT="5"' 'ALLOW_GROUPS="wheel"'; do
+  t_true "root config: $kv" grep -qxF "$kv" "$T/etc/snapper/configs/root"
+done
+t_true "SNAPPER_CONFIGS lists root" grep -qx 'SNAPPER_CONFIGS="root"' "$T/etc/conf.d/snapper"
+t_true "the cleanup timer is enabled" grep -qx "systemctl enable snapper-cleanup.timer" "$T/calls"
+t_true "snapshot 1 is created without D-Bus" \
+  grep -qxF "snapper --no-dbus -c root create --description Gnomarchy installed" "$T/calls"
+rm "$T/calls"
+stub snapper '[[ " $* " == *" list "* ]] && echo "Gnomarchy installed"; exit 0'
+PATH="$T/bin:$PATH" "$BOOT" snapper-init 2>"$T/log"
+t_false "a second run creates no second snapshot" grep -q " create " "$T/calls"
+
 t_done
