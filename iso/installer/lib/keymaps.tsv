@@ -1,5 +1,4 @@
 # id	xkb_layout	xkb_variant	console_keymap	console_font	latin	label
-# lv: kbd 2.10 has no Latvian console keymap that compiles (lv, lv-tilde fail); the console falls back to us, which stays Latin for the boot passphrase.
 us	us	-	us	-	yes	English (US)
 us-intl	us	intl	us-acentos	-	yes	English (US, international)
 gb	gb	-	uk	-	yes	English (UK)
@@ -21,14 +20,14 @@ pl	pl	-	pl2	-	yes	Polish
 cz	cz	-	cz-qwertz	-	yes	Czech
 sk	sk	-	sk-qwertz	-	yes	Slovak
 hu	hu	-	hu	-	yes	Hungarian
-ro	ro	-	ro_win	-	yes	Romanian
+ro	ro	-	ro	-	yes	Romanian
 tr	tr	-	trq	-	yes	Turkish
 ee	ee	-	et	-	yes	Estonian
 lt	lt	-	lt.baltic	-	yes	Lithuanian
-lv	lv	-	us	-	yes	Latvian
-ru	ru	-	ru-cp1251	cyr-sun16	no	Russian
+lv	lv	-	lv	-	yes	Latvian
+ru	ru	-	ru	cyr-sun16	no	Russian
 ua	ua	-	ua	cyr-sun16	no	Ukrainian
 by	by	-	by	cyr-sun16	no	Belarusian
-bg	bg	-	bg_bds-cp1251	cyr-sun16	no	Bulgarian
+bg	bg	-	bg_bds-utf8	cyr-sun16	no	Bulgarian
 gr	gr	-	gr	iso07u-16	no	Greek
 jp	jp	-	jp106	-	yes	Japanese

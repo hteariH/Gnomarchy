@@ -26,14 +26,15 @@ t_eq "de X11 layout" "$KB_XKB_LAYOUT" "de"
 t_eq "de has no variant" "$KB_XKB_VARIANT" ""
 t_eq "the menu line round-trips" "$(keymap_id_from_menu "$(keymap_menu | grep '^German  \[')")" "de"
 
-# The plain-layer symbol of keycode 16 (Q on a US keyboard), from the compiled
-# table, so included keymap files count.
+# plain_q TABLE — the plain-layer symbol of keycode 16 (Q on a US keyboard) in
+# a compiled table. Maps are compiled with --unicode: the UTF-8 maps use keysyms
+# the 8-bit table rejects, and systemd-vconsole-setup loads them in Unicode mode.
 plain_q() {
-  loadkeys --mktable --quiet "$1" | awk '
+  awk '
     /plain_map\[NR_KEYS\]/ { on = 1; next }
     on && /};/ { exit }
     on { gsub(/[{},]/, " "); for (i = 1; i <= NF; i++) v[n++] = $i }
-    END { print v[16] }'
+    END { print v[16] }' "$1"
 }
 
 evdev=/usr/share/X11/xkb/rules/evdev.lst
@@ -53,14 +54,22 @@ while IFS=$'\t' read -r id layout variant keymap font latin label extra; do
   if [[ -z "$(find /usr/share/kbd/keymaps -name "$keymap.map.gz" -print -quit)" ]]; then
     t_no "$id: no console keymap $keymap"
   else
-    q="$(plain_q "$keymap")"
-    # 0xfb61..0xfb7a: KT_LETTER a..z. A Latin default layer is what makes a
-    # LUKS passphrase typeable at boot.
-    if [[ "$q" =~ ^0xfb(6[1-9a-f]|7[0-9a])$ ]]; then
-      t_ok "$id: console keymap $keymap starts on a Latin layer"
+    # The compile is the existence check: a broken map exits non-zero here.
+    # (loadkeys --parse needs an open console, so it cannot run in a container.)
+    tbl="$(mktemp)"
+    if err="$(loadkeys --unicode --mktable --quiet "$keymap" 2>&1 >"$tbl")"; then
+      q="$(plain_q "$tbl")"
+      # 0xfb61..0xfb7a: KT_LETTER a..z. A Latin default layer is what makes a
+      # LUKS passphrase typeable at boot.
+      if [[ "$q" =~ ^0xfb(6[1-9a-f]|7[0-9a])$ ]]; then
+        t_ok "$id: console keymap $keymap compiles and starts on a Latin layer"
+      else
+        t_no "$id: console keymap $keymap does not start on a Latin layer" "keycode 16 plain: $q"
+      fi
     else
-      t_no "$id: console keymap $keymap does not start on a Latin layer" "keycode 16 plain: $q"
+      t_no "$id: console keymap $keymap does not compile" "$err"
     fi
+    rm -f "$tbl"
   fi
   if [[ "$font" != - ]]; then
     ls /usr/share/kbd/consolefonts/"$font".* >/dev/null && t_ok "$id: font $font exists" || t_no "$id: no console font $font"
