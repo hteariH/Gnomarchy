@@ -1,0 +1,193 @@
+#!/bin/bash
+# The Gnomarchy installer, started on tty1 of the live ISO by
+# /root/.automated_script.sh. It lives in the repository copy at
+# /root/gnomarchy so it is always the revision of the configuration it installs.
+#
+# Interactive: a gum text UI. Unattended: answers from gnomarchy-unattended.conf
+# on the boot medium or on a device labelled GNOMARCHY; plain output; a
+# power-off on failure, so CI never waits out its timeout.
+# Design: docs/superpowers/specs/2026-10-28-installer-limine-design.md
+# shellcheck source-path=SCRIPTDIR
+set -Eeuo pipefail
+
+INSTALLER_DIR="$(cd -- "$(dirname -- "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+LOG=/var/log/gnomarchy-installer.log
+UNATTENDED=0
+
+# shellcheck source=lib/form.sh
+source "$INSTALLER_DIR/lib/form.sh"
+# shellcheck source=lib/disk.sh
+source "$INSTALLER_DIR/lib/disk.sh"
+# shellcheck source=lib/stages.sh
+source "$INSTALLER_DIR/lib/stages.sh"
+# shellcheck source=lib/ui.sh
+source "$INSTALLER_DIR/lib/ui.sh"
+
+STAGE_STATE=()
+for _ in "${STAGE_FNS[@]}"; do STAGE_STATE+=(wait); done
+
+copy_log_to_target() {
+  if mountpoint -q /mnt/var/log; then cp "$LOG" /mnt/var/log/gnomarchy-installer.log; fi
+}
+
+# An error before any stage ran, in unattended mode: say what and power off.
+installer_abort() {
+  printf 'Installation aborted: %s\n' "$*" | tee -a "$LOG" >&2
+  if ((UNATTENDED)); then
+    # Power off rather than sit at a prompt: CI would wait out its timeout.
+    systemctl poweroff
+  fi
+  exit 1
+}
+
+find_unattended_conf() {
+  local dev mnt=/run/gnomarchy-auto
+  if [[ -f /run/archiso/bootmnt/gnomarchy-unattended.conf ]]; then
+    printf '%s\n' /run/archiso/bootmnt/gnomarchy-unattended.conf
+    return 0
+  fi
+  mkdir -p "$mnt"
+  # Several filesystems can carry the label (an installed system's Btrfs is
+  # GNOMARCHY too), so try each. blkid exits 2 when none has it.
+  while IFS= read -r dev; do
+    mount -o ro "$dev" "$mnt" || continue
+    if [[ -f "$mnt/gnomarchy-unattended.conf" ]]; then
+      printf '%s\n' "$mnt/gnomarchy-unattended.conf"
+      return 0
+    fi
+    umount "$mnt"
+  done < <(blkid -t LABEL=GNOMARCHY -o device || true)
+  return 1
+}
+
+load_unattended() {
+  # shellcheck source=/dev/null
+  source "$1"
+  installer_check_answers || installer_abort "the answers in $1 are not valid (see above)"
+  DISK="$GNOMARCHY_DISK"
+  FULLNAME="$GNOMARCHY_FULLNAME"
+  USERNAME="$GNOMARCHY_USERNAME"
+  PASSWORD="$GNOMARCHY_PASSWORD"
+  DISK_PASSWORD="$GNOMARCHY_DISK_PASSWORD"
+  ENCRYPT="$GNOMARCHY_ENCRYPT"
+  TARGET_HOSTNAME="$GNOMARCHY_HOSTNAME"
+  TIMEZONE="$GNOMARCHY_TIMEZONE"
+  KEYMAP_ID="$GNOMARCHY_KEYMAP"
+  keymap_load "$KEYMAP_ID"
+  [[ -b "$DISK" ]] || installer_abort "GNOMARCHY_DISK $DISK is not a block device"
+  [[ "$DISK" != "$(boot_medium_disk)" ]] || installer_abort "GNOMARCHY_DISK $DISK is the installation medium"
+  (($(blockdev --getsize64 "$DISK") >= INSTALLER_MIN_DISK_BYTES)) ||
+    installer_abort "GNOMARCHY_DISK $DISK is smaller than 20 GiB"
+}
+
+# run_stage INDEX — runs one stage in a subshell; returns its status.
+run_stage() {
+  local i="$1" fn="${STAGE_FNS[$1]}" pid rc frame=0 log_size
+  STAGE_STATE[i]=run
+  printf '\n===== [%d/%d] %s =====\n' "$((i + 1))" "${#STAGE_FNS[@]}" "${STAGE_TITLES[i]}" >>"$LOG"
+  # The status is taken with ||: the ERR trap fires on any failing command, and
+  # a failed stage is not an unexpected error. The subshell drops the trap too.
+  rc=0
+  log_size="$(stat -c %s "$LOG")"
+  # A background subshell in both modes. A subshell that is the operand of
+  # if, ! or || has errexit switched off inside it, so a stage run that way
+  # would carry on past its first failing command.
+  (trap - ERR; set -Eeuo pipefail; "$fn") </dev/null >>"$LOG" 2>&1 &
+  pid=$!
+  if ((UNATTENDED)); then
+    printf '[%d/%d] %s\n' "$((i + 1))" "${#STAGE_FNS[@]}" "${STAGE_TITLES[i]}"
+    # Show the stage's output as it is logged; tail leaves when the stage does.
+    tail -c +"$((log_size + 1))" -f --pid="$pid" "$LOG"
+  else
+    # kill -0 only asks whether the stage is still running.
+    while kill -0 "$pid" 2>/dev/null; do
+      ui_progress "$frame"
+      frame=$((frame + 1))
+      sleep 0.2
+    done
+  fi
+  wait "$pid" || rc=$?
+  if ((rc == 0)); then STAGE_STATE[i]="done"; else STAGE_STATE[i]="fail"; fi
+  ((UNATTENDED)) || ui_progress "$frame"
+  return "$rc"
+}
+
+installer_failed() {
+  local i="$1" choice
+  printf '\nInstallation failed in stage %d: %s\n' "$((i + 1))" "${STAGE_TITLES[i]}" >>"$LOG"
+  copy_log_to_target
+  if ((UNATTENDED)); then
+    printf '\nInstallation failed in stage %d (%s). Last lines of %s:\n' "$((i + 1))" "${STAGE_TITLES[i]}" "$LOG"
+    tail -n 30 "$LOG"
+    systemctl poweroff
+    exit 1
+  fi
+  while :; do
+    ui_header "Installation failed: ${STAGE_TITLES[i]}"
+    tail -n 30 "$LOG"
+    printf '\nThe full log is %s.\n\n' "$LOG"
+    choice="$(gum choose "Show the full log" "Open a shell" "Power off")" || choice="Open a shell"
+    case "$choice" in
+      "Show the full log") gum pager <"$LOG" ;;
+      "Open a shell")
+        ui_say "Type exit to come back here."
+        # The shell's status is the user's last command, not ours.
+        bash -i || :
+        ;;
+      *)
+        systemctl poweroff
+        exit 1
+        ;;
+    esac
+  done
+}
+
+installer_done() {
+  echo "Installation complete." >>"$LOG"
+  copy_log_to_target
+  umount -R /mnt
+  if [[ "$ENCRYPT" == y ]]; then cryptsetup close cryptroot; fi
+  if ((UNATTENDED)); then
+    echo "Installation complete. Rebooting."
+    systemctl reboot
+    exit 0
+  fi
+  ui_header "Gnomarchy is installed"
+  ui_say "Remove the installation medium, then start your new system."
+  if gum confirm "Reboot now?"; then systemctl reboot; fi
+}
+
+trap 'installer_abort "unexpected error at line $LINENO"' ERR
+
+main() {
+  local conf i
+  : >"$LOG"
+  ui_palette
+  if conf="$(find_unattended_conf)"; then
+    UNATTENDED=1
+    echo "Unattended installation, answers from $conf" | tee -a "$LOG"
+    load_unattended "$conf"
+    ensure_network
+  else
+    ui_header "Welcome to Gnomarchy"
+    if [[ -d /sys/firmware/efi/efivars ]]; then
+      ui_say "Booted in UEFI mode. Gnomarchy installs a bootloader that also boots on BIOS."
+    else
+      ui_say "Booted in BIOS mode. Gnomarchy installs a bootloader that also boots on UEFI."
+    fi
+    sleep 2
+    ensure_network
+    choose_disk
+    run_form
+    until confirm_summary; do run_form; done
+  fi
+
+  disk_layout
+  ((UNATTENDED)) || printf '\e[2J'
+  for i in "${!STAGE_FNS[@]}"; do
+    run_stage "$i" || installer_failed "$i"
+  done
+  installer_done
+}
+
+main "$@"
