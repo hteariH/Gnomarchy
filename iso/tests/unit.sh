@@ -25,7 +25,7 @@ mapfile -t scripts < <(
     default/boot/gnomarchy-boot default/boot/50-gnomarchy-boot default/boot/deploy.sh \
     default/boot/initcpio-post \
     iso/installer/gnomarchy-install iso/installer/lib/run-stage.sh \
-    bin/gnomarchy-snapshot-restore bin/gnomarchy-snapshot-notify \
+    bin/gnomarchy-snapshot-restore bin/gnomarchy-snapshot-notify bin/gnomarchy-windows \
     install/login/boot.sh install/desktop/set-keyboard-layout.sh \
     iso/tests/test-*.sh |
     while read -r f; do [[ -f "$f" ]] && printf '%s\n' "$f"; done

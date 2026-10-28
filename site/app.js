@@ -202,16 +202,18 @@ Switch with: gnomarchy keymap <omarchy|gnome>`,
             'success regardless, which hid a broken git pull for weeks.'
     },
     windows: {
-      cmd: 'gnomarchy windows info',
-      output: `Windows 11 VM Configuration:
-  Location: /home/you/.local/share/gnomarchy/vms/windows-11
-  RAM:      8 GB
-  CPUs:     4 Cores (Host Passthrough)
-  Disk:     VirtIO SCSI / QCOW2
-  Graphics: VirtIO GPU (OpenGL Accelerated)
-  TPM:      Software TPM 2.0 (swtpm)`,
-      note: 'You supply the Windows ISO. It opens in an ordinary QEMU window — ' +
-            'there is no seamless mode, no shared clipboard and no shared folder.'
+      cmd: 'gnomarchy windows status',
+      output: `WinBoat:
+  no    not installed (gnomarchy windows install)
+Requirements:
+  ok    KVM: /dev/kvm is usable
+  ok    Docker: the service is running
+  ok    Docker: compose is available
+  ok    Docker: you is in the docker group
+  ok    FreeRDP: xfreerdp3 is installed`,
+      note: 'Opt-in. gnomarchy windows install takes winboat-bin from the AUR, or the ' +
+            'checksum-pinned release AppImage; WinBoat then runs Windows in a ' +
+            'container and opens its apps as ordinary windows.'
     }
   };
 

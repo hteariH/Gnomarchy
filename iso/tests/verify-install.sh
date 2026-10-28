@@ -303,6 +303,22 @@ else
   ok "no gnomarchy-screensaver command"
 fi
 
+# --- Windows apps: WinBoat, opt-in -----------------------------------------
+# The QEMU Windows VM is gone, and with it the packages only it used.
+for pkg in qemu-desktop edk2-ovmf swtpm; do
+  if compgen -G "$ROOT/var/lib/pacman/local/$pkg-[0-9]*" >/dev/null; then
+    no "$pkg is installed" "only the removed Windows VM used it"
+  else
+    ok "$pkg is not installed"
+  fi
+done
+WINDOWS_CMD="$HOME_DIR/.local/share/gnomarchy/bin/gnomarchy-windows"
+if [[ -L "$ROOT/usr/local/bin/gnomarchy-windows" ]] && grep -q 'winboat-bin' "$WINDOWS_CMD"; then
+  ok "gnomarchy windows is the WinBoat installer"
+else
+  no "gnomarchy windows is not the WinBoat installer" "$WINDOWS_CMD"
+fi
+
 # --- Tool configs the theme engine writes into -----------------------------
 
 if [[ -f "$HOME_DIR/.config/btop/btop.conf" ]]; then

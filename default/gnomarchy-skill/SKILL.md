@@ -261,15 +261,15 @@ gnomarchy voxtype status
 
 ---
 
-## 12. Windows 11 VM (`gnomarchy windows`)
+## 12. Windows apps (`gnomarchy windows`)
 
-Hardware-accelerated Windows 11 virtual machine using KVM, VirtIO, and TPM 2.0:
+WinBoat runs Windows in a Docker container and opens its applications as
+desktop windows. It is opt-in; install it only when the user asks:
 
 ```bash
-gnomarchy windows setup     # Provision VM storage & environment
-gnomarchy windows start     # Boot Windows 11 VM
-gnomarchy windows stop      # Cleanly stop VM
-gnomarchy windows status    # Check VM state and disk usage
+gnomarchy windows install   # winboat-bin from the AUR, else the release AppImage
+gnomarchy windows status    # KVM, Docker, docker group, FreeRDP, and whether it is installed
+gnomarchy windows           # start WinBoat
 ```
 
 ---

@@ -46,7 +46,7 @@ Commands:
                                Launch or inspect AI coding agents & skills
   webapp <add|list|remove>     Turn websites into isolated desktop applications
   voxtype [toggle|start|stop]  Speech-to-text AI dictation (Super+D)
-  windows <setup|start|stop>   Manage accelerated Windows 11 KVM VM
+  windows [install|status]     Windows apps through WinBoat (opt-in)
   reminder <time|dur> <msg>    Schedule desktop notification reminders
   capture <annotate|region|screen>
                                Screenshot, optionally into the Satty annotator
