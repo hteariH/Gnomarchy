@@ -12,11 +12,8 @@ if [ -d "$GNOMARCHY_PATH/default/plymouth" ]; then
   fi
 fi
 
-# Ensure mkinitcpio has plymouth hook if installed
-if [ -f /etc/mkinitcpio.conf ]; then
-  if ! grep -q "plymouth" /etc/mkinitcpio.conf; then
-    sudo sed -i 's/HOOKS=(\(.*\)udev\(.*\)filesystems\(.*\))/HOOKS=(\1udev plymouth\2filesystems\3)/' /etc/mkinitcpio.conf 2>/dev/null || true
-  fi
-fi
+# The plymouth hook is in /etc/mkinitcpio.conf.d/gnomarchy.conf, written by
+# default/boot/deploy.sh. Editing HOOKS here used to insert it after `udev`,
+# which a systemd HOOKS line never contains, so it never happened.
 
 gnomarchy_step "Boot splash prepared"

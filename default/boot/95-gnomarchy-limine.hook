@@ -1,0 +1,12 @@
+# A new limine package changes nothing on disk until its binaries are copied
+# to the ESP and its stage 1 into the disk's boot sector.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = limine
+
+[Action]
+Description = Installing the updated Limine onto the ESP and disk...
+When = PostTransaction
+Exec = /usr/local/lib/gnomarchy/boot/gnomarchy-boot install
