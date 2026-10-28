@@ -590,3 +590,36 @@ All three go in `TESTING.md`.
   mounted ESP, which both provide.
 - **ESP layout.** An existing ESP smaller than 4 GiB only matters for
   reinstalls. The installer always repartitions.
+
+## Refinements made while planning
+
+- Snapshot titles use ASCII `|` separators, not `│`: Limine's font is code
+  page 437.
+- A snapshot's kernel is identified by matching the ESP's `vmlinuz-<kernel>`
+  byte for byte (b2sum) against `usr/lib/modules/*/vmlinuz` inside the
+  snapshot. No `file` parsing and no hash cache.
+- snap-pac is already in `gnomarchy-base.packages`. What has to come last is
+  the snapper config: without one snap-pac does nothing, so `install.sh`'s
+  transactions leave no snapshots.
+- The snapper config is written by `gnomarchy-boot snapper-init` from
+  snapper's own template, not deployed from the repository.
+- The keyboard layout is the first form field, and the live console switches
+  to it, so passwords are typed in the layout they will be entered in.
+- `default/boot/deploy.sh` (root) deploys the boot tooling. It runs only on
+  machines with `/etc/gnomarchy/boot.conf`, i.e. installed from the ISO; on any
+  other machine the bootloader is left alone.
+- `/etc/gnomarchy/boot.conf` holds `DISK`, `ESP_PART`, `ENCRYPTED`.
+- `pacstrap` adds `efibootmgr` and `plymouth`: the bootloader stage needs the
+  first, and the initramfs HOOKS name the second before `install.sh` runs.
+- `95-gnomarchy-boot.hook` fires after every transaction (`Target = *`)
+  rather than mirroring mkinitcpio's trigger list; an update costs two hashes.
+- A snapshot whose command line cannot be derived is left out of the menu, so
+  the menu stays bootable; `snapshot-add` refuses it.
+- `gnomarchy-boot restore N` takes no `--yes`; confirmation is the user
+  command's job (`gnomarchy snapshot restore N --yes` skips it).
+- An unattended failure powers the machine off, so CI fails fast instead of
+  waiting out its timeout.
+- GDM's encrypted-install autologin keys on `ENCRYPTED=1` in `boot.conf`;
+  there is no crypttab to detect any more.
+- `AGENTS.md` makes no claim about the installer, boot or snapshots and is not
+  changed.
