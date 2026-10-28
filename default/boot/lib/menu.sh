@@ -13,7 +13,7 @@ boot_kernels() {
     else
       boot_log "skipping $name: no initramfs-$name.img on the ESP"
     fi
-  done | sort
+  done | LC_ALL=C sort
 }
 
 # The kernel snapshots are recorded against: linux if installed, else the first.
@@ -39,7 +39,7 @@ boot_snapshot_numbers() {
     n="${f##*/}"
     n="${n%.conf}"
     if [[ "$n" =~ ^[0-9]+$ ]]; then printf '%s\n' "$n"; fi
-  done | sort -rn
+  done | LC_ALL=C sort -rn
 }
 
 # /etc/kernel/cmdline with whitespace collapsed to single spaces.
@@ -82,13 +82,35 @@ boot_snapshot_cmdline() {
   printf '%s\n' "${out[*]}"
 }
 
-# boot_snapshot_title N DATE DESCRIPTION
+# boot_snapshot_title N DATE DESCRIPTION — Limine's font is code page 437, so
+# every byte of DATE and DESCRIPTION outside printable ASCII becomes a space.
 boot_snapshot_title() {
-  if [[ -n "$3" ]]; then
-    printf '%s | %s | %s' "$1" "$2" "$3"
+  local LC_ALL=C date desc
+  date="${2//[^ -~]/ }"
+  desc="${3//[^ -~]/ }"
+  if [[ -n "$desc" ]]; then
+    printf '%s | %s | %s' "$1" "$date" "$desc"
   else
-    printf '%s | %s' "$1" "$2"
+    printf '%s | %s' "$1" "$date"
   fi
+}
+
+# boot_snapshot_renderable N BASE — succeeds when snapshot N gets a menu entry:
+# its record exists, its boot files are in the store and its command line
+# derives. The default check and the render loop both call this, so they
+# cannot disagree.
+boot_snapshot_renderable() {
+  local n="$1" base="$2"
+  local -A e=()
+  if ! boot_read_kv "$BOOT_ENTRIES/$n.conf" e; then
+    boot_log "snapshot $n has no menu entry"
+    return 1
+  fi
+  if [[ ! -f "$BOOT_STORE/${e[KERNEL_HASH]:-none}" || ! -f "$BOOT_STORE/${e[INITRAMFS_HASH]:-none}" ]]; then
+    boot_log "snapshot $n: its boot files are missing from the store"
+    return 1
+  fi
+  boot_snapshot_cmdline "$base" "$n" >/dev/null
 }
 
 # Limine entry paths separate levels with /; a title's own /, \ and # are
@@ -150,8 +172,9 @@ boot_render_kernel() {
 # boot_render [ID] — prints limine.conf. ID is snapshot:N or a kernel name;
 # without one the default is the linux kernel.
 boot_render() {
-  local id="${1:-}" base kernel n title cmdline default_path
+  local id="${1:-}" base kernel n title cmdline default_path shown=0
   local -a kernels snapshots
+  local -A d=() e=()
   base="$(boot_base_cmdline)" || return 1
   mapfile -t kernels < <(boot_kernels)
   if ((${#kernels[@]} == 0)); then
@@ -166,11 +189,11 @@ boot_render() {
       ;;
     snapshot:*)
       n="${id#snapshot:}"
-      local -A d=()
-      if ! boot_read_kv "$BOOT_ENTRIES/$n.conf" d; then
-        boot_log "snapshot $n has no menu entry"
+      if ! boot_snapshot_renderable "$n" "$base"; then
+        boot_log "snapshot $n is not in the menu, so it cannot be the default"
         return 1
       fi
+      boot_read_kv "$BOOT_ENTRIES/$n.conf" d
       title="$(boot_snapshot_title "$n" "${d[DATE]:-}" "${d[DESCRIPTION]:-}")"
       default_path="Gnomarchy/Snapshots/$(boot_escape_entry "$title")"
       ;;
@@ -199,22 +222,22 @@ boot_render() {
     fi
   done
 
-  ((${#snapshots[@]})) || return 0
-  printf '//Snapshots\n'
   for n in "${snapshots[@]}"; do
-    local -A e=()
-    boot_read_kv "$BOOT_ENTRIES/$n.conf" e
     # A broken record must not take the whole menu with it.
-    if [[ ! -f "$BOOT_STORE/${e[KERNEL_HASH]:-none}" || ! -f "$BOOT_STORE/${e[INITRAMFS_HASH]:-none}" ]]; then
-      boot_log "snapshot $n: its boot files are missing from the store; left out of the menu"
-      continue
-    fi
-    if ! cmdline="$(boot_snapshot_cmdline "$base" "$n")"; then
+    if ! boot_snapshot_renderable "$n" "$base"; then
       boot_log "snapshot $n left out of the menu"
       continue
     fi
+    e=()
+    boot_read_kv "$BOOT_ENTRIES/$n.conf" e
+    cmdline="$(boot_snapshot_cmdline "$base" "$n")" || return 1
+    # The folder heading appears only once an entry goes under it.
+    if ((!shown)); then
+      printf '//Snapshots\n'
+      shown=1
+    fi
     title="$(boot_snapshot_title "$n" "${e[DATE]:-}" "${e[DESCRIPTION]:-}")"
-    boot_render_entry "///$(boot_escape_entry "$title")" \
+    boot_render_entry "///$title" \
       "/gnomarchy/store/${e[KERNEL_HASH]}" "${e[KERNEL_HASH]}" \
       "/gnomarchy/store/${e[INITRAMFS_HASH]}" "${e[INITRAMFS_HASH]}" \
       "$cmdline"

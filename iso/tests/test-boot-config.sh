@@ -119,8 +119,41 @@ new_tree
 "$BOOT" update
 cp "$T/boot/limine.conf" "$T/before.conf"
 rm "$T/boot/vmlinuz-linux"
-t_false "update fails without a kernel" "$BOOT" update
+t_false "update fails without a kernel" "$BOOT" update 2>"$T/log"
+t_true "the missing kernel is reported" grep -q "no kernel with an initramfs" "$T/log"
 t_true "limine.conf is left as it was" cmp -s "$T/before.conf" "$T/boot/limine.conf"
 t_false "no temporary file is left behind" test -e "$T/boot/limine.conf.new"
+
+# non_ascii FILE — succeeds when FILE holds any byte outside printable ASCII.
+non_ascii() { LC_ALL=C grep -q '[^ -~]' "$1"; }
+
+echo "--- snapshot heading is ASCII and matches the default entry"
+new_tree
+mkdir -p "$T/boot/gnomarchy/store" "$T/boot/gnomarchy/entries"
+echo kh >"$T/boot/gnomarchy/store/kh"
+echo ih >"$T/boot/gnomarchy/store/ih"
+# DESCRIPTION holds a two-byte UTF-8 e-acute and a tab; both become spaces.
+printf 'KERNEL_HASH=kh\nINITRAMFS_HASH=ih\nDATE=2026-10-28 10:00\nDESCRIPTION=caf\xc3\xa9 b\tz\n' >"$T/boot/gnomarchy/entries/7.conf"
+LC_ALL=C.UTF-8 "$BOOT" update
+t_true "the heading replaces each non-ASCII byte and the tab with a space" conf_has "///7 | 2026-10-28 10:00 | caf   b z"
+t_false "the menu holds no byte outside printable ASCII" non_ascii "$T/boot/limine.conf"
+LC_ALL=C.UTF-8 "$BOOT" update --default snapshot:7
+t_true "the default names the same heading" conf_has "default_entry: Gnomarchy/Snapshots/7 | 2026-10-28 10:00 | caf   b z"
+
+echo "--- a default must name a snapshot that is in the menu"
+new_tree
+mkdir -p "$T/boot/gnomarchy/store" "$T/boot/gnomarchy/entries"
+echo kh >"$T/boot/gnomarchy/store/kh"
+printf 'KERNEL_HASH=kh\nINITRAMFS_HASH=ih\nDATE=2026-10-28 10:00\nDESCRIPTION=half-copied\n' >"$T/boot/gnomarchy/entries/8.conf"
+"$BOOT" update 2>"$T/log"
+t_true "the snapshot with a missing boot file is left out" grep -q "snapshot 8: its boot files are missing" "$T/log"
+t_false "no empty Snapshots folder when every snapshot is skipped" conf_has "//Snapshots"
+cp "$T/boot/limine.conf" "$T/before.conf"
+t_false "a default on the skipped snapshot fails" "$BOOT" update --default snapshot:8 2>"$T/log"
+t_true "the failed default is reported" grep -q "snapshot 8" "$T/log"
+t_true "limine.conf is left as it was after the failed default" cmp -s "$T/before.conf" "$T/boot/limine.conf"
+echo ih >"$T/boot/gnomarchy/store/ih"
+t_true "the same default succeeds once its files are in the store" "$BOOT" update --default snapshot:8
+t_true "the default names the snapshot" conf_has "default_entry: Gnomarchy/Snapshots/8 | 2026-10-28 10:00 | half-copied"
 
 t_done
