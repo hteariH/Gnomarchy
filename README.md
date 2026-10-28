@@ -80,7 +80,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
    ```bash
    sudo dd if=gnomarchy-linux.iso of=/dev/sdX bs=4M status=progress oflag=sync
    ```
-3. Boot your system in **UEFI mode** with Secure Boot temporarily disabled.
+3. Boot your system in **UEFI or BIOS mode** with Secure Boot temporarily disabled.
 4. The installer starts on TTY1: pick a disk, fill in a short form (keyboard layout, user, password, computer name, timezone, optional LUKS2 encryption), check the summary and watch seven stages run. It lays out Btrfs subvolumes (`@`, `@home`, `@snapshots`, `@var_log`, `@var_cache`), installs Limine for both UEFI and BIOS, and takes a first snapshot.
 
 ### Method 2: Quick Install Over Clean Arch Linux

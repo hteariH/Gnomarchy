@@ -13,8 +13,9 @@ gnomarchy snapshot restore 12
 
 `snap-pac` takes one before and one after every pacman transaction, so a
 package update that goes wrong is already covered. There are no timeline
-snapshots; Snapper keeps the last 10 numbered ones (5 marked important), and
-snapshot 1, "Gnomarchy installed", is never cleaned up.
+snapshots. Snapper prunes only the pairs `snap-pac` takes, keeping the last
+10 (5 marked important). Snapshots from `gnomarchy snapshot create` and
+snapshot 1, "Gnomarchy installed", are kept until you delete them.
 
 ## Trying a snapshot
 

@@ -86,6 +86,7 @@ gnomarchy update
 
 ## Getting more detail
 
+    /var/log/gnomarchy-installer.log      the installer, with the failing stage
     /var/log/gnomarchy-install.log        installation
     journalctl -b 0 /usr/bin/gnome-shell  the current session's shell
     gnomarchy version --verbose           version, theme, migrations applied
