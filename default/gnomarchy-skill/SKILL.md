@@ -28,7 +28,7 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 > ```bash
 > gnomarchy snapshot create "Before agent change: <description of change>"
 > ```
-> This allows the user to immediately roll back any broken state directly from the Limine bootloader menu.
+> Every snapshot appears in the Limine menu, and `gnomarchy snapshot restore <n>` makes one the system.
 
 ---
 
@@ -200,6 +200,9 @@ gnomarchy snapshot list
 
 # Create a snapshot before making system modifications
 gnomarchy snapshot create "Pre-refactor snapshot"
+
+# Make snapshot 12 the system from the next boot on
+gnomarchy snapshot restore 12 --yes
 ```
 
 ---

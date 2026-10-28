@@ -22,8 +22,13 @@ The installer is driven by an answers file on a separate disk labeled
 To reproduce locally:
 
 ```bash
-printf '%s
-'   'GNOMARCHY_DISK=/dev/vda'   'GNOMARCHY_FULLNAME="Test User"'   'GNOMARCHY_USERNAME=citest'   'GNOMARCHY_PASSWORD=test-password'   'GNOMARCHY_ENCRYPT=n' > gnomarchy-unattended.conf
+printf '%s\n' 'GNOMARCHY_DISK=/dev/vda' 'GNOMARCHY_FULLNAME="Test User"' \
+  'GNOMARCHY_USERNAME=citest' 'GNOMARCHY_PASSWORD=test-password' \
+  'GNOMARCHY_ENCRYPT=n' 'GNOMARCHY_HOSTNAME=citest-host' \
+  'GNOMARCHY_TIMEZONE=Europe/Berlin' 'GNOMARCHY_KEYMAP=de' \
+  > gnomarchy-unattended.conf
+# With GNOMARCHY_ENCRYPT=y, add GNOMARCHY_DISK_PASSWORD=<passphrase> (optional;
+# without it the user's password is used).
 
 truncate -s 8M answers.img
 mkfs.vfat -n GNOMARCHY answers.img
@@ -32,7 +37,28 @@ mcopy -i answers.img gnomarchy-unattended.conf ::/
 
 Attach `answers.img` as a second drive and the installer runs without prompts.
 
-The job checks two layers:
+The workflow has these layers:
+
+- **`unit` job** (`iso/tests/unit.sh`, in an `archlinux` container): the boot
+  menu generator, the snapper plugin, the deploy script, the installer's
+  validation and stage rules, and shellcheck. The install job needs it.
+- **Encrypted variant**: the install job runs a `plain` and an `encrypted`
+  variant. The encrypted one is installed and checked offline only.
+- **Snapshot checks in the session boot**: the plain variant's session test
+  also covers the snapshot machinery and hands a snapshot number on.
+- **Third boot, from a snapshot**: the image boots that snapshot, then
+  restores it; the job checks the `@restore-backup-*` subvolume, that `@` is
+  a copy of the snapshot and that writes during the snapshot boot did not
+  reach it.
+
+Not covered by CI:
+
+- Booting in BIOS mode (offline checks only: `limine-bios.sys` on the ESP and
+  the MBR boot code).
+- An encrypted boot (no passphrase entry).
+- The gum screens (the CI install is unattended).
+
+The offline and session layers:
 
 - **Offline** (`iso/tests/verify-install.sh`, run against the mounted image):
   GDM enabled, whisper backend installed, every `gnomarchy-*` command in
@@ -87,7 +113,7 @@ sudo apt install qemu-system-x86 ovmf
    ```
 3. **Verify Installer Workflow**:
    - Confirm Tokyo Night colors display on TTY1.
-   - Verify disk selection prompt identifies the virtual drive (`/dev/vda`).
+   - Choose `/dev/vda` in the disk list, fill the form, check the summary, watch the seven stages.
    - Test both unencrypted and encrypted (LUKS) installation paths.
    - Observe Btrfs subvolume creation (`@`, `@home`, `@snapshots`, `@var_log`, `@var_cache`).
    - Observe package installation and chroot execution of `install.sh`.
@@ -167,7 +193,7 @@ Once logged into the Gnomarchy desktop:
    gnomarchy snapshot create "Test Snapshot"
    gnomarchy snapshot list
    ```
-   - Verify snapshot appears in Snapper and Limine boot menu upon reboot.
+   - Reboot: the snapshot is under Gnomarchy → Snapshots in the Limine menu. Boot it, confirm the 'Booted snapshot' notification, then run `gnomarchy snapshot restore <n>` and reboot.
 
 ---
 
