@@ -371,6 +371,21 @@ done
 ((recoloured)) && ok "a theme change recolours the Limine menu" ||
   no "the Limine menu kept its colours after a theme change" "$(grep '^term_background' "$LIMINE")"
 gnomarchy-theme-set tokyo-night >/dev/null
+# The theme change queues a menu regeneration (a path unit) that renders the
+# default entry. Wait for it to land and finish, or it can run after the
+# hand-over below and reset the third boot's default.
+want_back="$(boot_palette_from_alacritty "$HOME/.local/share/gnomarchy/themes/tokyo-night/alacritty.toml" |
+  sed -n 's/^BACKGROUND=//p')"
+settled=0
+for _ in $(seq 1 30); do
+  if grep -qx "term_background: 00$want_back" "$LIMINE" &&
+    ! systemctl is-active --quiet gnomarchy-boot-theme.service; then
+    settled=1
+    break
+  fi
+  sleep 1
+done
+((settled)) || no "the menu did not return to tokyo-night" "$(grep '^term_background' "$LIMINE")"
 
 sources="$(gsettings get org.gnome.desktop.input-sources sources)"
 [[ "$sources" == "[('xkb', 'de')]" ]] && ok "GNOME input sources are the installer's layout" ||
@@ -405,7 +420,12 @@ fi
 kill "$gui_pid" 2>/dev/null || true  # already gone if it crashed; not a failure
 
 # Hand over to the third boot: the snapshot made above, which, unlike
-# snapshot 1, includes CI's autologin and this script.
+# snapshot 1, includes CI's autologin and this script. No queued regeneration
+# may follow --default, so let the theme service go idle first.
+for _ in $(seq 1 30); do
+  systemctl is-active --quiet gnomarchy-boot-theme.service || break
+  sleep 1
+done
 if [[ "$snap" =~ ^[0-9]+$ ]] && sudo -n "$BOOT_BIN" update --default "snapshot:$snap" &&
   grep -q "^default_entry: Gnomarchy/Snapshots/$snap | " "$LIMINE"; then
   ok "the next boot defaults to snapshot $snap"

@@ -392,27 +392,30 @@ jobs:
           fi
 
           REPORT=/mnt/gnomarchy/home/citest/.local/state/gnomarchy/verify/session.txt
+          RESULT_OK=0
           if sudo test -f "$REPORT"; then
             echo "=== session verification report ==="
             sudo cat "$REPORT"
-            if sudo grep -q "RESULT: SUCCESS" "$REPORT"; then
-              echo "Session verification passed."
-            else
-              echo "::error::Session verification failed."
-              exit 1
-            fi
+            # Hand the snapshot on even when a check failed, so a flaky session
+            # check does not hide the snapshot boot.
             SNAP="$(sudo sed -n 's/^SNAPSHOT: //p' "$REPORT")"
             echo "snapshot=$SNAP" >> "$GITHUB_OUTPUT"
+            if sudo grep -q "RESULT: SUCCESS" "$REPORT"; then
+              echo "Session verification passed."
+              RESULT_OK=1
+            else
+              echo "::error::Session verification failed."
+            fi
           else
             echo "::error::No session report - the desktop never reached the verification step."
             echo "--- session serial tail ---"
             tail -100 session-serial.log 2>/dev/null || true
-            exit 1
           fi
 
           sudo umount -R /mnt/gnomarchy
           sudo qemu-nbd --disconnect /dev/nbd0
           sleep 3
+          [ "$RESULT_OK" -eq 1 ] || exit 1
 
       - name: Boot the snapshot and restore it
         if: always() && steps.session.outputs.snapshot != '' && matrix.variant == 'plain'
@@ -434,7 +437,7 @@ jobs:
             -no-reboot
           echo "qemu exit: $?"
           set -e
-          sudo chown "$USER:$USER" disk.qcow2 snapshot-serial.log
+          sudo chown "$USER:$USER" disk.qcow2 snapshot-serial.log 2>/dev/null || true
 
       - name: Read snapshot-boot results and check the restore
         if: always() && steps.session.outputs.snapshot != '' && matrix.variant == 'plain'
@@ -669,5 +672,6 @@ jobs:
         run: |
           sudo umount -R /mnt/gnomarchy 2>/dev/null || true
           sudo umount /mnt/ci-log /mnt/ci-home 2>/dev/null || true  # only mounted if Collect logs got that far
+          sudo umount /mnt/gnomarchy-top 2>/dev/null || true  # only mounted if the restore check got that far
           sudo cryptsetup close ci-root 2>/dev/null || true  # only open on the encrypted variant
           sudo qemu-nbd --disconnect /dev/nbd0 2>/dev/null || true
