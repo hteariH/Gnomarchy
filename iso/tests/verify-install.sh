@@ -465,9 +465,12 @@ grep -qE '^SNAPPER_CONFIGS="(.* )?root( .*)?"$' "$ROOT/etc/conf.d/snapper" &&
   ok "the boot-theme path unit is enabled" || no "gnomarchy-boot-theme.path is not enabled"
 [[ -x "$ROOT/usr/lib/snapper/plugins/50-gnomarchy-boot" ]] &&
   ok "the snapper plugin is installed" || no "no executable snapper plugin"
-for hook in 95-gnomarchy-boot.hook 95-gnomarchy-limine.hook; do
+for hook in 00-gnomarchy-guard.hook 95-gnomarchy-boot.hook 95-gnomarchy-limine.hook; do
   [[ -f "$ROOT/etc/pacman.d/hooks/$hook" ]] && ok "pacman hook $hook" || no "no pacman hook $hook"
 done
+# A hand-run mkinitcpio -P left the menu naming the old image's hash.
+[[ -x "$ROOT/etc/initcpio/post/gnomarchy-boot" ]] &&
+  ok "the mkinitcpio post hook is installed" || no "no executable mkinitcpio post hook"
 compgen -G "$ROOT/var/lib/pacman/local/snap-pac-[0-9]*" >/dev/null &&
   ok "snap-pac is installed" || no "snap-pac is not installed"
 if grep -q '<description>Gnomarchy installed</description>' "$ROOT/.snapshots/1/info.xml" 2>/dev/null; then

@@ -102,6 +102,26 @@ if [[ "$MODE" == snapshot ]]; then
   ((notified)) && ok "the snapshot notice ran" || no "the snapshot notice never ran"
   echo "--- failed units (diagnostic only) ---"
   systemctl --failed --no-legend --no-pager
+  # A transaction here put the new kernel on the persistent ESP while its
+  # modules vanished with the overlay, so the guard hook must refuse it.
+  if guard_out="$(/usr/local/lib/gnomarchy/boot/gnomarchy-boot guard 2>&1)"; then
+    no "gnomarchy-boot guard lets a snapshot boot through"
+  elif [[ "$guard_out" == *"running snapshot $n"* ]]; then
+    ok "gnomarchy-boot guard refuses a snapshot boot and names it"
+  else
+    no "gnomarchy-boot guard refused without naming snapshot $n" "$guard_out"
+  fi
+  menu_before="$(b2sum /boot/limine.conf)"
+  pkg="$(find /var/cache/pacman/pkg -name 'file-[0-9]*.pkg.tar.zst' | sort | tail -n1)"
+  if [[ -z "$pkg" ]]; then
+    no "no cached package to try a transaction with"
+  elif sudo -n pacman -U --noconfirm "$pkg"; then
+    no "pacman ran a transaction on a snapshot boot"
+  else
+    ok "pacman refuses a transaction on a snapshot boot"
+  fi
+  [[ "$(b2sum /boot/limine.conf)" == "$menu_before" ]] &&
+    ok "the refused transaction left the menu alone" || no "the refused transaction changed limine.conf"
   if gnomarchy snapshot restore "$n" --yes; then
     ok "gnomarchy snapshot restore $n succeeded"
   else

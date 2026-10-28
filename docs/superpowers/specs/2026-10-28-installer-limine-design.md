@@ -64,9 +64,11 @@ scripts from a user's home, so `install/login/boot.sh` deploys them root-owned:
 | `default/boot/gnomarchy-boot` | `/usr/local/lib/gnomarchy/boot/gnomarchy-boot` |
 | `default/boot/lib/*.sh` | `/usr/local/lib/gnomarchy/boot/lib/` |
 | `default/boot/50-gnomarchy-boot` | `/usr/lib/snapper/plugins/50-gnomarchy-boot` |
+| `default/boot/00-gnomarchy-guard.hook` | `/etc/pacman.d/hooks/00-gnomarchy-guard.hook` |
 | `default/boot/95-gnomarchy-boot.hook` | `/etc/pacman.d/hooks/95-gnomarchy-boot.hook` |
 | `default/boot/95-gnomarchy-limine.hook` | `/etc/pacman.d/hooks/95-gnomarchy-limine.hook` |
 | `default/boot/gnomarchy-overlay` | `/etc/initcpio/install/gnomarchy-overlay` |
+| `default/boot/initcpio-post` | `/etc/initcpio/post/gnomarchy-boot` |
 | `default/boot/mkinitcpio.conf` | `/etc/mkinitcpio.conf.d/gnomarchy.conf` |
 | `default/boot/gnomarchy-boot-theme.{path,service}` | `/etc/systemd/system/` |
 | `default/boot/snapper-root.conf` | `/etc/snapper/configs/root` (first deploy only) |
@@ -106,6 +108,7 @@ Runs as root. All writes to the ESP happen under `flock /boot/gnomarchy/lock`.
 | `snapshot-add N` | records snapshot N (below), then `update` |
 | `snapshot-remove N` | drops entry N, garbage-collects `store`, then `update` |
 | `restore N [--yes]` | restores snapshot N (below) |
+| `guard` | exits 1, saying why, on a snapshot boot or with a restore pending; takes no lock and needs no root |
 
 Every failure is reported on stderr and gives a non-zero exit. Nothing is
 suppressed.
@@ -114,6 +117,7 @@ suppressed.
 
 ```
 timeout: 3
+hash_mismatch_panic: no
 default_entry: Gnomarchy/linux
 interface_branding: Gnomarchy
 interface_branding_colour: <theme blue>
@@ -216,8 +220,12 @@ stay and remain restorable from a running system.
 
 | Hook | Trigger | Runs |
 |---|---|---|
-| `95-gnomarchy-boot.hook` | kernel images, `usr/lib/initcpio/*`, mkinitcpio | `gnomarchy-boot update` (after `90-mkinitcpio-install.hook`) |
-| `95-gnomarchy-limine.hook` | the `limine` package | `gnomarchy-boot install` then `update` |
+| `00-gnomarchy-guard.hook` | every package (`Target = *`), `PreTransaction`, `AbortOnFail` | `gnomarchy-boot guard` |
+| `95-gnomarchy-boot.hook` | every package (`Target = *`) | `gnomarchy-boot update` (after `90-mkinitcpio-install.hook`) |
+| `95-gnomarchy-limine.hook` | the `limine` package | `gnomarchy-boot install`; the `Target = *` hook above regenerates the menu |
+
+The mkinitcpio post hook `/etc/initcpio/post/gnomarchy-boot` runs
+`gnomarchy-boot update` after every image build, by pacman or by hand.
 
 ### initramfs
 
@@ -485,7 +493,8 @@ GNOMARCHY_KEYMAP=de
 
 **Snapshots**
 - The snapper config exists and is listed in `/etc/conf.d/snapper`.
-- The plugin is executable and both pacman hooks are present.
+- The plugin is executable, the three pacman hooks are present and the
+  mkinitcpio post hook is executable.
 - snap-pac is installed.
 - Snapshot 1 exists with its description, and it has a menu entry.
 
@@ -623,3 +632,25 @@ All three go in `TESTING.md`.
   there is no crypttab to detect any more.
 - `AGENTS.md` makes no claim about the installer, boot or snapshots and is not
   changed.
+- `95-gnomarchy-limine.hook` runs `install` only: the `Target = *` boot hook
+  regenerates the menu in the same transaction.
+- `00-gnomarchy-guard.hook` (`PreTransaction`, `AbortOnFail`) runs
+  `gnomarchy-boot guard`, which refuses every transaction on a snapshot boot
+  (`gnomarchy.snapshot=` on `/proc/cmdline`) and on the old root after a
+  restore (FSROOT `/@restore-backup-*`). The ESP is persistent there and the
+  root is not, so a kernel upgrade would leave the next normal boot with a
+  kernel and no modules. `gnomarchy update` asks the same guard before it
+  touches anything. An unreadable `/proc/cmdline` or root mount (a bare
+  rescue chroot) warns and lets the transaction through.
+- The mkinitcpio post hook `/etc/initcpio/post/gnomarchy-boot` (mkinitcpio
+  runs every executable there after writing an image) regenerates the menu,
+  so a hand-run `mkinitcpio -P` cannot leave a stale hash. As a second line,
+  the menu sets `hash_mismatch_panic: no`: a mismatch warns and waits for a
+  key instead of panicking. `gnomarchy boot update` regenerates the menu by
+  hand, which an edit of `/etc/kernel/cmdline` needs.
+- `plymouth-set-default-theme -R` rebuilds the initramfs, so the image carries
+  the theme it names; the post hook rehashes the menu.
+- The migration ledger lives in `/home` and is not rolled back by a restore;
+  migrations applied after the snapshot are not re-run. `gnomarchy update`
+  after a restore redeploys the root-side boot tooling from the current
+  repository.

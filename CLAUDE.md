@@ -40,7 +40,7 @@ iso/
   configs/airootfs/root/.automated_script.sh   starts iso/installer/gnomarchy-install on tty1
   tests/                 smoke-test verification scripts
 default/                 files deployed onto the installed system
-  boot/                  gnomarchy-boot, snapper plugin, pacman hooks, initramfs hook (deployed root-owned)
+  boot/                  gnomarchy-boot, snapper plugin, pacman hooks, initcpio install and post hooks (deployed root-owned)
 ```
 
 `install.sh` sources the stages in order and wraps each in `run_stage`, which
@@ -231,7 +231,19 @@ UUID (`b1dcc9dd-…`) is created at install time.
 regenerates the whole file from `/etc/kernel/cmdline`, the kernels on the ESP,
 per-snapshot records in `/boot/gnomarchy/entries/` and the theme in
 `/etc/gnomarchy/boot-theme.conf`. Change the command line in
-`/etc/kernel/cmdline`, never in `limine.conf`.
+`/etc/kernel/cmdline`, never in `limine.conf`, then `gnomarchy boot update`.
+
+What regenerates it: the `Target = *` pacman hook, the snapper plugin, the
+theme path unit, and the mkinitcpio post hook `/etc/initcpio/post/gnomarchy-boot`,
+which catches a hand-run `mkinitcpio -P`. Kernel entries carry a `#b2sum`, so
+a stale menu would otherwise panic; `hash_mismatch_panic: no` turns that into
+a warning.
+
+`00-gnomarchy-guard.hook` runs `gnomarchy-boot guard` before every pacman
+transaction and aborts it on a snapshot boot (`gnomarchy.snapshot=` on the
+command line) or with a restore pending (root FSROOT `/@restore-backup-*`):
+the ESP survives the reboot and the root does not, so a kernel upgrade would
+leave a kernel with no modules. `gnomarchy update` asks the same guard first.
 
 It runs as root from `/usr/local/lib/gnomarchy/boot/`, copied there by
 `default/boot/deploy.sh` (installer, `install.sh`, `gnomarchy update`). Root

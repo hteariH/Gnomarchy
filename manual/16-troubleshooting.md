@@ -74,6 +74,27 @@ git -C ~/.local/share/gnomarchy status -sb
 Machines installed from older ISOs were deployed without one. Recent versions
 of `gnomarchy update` create it automatically.
 
+## A kernel command-line change does nothing
+
+The boot menu is generated from `/etc/kernel/cmdline`, and editing that file
+alone does not regenerate it:
+
+```bash
+gnomarchy boot update
+```
+
+The same applies if Limine warns of a hash mismatch at boot: the menu names a
+kernel or initramfs that has changed since it was written. Press a key to boot
+anyway, then run `gnomarchy boot update`.
+
+## pacman says "this system is running snapshot N"
+
+You booted a snapshot from the menu, and package changes there would be lost
+at the next reboot while the kernel they install would not. Reboot into the
+normal entry, or make the snapshot the system with
+`gnomarchy snapshot restore N` and reboot. "A restore is pending" means a
+restore already ran: reboot first.
+
 ## A command is not found from a keybinding
 
 Every `gnomarchy-*` command must be in `/usr/local/bin` to be reachable from the

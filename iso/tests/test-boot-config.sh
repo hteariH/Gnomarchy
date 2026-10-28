@@ -88,6 +88,7 @@ echo "--- one kernel"
 new_tree
 t_true "update succeeds" "$BOOT" update
 golden "single kernel menu" single.conf
+t_true "a hash mismatch warns instead of panicking" conf_has "hash_mismatch_panic: no"
 
 echo "--- fallback image and a second kernel"
 fallback_bytes "${KVERS[0]}" >"$T/boot/initramfs-linux-fallback.img"
@@ -142,6 +143,21 @@ t_true "the heading replaces each non-ASCII byte and the tab with a space" conf_
 t_false "the menu holds no byte outside printable ASCII" non_ascii "$T/boot/limine.conf"
 LC_ALL=C.UTF-8 "$BOOT" update --default snapshot:7
 t_true "the default names the same heading" conf_has "default_entry: Gnomarchy/Snapshots/7 | 2026-10-28 10:00 | caf   b z"
+
+echo "--- a heading that ends in spaces is trimmed, in the entry and the default"
+new_tree
+mkdir -p "$T/boot/gnomarchy/store" "$T/boot/gnomarchy/entries"
+echo kh >"$T/boot/gnomarchy/store/kh"
+echo ih >"$T/boot/gnomarchy/store/ih"
+# Cut at 60 characters, a description can end in a space; a trailing e-acute
+# becomes two more. Limine trims a heading, so the default must too.
+printf 'KERNEL_HASH=kh\nINITRAMFS_HASH=ih\nDATE=2026-10-28 10:00\nDESCRIPTION=trailing \xc3\xa9\n' >"$T/boot/gnomarchy/entries/9.conf"
+printf 'KERNEL_HASH=kh\nINITRAMFS_HASH=ih\nDATE=2026-10-28 11:00\nDESCRIPTION=\xc3\xa9 \n' >"$T/boot/gnomarchy/entries/10.conf"
+LC_ALL=C.UTF-8 "$BOOT" update --default snapshot:9
+t_true "the heading has no trailing spaces" conf_has "///9 | 2026-10-28 10:00 | trailing"
+t_true "the default names the trimmed heading" conf_has "default_entry: Gnomarchy/Snapshots/9 | 2026-10-28 10:00 | trailing"
+t_true "a description of nothing but spaces leaves no separator" conf_has "///10 | 2026-10-28 11:00"
+t_false "no line in the menu ends in a space" grep -q ' $' "$T/boot/limine.conf"
 
 echo "--- a default must name a snapshot that is in the menu"
 new_tree
@@ -266,6 +282,21 @@ t_true "delete-snapshot-post removes" bash "$PLUGIN" delete-snapshot-post / btrf
 t_false "the entry is gone" grep -q '^///5 | ' "$T/boot/limine.conf"
 unset GNOMARCHY_BOOT_BIN
 
+echo "--- the mkinitcpio post hook regenerates the menu"
+new_tree
+POST="$REPO/default/boot/initcpio-post"
+"$BOOT" update
+# A hand-run mkinitcpio -P: the ESP's initramfs changes under the menu.
+initramfs_bytes "${KVERS[1]}" >"$T/boot/initramfs-linux.img"
+new_hash="$(initramfs_bytes "${KVERS[1]}" | b2sum | cut -d' ' -f1)"
+t_false "the menu is stale before the hook" grep -qF "#$new_hash" "$T/boot/limine.conf"
+t_true "the post hook succeeds" env GNOMARCHY_BOOT_BIN="$BOOT" bash "$POST" "$T/boot/vmlinuz-linux" "$T/boot/initramfs-linux.img"
+t_true "and the menu carries the new image's hash" \
+  conf_has "    module_path: boot():/initramfs-linux.img#$new_hash"
+t_true "without the boot tooling the hook does nothing" \
+  env GNOMARCHY_BOOT_BIN="$T/missing" bash "$POST" "$T/boot/vmlinuz-linux" "$T/boot/initramfs-linux.img" 2>"$T/log"
+t_true "and says so" grep -qF "$T/missing" "$T/log"
+
 # stub NAME SCRIPT — a fake command in $T/bin that logs its arguments.
 stub() {
   mkdir -p "$T/bin"
@@ -349,5 +380,24 @@ stub snapper ''
 stub systemctl ''
 PATH="$T/bin:$PATH" "$BOOT" snapper-init 2>"$T/log"
 t_true "root is added and home is kept" grep -qxF 'SNAPPER_CONFIGS="home root"' "$T/etc/conf.d/snapper"
+
+echo "--- guard: no transaction on a root that is thrown away"
+new_tree
+mkdir -p "$T/proc"
+echo 'root=UUID=1111-2222 rw rootflags=subvol=@ quiet splash' >"$T/proc/cmdline"
+export GNOMARCHY_BOOT_ROOT_FSTYPE=btrfs GNOMARCHY_BOOT_ROOT_FSROOT=/@
+t_true "guard passes on a normal root" "$BOOT" guard 2>"$T/log"
+mkdir -p "$T/boot/gnomarchy"
+t_true "guard takes no lock" timeout 5 flock "$T/boot/gnomarchy/lock" "$BOOT" guard
+echo 'root=UUID=1111-2222 ro rootflags=subvol=@snapshots/12/snapshot quiet systemd.volatile=overlay gnomarchy.snapshot=12' >"$T/proc/cmdline"
+export GNOMARCHY_BOOT_ROOT_FSTYPE=overlay GNOMARCHY_BOOT_ROOT_FSROOT=/
+t_false "guard refuses on a snapshot boot" "$BOOT" guard 2>"$T/log"
+t_true "and names the snapshot" grep -qF "this system is running snapshot 12; changes here are lost at reboot" "$T/log"
+t_true "and the way out" grep -qF "restore it first with gnomarchy snapshot restore 12" "$T/log"
+echo 'root=UUID=1111-2222 rw rootflags=subvol=@ quiet splash' >"$T/proc/cmdline"
+export GNOMARCHY_BOOT_ROOT_FSTYPE=btrfs GNOMARCHY_BOOT_ROOT_FSROOT=/@restore-backup-20261028-101500
+t_false "guard refuses while a restore is pending" "$BOOT" guard 2>"$T/log"
+t_true "and says to reboot" grep -qF "a restore is pending; reboot first" "$T/log"
+unset GNOMARCHY_BOOT_ROOT_FSTYPE GNOMARCHY_BOOT_ROOT_FSROOT
 
 t_done

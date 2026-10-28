@@ -328,7 +328,15 @@ gnomarchy snapshot list
 
 # Make a snapshot the system from the next boot on (asks which, without a number)
 gnomarchy snapshot restore 12
+
+# Regenerate the Limine boot menu after editing /etc/kernel/cmdline
+gnomarchy boot update
 ```
+
+The menu also regenerates itself after every kernel update, snapshot, theme
+change and initramfs rebuild. While a snapshot is booted, pacman and
+`gnomarchy update` refuse to change packages: the snapshot's changes are lost
+at reboot, the kernel they would install is not.
 
 ### Command Center
 ```bash

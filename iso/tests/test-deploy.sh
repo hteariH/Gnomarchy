@@ -23,14 +23,20 @@ echo "--- an encrypted ISO install"
 printf 'DISK=/dev/vda\nESP_PART=2\nENCRYPTED=1\n' >"$D/etc/gnomarchy/boot.conf"
 t_true "deploy succeeds" run_deploy
 t_true "deploy reports completion" grep -qx 'Boot tooling deployed.' "$D/deploy.log"
-for f in usr/local/lib/gnomarchy/boot/gnomarchy-boot usr/lib/snapper/plugins/50-gnomarchy-boot; do
+for f in usr/local/lib/gnomarchy/boot/gnomarchy-boot usr/lib/snapper/plugins/50-gnomarchy-boot \
+  etc/initcpio/post/gnomarchy-boot; do
   t_true "$f is executable" test -x "$D/$f"
 done
 for f in usr/local/lib/gnomarchy/boot/lib/common.sh usr/local/lib/gnomarchy/boot/lib/palette.sh \
-  etc/pacman.d/hooks/95-gnomarchy-boot.hook etc/pacman.d/hooks/95-gnomarchy-limine.hook \
+  etc/pacman.d/hooks/00-gnomarchy-guard.hook etc/pacman.d/hooks/95-gnomarchy-boot.hook \
+  etc/pacman.d/hooks/95-gnomarchy-limine.hook \
   etc/initcpio/install/gnomarchy-overlay etc/systemd/system/gnomarchy-boot-theme.path \
   etc/systemd/system/gnomarchy-boot-theme.service etc/xdg/autostart/gnomarchy-snapshot-notify.desktop; do
   t_true "$f is installed" test -f "$D/$f"
+done
+GUARD="$D/etc/pacman.d/hooks/00-gnomarchy-guard.hook"
+for line in 'When = PreTransaction' 'AbortOnFail' 'Target = *' 'Exec = /usr/local/lib/gnomarchy/boot/gnomarchy-boot guard'; do
+  t_true "the guard hook has: $line" grep -qxF "$line" "$GUARD"
 done
 t_true "the theme path unit is enabled" test -L "$D/etc/systemd/system/paths.target.wants/gnomarchy-boot-theme.path"
 t_eq "the theme file is root:wheel 664" "$(stat -c '%U:%G %a' "$D/etc/gnomarchy/boot-theme.conf")" "root:wheel 664"

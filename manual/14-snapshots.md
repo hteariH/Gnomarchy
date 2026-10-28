@@ -26,12 +26,24 @@ snapshot 1, "Gnomarchy installed", are kept until you delete them.
    memory: anything you change is gone at the next reboot. A notification says
    so and offers to restore it.
 
+Package changes are refused while you run a snapshot: pacman and
+`gnomarchy update` stop with "this system is running snapshot N". The boot
+partition is not part of the snapshot, so a kernel installed there would
+outlive the modules that went with it. Restore the snapshot first if you
+want to keep working from it.
+
 ## Restoring
 
 `gnomarchy snapshot restore <number>` makes a snapshot the system from the
 next boot on. It works from the normal system and from a snapshot you booted.
 The system you had is kept as `@restore-backup-<time>` until the next restore.
-Until you reboot, a second restore is refused.
+Until you reboot, a second restore is refused, and so are package changes.
+
+After the reboot, run `gnomarchy update`. `/home` is not rolled back, and the
+record of applied migrations lives there, so migrations that ran after the
+snapshot was taken are not run again by themselves - their changes to the
+system are gone with the rest. The same update also puts the boot tooling
+from your current Gnomarchy checkout back in place of the snapshot's copy.
 
 ## Limits
 
@@ -40,6 +52,16 @@ Until you reboot, a second restore is refused.
   restored.
 - A snapshot taken under a kernel that is no longer on the EFI partition has
   no menu entry.
+
+## The boot menu
+
+The menu is generated, never edited: kernel updates, snapshots, theme changes
+and every initramfs rebuild (`mkinitcpio -P` included) regenerate it. The
+kernel command line lives in `/etc/kernel/cmdline`; after editing it, run
+
+```bash
+gnomarchy boot update
+```
 
 ## Subvolume layout
 

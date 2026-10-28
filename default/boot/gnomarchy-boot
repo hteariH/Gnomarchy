@@ -3,7 +3,9 @@
 #
 # Runs as root from /usr/local/lib/gnomarchy/boot (root never executes scripts
 # from a user's home). Called by the installer, the pacman hooks, the snapper
-# plugin, the theme path unit and `gnomarchy snapshot restore`.
+# plugin, the mkinitcpio post hook, the theme path unit, `gnomarchy boot
+# update` and `gnomarchy snapshot restore`; `guard` by pacman and `gnomarchy
+# update` before every transaction.
 # Design: docs/superpowers/specs/2026-10-28-installer-limine-design.md
 # shellcheck source-path=SCRIPTDIR
 set -Eeuo pipefail
@@ -21,6 +23,8 @@ source "$BOOT_LIB/install.sh"
 source "$BOOT_LIB/snapper.sh"
 # shellcheck source=lib/restore.sh
 source "$BOOT_LIB/restore.sh"
+# shellcheck source=lib/guard.sh
+source "$BOOT_LIB/guard.sh"
 
 usage() {
   cat <<'EOF'
@@ -32,10 +36,12 @@ Usage: gnomarchy-boot <command>
   snapshot-remove N       drop snapshot N's menu entry
   snapper-init            create the root snapper config and snapshot 1
   restore N               make snapshot N the root filesystem from next boot
+  guard                   fail on a snapshot boot or with a restore pending
 EOF
 }
 
-if [[ $EUID -ne 0 && -z "$BOOT_ROOT" ]]; then
+# guard only reads, so gnomarchy update can ask it before it asks for sudo.
+if [[ $EUID -ne 0 && -z "$BOOT_ROOT" && "${1:-}" != guard ]]; then
   boot_die "must run as root"
 fi
 
@@ -80,6 +86,10 @@ case "$cmd" in
   restore)
     boot_lock
     boot_restore "${1:?restore needs a snapshot number}"
+    ;;
+  guard)
+    # No lock: it writes nothing, and pacman runs it before every transaction.
+    boot_guard
     ;;
   -h | --help | help)
     usage

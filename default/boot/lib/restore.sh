@@ -36,8 +36,8 @@ boot_restore() {
   # old @, parked as @restore-backup-*. Restoring again would park that one and
   # could leave no root to come back to. An overlay root (booted from a
   # snapshot) is not btrfs, so this does not apply there.
-  fstype="$(findmnt -no FSTYPE /)" || boot_die "cannot read the type of the running root"
-  fsroot="$(findmnt -no FSROOT /)" || boot_die "cannot read the subvolume of the running root"
+  fstype="$(boot_root_fstype)" || boot_die "cannot read the type of the running root"
+  fsroot="$(boot_root_fsroot)" || boot_die "cannot read the subvolume of the running root"
   if [[ "$fstype" == btrfs && "$fsroot" == /@restore-backup-* ]]; then
     boot_die "a restore is already pending; reboot before restoring again"
   fi

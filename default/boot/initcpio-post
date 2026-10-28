@@ -1,0 +1,20 @@
+#!/bin/bash
+# mkinitcpio post hook: regenerates the Limine menu after every image build.
+#
+# Kernel entries carry the b2sum of their files, so an initramfs rebuilt by
+# hand (mkinitcpio -P, plymouth-set-default-theme -R) would otherwise stand
+# beside a menu that names the old hash. mkinitcpio runs every executable in
+# /etc/initcpio/post as
+#   <kernel image> <generated image>...
+# after the image is written, and treats a non-zero exit as a build error.
+# The arguments are not needed: the menu is regenerated from the whole ESP.
+set -euo pipefail
+
+BOOT="${GNOMARCHY_BOOT_BIN:-/usr/local/lib/gnomarchy/boot/gnomarchy-boot}"
+
+if [[ ! -x "$BOOT" ]]; then
+  # The boot tooling was removed; there is no menu of ours to keep in step.
+  echo "gnomarchy-boot post hook: no $BOOT; the Limine menu is not regenerated" >&2
+  exit 0
+fi
+exec "$BOOT" update

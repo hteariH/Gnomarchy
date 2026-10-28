@@ -26,6 +26,8 @@ for f in "$SRC"/lib/*.sh; do
   install -Dm644 "$f" "$LIB_DIR/lib/${f##*/}"
 done
 install -Dm755 "$SRC/50-gnomarchy-boot" "$DEST/usr/lib/snapper/plugins/50-gnomarchy-boot"
+install -Dm755 "$SRC/initcpio-post" "$DEST/etc/initcpio/post/gnomarchy-boot"
+install -Dm644 "$SRC/00-gnomarchy-guard.hook" "$DEST/etc/pacman.d/hooks/00-gnomarchy-guard.hook"
 install -Dm644 "$SRC/95-gnomarchy-boot.hook" "$DEST/etc/pacman.d/hooks/95-gnomarchy-boot.hook"
 install -Dm644 "$SRC/95-gnomarchy-limine.hook" "$DEST/etc/pacman.d/hooks/95-gnomarchy-limine.hook"
 install -Dm644 "$SRC/gnomarchy-overlay" "$DEST/etc/initcpio/install/gnomarchy-overlay"
@@ -52,4 +54,9 @@ chown root:wheel "$DEST/etc/gnomarchy/boot-theme.conf"
 chmod 664 "$DEST/etc/gnomarchy/boot-theme.conf"
 
 systemctl --root="${DEST:-/}" enable gnomarchy-boot-theme.path
+# On a running system (gnomarchy update) systemd must reread the units just
+# replaced. A chroot and a test tree have no systemd running to tell.
+if [[ -z "$DEST" && -d /run/systemd/system ]]; then
+  systemctl daemon-reload
+fi
 echo "Boot tooling deployed."

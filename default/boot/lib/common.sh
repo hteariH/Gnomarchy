@@ -42,3 +42,22 @@ boot_hash() {
   sum="$(b2sum "$1")" || return 1
   printf '%s\n' "${sum%% *}"
 }
+
+# The running root's filesystem type and subvolume, as findmnt reports them.
+# GNOMARCHY_BOOT_ROOT_FSTYPE and GNOMARCHY_BOOT_ROOT_FSROOT exist for the
+# tests, whose root is the container's.
+boot_root_fstype() {
+  if [[ -n "${GNOMARCHY_BOOT_ROOT_FSTYPE:-}" ]]; then
+    printf '%s\n' "$GNOMARCHY_BOOT_ROOT_FSTYPE"
+  else
+    findmnt -no FSTYPE /
+  fi
+}
+
+boot_root_fsroot() {
+  if [[ -n "${GNOMARCHY_BOOT_ROOT_FSROOT:-}" ]]; then
+    printf '%s\n' "$GNOMARCHY_BOOT_ROOT_FSROOT"
+  else
+    findmnt -no FSROOT /
+  fi
+}
