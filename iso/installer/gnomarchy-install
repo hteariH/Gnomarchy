@@ -95,7 +95,8 @@ run_stage() {
   # A fresh bash process: errexit is switched off for everything inside a
   # function called as an operand of if, ! or ||, and a subshell inherits that.
   # A new process starts clean whatever context run_stage is called from.
-  bash "$INSTALLER_DIR/lib/run-stage.sh" "$INSTALLER_DIR/lib" "$fn" </dev/null >>"$LOG" 2>&1 &
+  # The passwords go into this one process's environment only, not the installer's.
+  PASSWORD="$PASSWORD" DISK_PASSWORD="$DISK_PASSWORD" bash "$INSTALLER_DIR/lib/run-stage.sh" "$INSTALLER_DIR/lib" "$fn" </dev/null >>"$LOG" 2>&1 &
   pid=$!
   if ((UNATTENDED)); then
     printf '[%d/%d] %s\n' "$((i + 1))" "${#STAGE_FNS[@]}" "${STAGE_TITLES[i]}"
@@ -190,8 +191,11 @@ main() {
   fi
 
   disk_layout
-  # The stages are separate processes; these are what they read.
-  export LOG UNATTENDED DISK ESP_PART ROOT_PART FS_DEV FULLNAME USERNAME PASSWORD     DISK_PASSWORD ENCRYPT TARGET_HOSTNAME TIMEZONE KEYMAP_ID     KB_XKB_LAYOUT KB_XKB_VARIANT KB_CONSOLE_KEYMAP KB_CONSOLE_FONT KB_LATIN KB_LABEL
+  # The stages are separate processes; these are what they read. The two
+  # passwords are not exported: run_stage hands them to the stage alone.
+  export LOG UNATTENDED DISK ESP_PART ROOT_PART FS_DEV FULLNAME USERNAME \
+    ENCRYPT TARGET_HOSTNAME TIMEZONE KEYMAP_ID \
+    KB_XKB_LAYOUT KB_XKB_VARIANT KB_CONSOLE_KEYMAP KB_CONSOLE_FONT KB_LATIN KB_LABEL
   ((UNATTENDED)) || printf '\e[2J'
   for i in "${!STAGE_FNS[@]}"; do
     run_stage "$i"

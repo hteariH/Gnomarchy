@@ -18,11 +18,12 @@ set +eE
 mkdir "$work/lib"
 cp iso/installer/lib/*.sh "$work/lib/"
 cat >"$work/lib/stages.sh" <<'STAGES'
-STAGE_FNS=(stage_fails stage_passes stage_uses_global)
-STAGE_TITLES=("Fails" "Passes" "Uses a global")
+STAGE_FNS=(stage_fails stage_passes stage_uses_global stage_passwords)
+STAGE_TITLES=("Fails" "Passes" "Uses a global" "Passwords")
 stage_fails() { echo one; false; echo notreached; }
 stage_passes() { echo fine; }
 stage_uses_global() { echo "disk=$DISK"; }
+stage_passwords() { echo "own=$PASSWORD/$DISK_PASSWORD"; env; }
 STAGES
 # shellcheck source=/dev/null
 source "$work/lib/stages.sh"
@@ -30,7 +31,9 @@ source "$work/lib/stages.sh"
 INSTALLER_DIR="$work"
 LOG="$work/installer.log"
 UNATTENDED=1
-STAGE_STATE=(wait wait wait)
+STAGE_STATE=(wait wait wait wait)
+PASSWORD=pw-secret
+DISK_PASSWORD=disk-secret
 export LOG UNATTENDED
 export DISK=/dev/test
 
@@ -58,5 +61,12 @@ t_eq "a passing stage reports 0" "$STAGE_RC" 0
 : >"$LOG"
 run_stage 2 >/dev/null
 t_eq "exported globals reach the stage" "$(grep -c '^disk=/dev/test$' "$LOG")" 1
+
+: >"$LOG"
+run_stage 3 >/dev/null
+t_eq "the stage can read the passwords" "$(grep -c '^own=pw-secret/disk-secret$' "$LOG")" 1
+t_eq "a child of the stage does not inherit PASSWORD" "$(grep -c '^PASSWORD=' "$LOG")" 0
+t_eq "nor DISK_PASSWORD" "$(grep -c '^DISK_PASSWORD=' "$LOG")" 0
+t_eq "the installer does not export them" "$(yesno test -z "$(env | grep PASSWORD)")" yes
 
 t_done

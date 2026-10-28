@@ -8,6 +8,10 @@
 set -Eeuo pipefail
 trap 'echo "stage failed: $BASH_COMMAND (line $LINENO, status $?)"' ERR
 
+# The passwords arrive in the environment; keep them as shell variables only,
+# so no child (pacstrap, arch-chroot, install.sh and what it runs) inherits them.
+export -n PASSWORD DISK_PASSWORD
+
 libdir="$1"
 fn="$2"
 # shellcheck source=form.sh
