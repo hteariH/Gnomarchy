@@ -38,7 +38,8 @@ Commands:
                                Fetch/verify theme wallpapers for this machine
   gnome <extensions|hotkeys|scaling|restart>
                                Manage GNOME desktop settings & workflow
-  snapshot <create|list>       Manage Btrfs Snapper rollback snapshots
+  snapshot <create|list|restore>
+                               Btrfs snapshots; restore makes one the system
   agent <list|claude|opencode|pi|aider>
                                Launch or inspect AI coding agents & skills
   webapp <add|list|remove>     Turn websites into isolated desktop applications
@@ -145,8 +146,15 @@ case "$command_group" in
       list)
         exec gnomarchy-snapshot-list
         ;;
+      restore)
+        shift 2
+        exec gnomarchy-snapshot-restore "$@"
+        ;;
+      notify)
+        exec gnomarchy-snapshot-notify
+        ;;
       *)
-        echo "Usage: gnomarchy snapshot <create|list>"
+        echo "Usage: gnomarchy snapshot <create|list|restore>"
         exit 1
         ;;
     esac

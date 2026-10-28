@@ -87,6 +87,20 @@ if [[ -d "$GNOMARCHY_PATH/.git" ]]; then
   chmod +x "$GNOMARCHY_PATH/bin"/* 2>/dev/null
 fi
 
+# --- Boot tooling ------------------------------------------------------------
+# gnomarchy-boot, its snapper plugin and its pacman hooks run as root from
+# root-owned copies; refresh them from the tree the pull just updated.
+if [[ -f /etc/gnomarchy/boot.conf && -f "$GNOMARCHY_PATH/default/boot/deploy.sh" ]]; then
+  step "Updating Boot Tooling"
+  if sudo bash "$GNOMARCHY_PATH/default/boot/deploy.sh" &&
+    sudo /usr/local/lib/gnomarchy/boot/gnomarchy-boot update; then
+    good "Boot menu regenerated"
+  else
+    warn "Boot tooling update FAILED"
+    note_failure "boot tooling"
+  fi
+fi
+
 # --- Migrations ------------------------------------------------------------
 # This is what carries configuration changes onto an already-installed machine.
 if command -v gnomarchy-migrate >/dev/null 2>&1; then

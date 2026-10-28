@@ -1,0 +1,49 @@
+#!/bin/bash
+# Make a snapshot the running system from the next boot on.
+#
+#   gnomarchy snapshot restore [N] [--yes]
+#
+# The current root is kept as @restore-backup-<time> until the next restore.
+set -euo pipefail
+
+BOOT=/usr/local/lib/gnomarchy/boot/gnomarchy-boot
+n=""
+yes=0
+for arg in "$@"; do
+  case "$arg" in
+    --yes | -y) yes=1 ;;
+    *) n="$arg" ;;
+  esac
+done
+
+if [[ ! -x "$BOOT" ]]; then
+  echo "This machine was not installed from the Gnomarchy ISO; there is no Gnomarchy boot menu to restore into." >&2
+  exit 1
+fi
+
+if [[ -z "$n" ]]; then
+  if ! command -v gum >/dev/null; then
+    echo "Usage: gnomarchy snapshot restore <number>" >&2
+    exit 1
+  fi
+  choice="$(sudo snapper --csvout --no-headers -c root list --columns number,date,description |
+    awk -F, '$1 != 0 { printf "%-5s %s  %s\n", $1, substr($2, 1, 16), $3 }' |
+    gum choose --header "Restore which snapshot?")"
+  n="${choice%% *}"
+fi
+
+if [[ ! "$n" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Not a snapshot number: $n" >&2
+  exit 1
+fi
+
+if ((!yes)); then
+  gum confirm "Restore snapshot $n? The current system is kept as a backup until the next restore." || exit 1
+fi
+
+sudo "$BOOT" restore "$n"
+echo "Snapshot $n will be the system after the next reboot."
+
+if ((!yes)) && gum confirm "Reboot now?"; then
+  systemctl reboot
+fi
