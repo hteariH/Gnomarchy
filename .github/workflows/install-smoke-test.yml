@@ -296,7 +296,7 @@ jobs:
           sudo chown -R 1000:1000 /mnt/gnomarchy/home/citest/.config
 
           # Let the verification script end the run.
-          echo 'citest ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff' \
+          echo 'citest ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff, /usr/bin/snapper, /usr/bin/pacman, /usr/local/lib/gnomarchy/boot/gnomarchy-boot' \
             | sudo tee /mnt/gnomarchy/etc/sudoers.d/99-ci-verify > /dev/null
           sudo chmod 440 /mnt/gnomarchy/etc/sudoers.d/99-ci-verify
 
@@ -305,7 +305,7 @@ jobs:
           # menu, and a boot that fails is completely opaque.
           if sudo test -f /mnt/gnomarchy/boot/limine.conf; then
             sudo sed -i 's/quiet splash/console=tty0 console=ttyS0,115200 systemd.log_level=info/' \
-              /mnt/gnomarchy/boot/limine.conf
+              /mnt/gnomarchy/boot/limine.conf /mnt/gnomarchy/etc/kernel/cmdline
             echo "--- limine.conf ---"
             sudo cat /mnt/gnomarchy/boot/limine.conf
           else
@@ -348,6 +348,7 @@ jobs:
           sudo chown "$USER:$USER" disk.qcow2 session-serial.log 2>/dev/null || true
 
       - name: Read session verification results
+        id: session
         if: always() && steps.mount.outputs.mounted == 'true' && matrix.variant == 'plain'
         run: |
           sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
@@ -390,7 +391,7 @@ jobs:
             echo "(no persistent journal)"
           fi
 
-          REPORT=/mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt
+          REPORT=/mnt/gnomarchy/home/citest/.local/state/gnomarchy/verify/session.txt
           if sudo test -f "$REPORT"; then
             echo "=== session verification report ==="
             sudo cat "$REPORT"
@@ -400,10 +401,83 @@ jobs:
               echo "::error::Session verification failed."
               exit 1
             fi
+            SNAP="$(sudo sed -n 's/^SNAPSHOT: //p' "$REPORT")"
+            echo "snapshot=$SNAP" >> "$GITHUB_OUTPUT"
           else
             echo "::error::No session report - the desktop never reached the verification step."
             echo "--- session serial tail ---"
             tail -100 session-serial.log 2>/dev/null || true
+            exit 1
+          fi
+
+          sudo umount -R /mnt/gnomarchy
+          sudo qemu-nbd --disconnect /dev/nbd0
+          sleep 3
+
+      - name: Boot the snapshot and restore it
+        if: always() && steps.session.outputs.snapshot != '' && matrix.variant == 'plain'
+        run: |
+          ACCEL="-accel tcg"
+          MEM=4096
+          if [ "${{ steps.kvm.outputs.available }}" = "true" ]; then
+            ACCEL="-accel kvm -cpu host"
+            MEM=8192
+          fi
+          set +e
+          sudo timeout 15m qemu-system-x86_64 \
+            $ACCEL -smp 4 -m $MEM \
+            -drive if=pflash,format=raw,readonly=on,file=${{ steps.ovmf.outputs.code }} \
+            -drive if=pflash,format=raw,file=./OVMF_VARS.fd \
+            -drive file=disk.qcow2,if=virtio,format=qcow2 \
+            -netdev user,id=n0 -device virtio-net-pci,netdev=n0 \
+            -display none -serial file:snapshot-serial.log \
+            -no-reboot
+          echo "qemu exit: $?"
+          set -e
+          sudo chown "$USER:$USER" disk.qcow2 snapshot-serial.log
+
+      - name: Read snapshot-boot results and check the restore
+        if: always() && steps.session.outputs.snapshot != '' && matrix.variant == 'plain'
+        env:
+          SNAP: ${{ steps.session.outputs.snapshot }}
+        run: |
+          sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2
+          sleep 5
+          ROOT_DEV=${{ steps.mount.outputs.root_dev }}
+          sudo mount -o subvol=@home,ro "$ROOT_DEV" /mnt/gnomarchy
+          REPORT=/mnt/gnomarchy/citest/.local/state/gnomarchy/verify/snapshot.txt
+          if ! sudo test -f "$REPORT"; then
+            echo "::error::No snapshot-boot report - snapshot $SNAP never reached a session."
+            tail -150 snapshot-serial.log || true
+            exit 1
+          fi
+          echo "=== snapshot-boot report ==="
+          sudo cat "$REPORT"
+          sudo umount /mnt/gnomarchy
+
+          sudo mkdir -p /mnt/gnomarchy-top
+          sudo mount -o subvolid=5,ro "$ROOT_DEV" /mnt/gnomarchy-top
+          failed=0
+          if compgen -G "/mnt/gnomarchy-top/@restore-backup-*" > /dev/null; then
+            echo "PASS  the previous root is kept as $(cd /mnt/gnomarchy-top && ls -d @restore-backup-*)"
+          else
+            echo "FAIL  no @restore-backup-* after the restore"; failed=1
+          fi
+          parent="$(sudo btrfs subvolume show /mnt/gnomarchy-top/@ | awk '/Parent UUID:/ { print $3 }')"
+          uuid="$(sudo btrfs subvolume show "/mnt/gnomarchy-top/@snapshots/$SNAP/snapshot" | awk '$1 == "UUID:" { print $2 }')"
+          if [ -n "$uuid" ] && [ "$parent" = "$uuid" ]; then
+            echo "PASS  @ is a copy of snapshot $SNAP"
+          else
+            echo "FAIL  @'s parent is '$parent', snapshot $SNAP is '$uuid'"; failed=1
+          fi
+          if sudo test -e "/mnt/gnomarchy-top/@snapshots/$SNAP/snapshot/var/tmp/gnomarchy-overlay-probe"; then
+            echo "FAIL  a write during the snapshot boot reached the snapshot"; failed=1
+          else
+            echo "PASS  writes during the snapshot boot stayed in the overlay"
+          fi
+          sudo umount /mnt/gnomarchy-top
+          if ! sudo grep -q "RESULT: SUCCESS" "$REPORT" || [ "$failed" -ne 0 ]; then
+            echo "::error::Snapshot boot or restore failed."
             exit 1
           fi
 
@@ -423,8 +497,19 @@ jobs:
           } > artifacts/summary.txt
           cp installer-serial.log artifacts/ 2>/dev/null || true
           cp session-serial.log artifacts/ 2>/dev/null || true
-          sudo cp /mnt/gnomarchy/var/log/gnomarchy-install.log artifacts/ 2>/dev/null || true
-          sudo cp /mnt/gnomarchy/var/tmp/gnomarchy-session-verify.txt artifacts/ 2>/dev/null || true
+          cp snapshot-serial.log artifacts/ 2>/dev/null || true
+          # Read the logs through mounts of their own: by now earlier steps
+          # may have unmounted /mnt/gnomarchy. A failure here only means an
+          # earlier step never got that far, which that step already reported.
+          ROOT_DEV="${{ steps.mount.outputs.root_dev }}"
+          if [ -n "$ROOT_DEV" ]; then
+            sudo mkdir -p /mnt/ci-log /mnt/ci-home
+            sudo mount -o subvol=@var_log,ro "$ROOT_DEV" /mnt/ci-log || true
+            sudo mount -o subvol=@home,ro "$ROOT_DEV" /mnt/ci-home || true
+            sudo cp /mnt/ci-log/gnomarchy-install.log /mnt/ci-log/gnomarchy-installer.log artifacts/ || true
+            sudo cp /mnt/ci-home/citest/.local/state/gnomarchy/verify/*.txt artifacts/ || true
+            sudo umount /mnt/ci-log /mnt/ci-home || true
+          fi
           sudo chown -R "$USER:$USER" artifacts 2>/dev/null || true
           ls -la artifacts/ || true
 
@@ -583,5 +668,6 @@ jobs:
         if: always()
         run: |
           sudo umount -R /mnt/gnomarchy 2>/dev/null || true
+          sudo umount /mnt/ci-log /mnt/ci-home 2>/dev/null || true  # only mounted if Collect logs got that far
           sudo cryptsetup close ci-root 2>/dev/null || true  # only open on the encrypted variant
           sudo qemu-nbd --disconnect /dev/nbd0 2>/dev/null || true
