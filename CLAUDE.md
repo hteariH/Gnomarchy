@@ -192,12 +192,12 @@ mcopy -i answers.img gnomarchy-unattended.conf ::/
 ## Diagnosing a failure
 
 ```bash
-/var/log/gnomarchy-installer.log      the installer's own log; the [n/7] lines show the stage
-/var/log/gnomarchy-install.log        installation; STAGE markers show where it stopped
-/var/log/pacman.log                   gnomarchy-boot output from the pacman hooks
+/var/log/gnomarchy-installer.log            the installer's own log; the [n/7] lines show the stage
+/var/log/gnomarchy-install.log              installation; STAGE markers show where it stopped
+/var/log/pacman.log                         gnomarchy-boot output from the pacman hooks
 journalctl --user -t gnomarchy-first-run    desktop configuration
 journalctl --user -t gnomarchy-verify       the CI session check
-gnomarchy version --verbose           version, theme, migrations applied
+gnomarchy version --verbose                 version, theme, migrations applied
 ```
 
 The install log is written by `install.sh` teeing into it. Before that existed,

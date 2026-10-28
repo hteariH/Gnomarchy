@@ -12,8 +12,9 @@ Boot the ISO; the installer starts on its own on the first console.
    to search). Encryption is optional; the disk password can be the same as
    your own.
 3. **Summary.** Check it. *Edit* goes back to the form with your answers
-   kept except the passwords, which are asked again; nothing is written until
-   you choose *Install*.
+   kept for the keyboard layout, names, computer name and timezone; the
+   passwords and the encryption choice are asked again. Nothing is written
+   until you choose *Install*.
 4. **Progress.** Seven stages. If one fails, the screen shows the end of the
    log and offers the full log, a shell, or power off. The log is
    `/var/log/gnomarchy-installer.log`, copied to the installed system.
