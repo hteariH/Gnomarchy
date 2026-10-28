@@ -1,7 +1,7 @@
 #!/bin/bash
 # Every bundled theme must yield a complete Limine palette.
 set -u
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../.." || exit 1
 # shellcheck source=iso/tests/lib/assert.sh
 source iso/tests/lib/assert.sh
 # shellcheck source=default/boot/lib/palette.sh
@@ -26,7 +26,8 @@ done
 
 tmp="$(mktemp)"
 printf '[colors.primary]\nbackground = "#000000"\n' >"$tmp"
-t_false "a palette with missing colours is rejected" boot_palette_from_alacritty "$tmp"
+err="$(boot_palette_from_alacritty "$tmp" 2>&1)" && t_no "a palette with missing colours is rejected" || t_ok "a palette with missing colours is rejected"
+t_true "the error names the missing colour" grep -q "no primary.foreground" <<<"$err"
 rm -f "$tmp"
 
 t_done

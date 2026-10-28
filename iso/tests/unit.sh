@@ -4,7 +4,7 @@
 #
 #   docker run --rm -v "$PWD:/w" -w /w archlinux:latest bash iso/tests/unit.sh --deps
 set -uo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../.." || exit 1
 
 if [[ "${1:-}" == --deps ]]; then
   pacman -Sy --noconfirm --needed kbd xkeyboard-config tzdata shellcheck diffutils >/dev/null || exit 1
