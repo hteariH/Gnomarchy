@@ -484,6 +484,11 @@ fi
   ok "snapshot 1 is in the boot menu" || no "snapshot 1 is not in the boot menu"
 
 # --- The installer's answers ------------------------------------------------
+# In CI the answers must arrive; an unset variable would otherwise skip every
+# check below without a word (sudo -E dropped them once).
+if [[ -n "${CI:-}" && -z "${GNOMARCHY_TEST_HOSTNAME:-}" ]]; then
+  no "GNOMARCHY_TEST_* variables did not reach the script" "CI is set but GNOMARCHY_TEST_HOSTNAME is not; the environment was dropped on the way in"
+fi
 if [[ -n "${GNOMARCHY_TEST_HOSTNAME:-}" ]]; then
   [[ "$(<"$ROOT/etc/hostname")" == "$GNOMARCHY_TEST_HOSTNAME" ]] &&
     ok "hostname is $GNOMARCHY_TEST_HOSTNAME" || no "hostname is not $GNOMARCHY_TEST_HOSTNAME" "$(<"$ROOT/etc/hostname")"
