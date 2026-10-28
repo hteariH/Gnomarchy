@@ -40,6 +40,9 @@ new_tree() {
   set_esp_kernel "${KVERS[0]}"
   echo 'root=UUID=1111-2222 rw rootflags=subvol=@ quiet splash' >"$T/etc/kernel/cmdline"
   boot_palette_from_alacritty "$REPO/themes/tokyo-night/alacritty.toml" >"$T/etc/gnomarchy/boot-theme.conf"
+  # A large ESP size keeps the budget out of every case that is not about it;
+  # otherwise usage would come from the host's df.
+  export GNOMARCHY_BOOT_ESP_SIZE_KB=10000000
 }
 
 # add_snapshot N DATE DESCRIPTION [KERNEL_VERSION] — a snapper snapshot as
@@ -204,6 +207,30 @@ t_false "snapshot-add refuses" "$BOOT" snapshot-add 2 2>"$T/log"
 t_false "and records nothing" test -e "$T/boot/gnomarchy/entries/2.conf"
 t_true "the menu still updates" "$BOOT" update
 
+echo "--- an info.xml without a date stores nothing"
+new_tree
+add_snapshot 2 "2026-10-27 09:15:00" "good"
+"$BOOT" snapshot-add 2 2>"$T/log"
+set_esp_kernel "${KVERS[1]}"
+add_snapshot 3 "2026-10-28 14:02:11" "undated" "${KVERS[1]}"
+sed -i '/<date>/d' "$T/.snapshots/3/info.xml"
+t_false "snapshot-add refuses it" "$BOOT" snapshot-add 3 2>"$T/log"
+t_true "and says why" grep -q "no readable date" "$T/log"
+t_false "and records nothing" test -e "$T/boot/gnomarchy/entries/3.conf"
+t_eq "and the store is unchanged" "$(find "$T/boot/gnomarchy/store" -type f | wc -l)" "2"
+
+echo "--- a full ESP: a copy that does not fit records nothing"
+PAD_KB=1
+new_tree
+add_snapshot 2 "2026-10-27 09:00:00" "full"
+# ulimit -f caps file size, so cp fails the way it does on a full ESP.
+t_false "snapshot-add fails when the copy does not fit" \
+  bash -c 'ulimit -f 1; exec "$0" snapshot-add "$1"' "$BOOT" 2 2>"$T/log"
+t_true "and says why" grep -q "no room on the ESP for vmlinuz-linux" "$T/log"
+t_false "and records nothing" test -e "$T/boot/gnomarchy/entries/2.conf"
+t_eq "and leaves no temporary file behind" "$(find "$T/boot" -name '*.tmp' | wc -l)" "0"
+PAD_KB=0
+
 echo "--- the ESP budget drops the oldest entries"
 PAD_KB=100
 new_tree
@@ -221,7 +248,7 @@ t_false "the third pushes out the oldest" test -e "$T/boot/gnomarchy/entries/2.c
 t_true "the newer two remain" test -e "$T/boot/gnomarchy/entries/3.conf" -a -e "$T/boot/gnomarchy/entries/4.conf"
 t_true "the snapshot itself is untouched" test -d "$T/.snapshots/2/snapshot"
 t_true "the drop is reported" grep -q "dropping the menu entry of snapshot 2" "$T/log"
-unset GNOMARCHY_BOOT_ESP_SIZE_KB
+export GNOMARCHY_BOOT_ESP_SIZE_KB=10000000
 PAD_KB=0
 
 echo "--- the snapper plugin"

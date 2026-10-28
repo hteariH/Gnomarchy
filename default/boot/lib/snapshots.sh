@@ -32,15 +32,32 @@ boot_snapshot_kernel_version() {
 }
 
 # boot_store_put FILE HASH — copy once; ten snapshots of one kernel share it.
+# errexit is off inside this function when a caller tests it, so every step
+# that can fail is checked by hand. A full ESP fails the copy; a copy whose
+# hash differs from HASH (the source changed while copying) fails the verify.
 boot_store_put() {
-  mkdir -p "$BOOT_STORE"
+  local name="${1##*/}" tmp="$BOOT_STORE/$2.tmp" got
+  mkdir -p "$BOOT_STORE" || return 1
   [[ -f "$BOOT_STORE/$2" ]] && return 0
-  cp "$1" "$BOOT_STORE/$2.tmp"
-  mv -f "$BOOT_STORE/$2.tmp" "$BOOT_STORE/$2"
+  if ! cp "$1" "$tmp"; then
+    rm -f "$tmp"
+    boot_log "no room on the ESP for $name"
+    return 1
+  fi
+  if ! got="$(boot_hash "$tmp")" || [[ "$got" != "$2" ]]; then
+    rm -f "$tmp"
+    boot_log "copy of $name did not verify; it changed while it was copied"
+    return 1
+  fi
+  mv -f "$tmp" "$BOOT_STORE/$2" || {
+    rm -f "$tmp"
+    boot_log "could not place $name in the store"
+    return 1
+  }
 }
 
 boot_snapshot_add() {
-  local n="$1" info kernel version kh ih date desc base
+  local n="$1" info kernel version kh ih taken desc base
   if [[ ! "$n" =~ ^[1-9][0-9]*$ ]]; then
     boot_log "snapshot number must be a positive integer, got '$n'"
     return 1
@@ -61,21 +78,32 @@ boot_snapshot_add() {
     return 0
   fi
 
-  kh="$(boot_hash "$BOOT_ESP/vmlinuz-$kernel")"
-  ih="$(boot_hash "$BOOT_ESP/initramfs-$kernel.img")"
-  boot_store_put "$BOOT_ESP/vmlinuz-$kernel" "$kh"
-  boot_store_put "$BOOT_ESP/initramfs-$kernel.img" "$ih"
-
-  date="$(boot_info_field "$info" date)"
-  if [[ -z "$date" ]] || ! date="$(date -d "$date UTC" '+%Y-%m-%d %H:%M')"; then
+  # Everything read from info.xml is checked before the store is touched, so a
+  # bad snapshot leaves the store as it was.
+  taken="$(boot_info_field "$info" date)"
+  if [[ -z "$taken" ]] || ! taken="$(date -d "$taken UTC" '+%Y-%m-%d %H:%M')"; then
     boot_log "snapshot $n: no readable date in $info"
     return 1
   fi
   desc="$(boot_clean_text "$(boot_info_field "$info" description)")"
 
+  kh="$(boot_hash "$BOOT_ESP/vmlinuz-$kernel")"
+  ih="$(boot_hash "$BOOT_ESP/initramfs-$kernel.img")"
+
+  # Free room before copying: the older entries are the ones to lose.
+  boot_enforce_budget
+  if ! boot_store_put "$BOOT_ESP/vmlinuz-$kernel" "$kh"; then
+    boot_log "snapshot $n gets no menu entry"
+    return 1
+  fi
+  if ! boot_store_put "$BOOT_ESP/initramfs-$kernel.img" "$ih"; then
+    boot_log "snapshot $n gets no menu entry"
+    return 1
+  fi
+
   mkdir -p "$BOOT_ENTRIES"
   printf 'KERNEL=%s\nVERSION=%s\nKERNEL_HASH=%s\nINITRAMFS_HASH=%s\nDATE=%s\nDESCRIPTION=%s\n' \
-    "$kernel" "$version" "$kh" "$ih" "$date" "$desc" >"$BOOT_ENTRIES/$n.conf.tmp"
+    "$kernel" "$version" "$kh" "$ih" "$taken" "$desc" >"$BOOT_ENTRIES/$n.conf.tmp"
   mv -f "$BOOT_ENTRIES/$n.conf.tmp" "$BOOT_ENTRIES/$n.conf"
   boot_log "snapshot $n added to the boot menu (kernel $version)"
   boot_enforce_budget
@@ -114,13 +142,21 @@ boot_store_gc() {
 # Percent of the ESP in use. GNOMARCHY_BOOT_ESP_SIZE_KB exists for the tests,
 # whose ESP is a plain directory.
 boot_esp_usage() {
-  local used
+  local pct="" used
   if [[ -n "${GNOMARCHY_BOOT_ESP_SIZE_KB:-}" ]]; then
-    used="$(du -sk --apparent-size "$BOOT_ESP" | cut -f1)"
-    printf '%s\n' $((used * 100 / GNOMARCHY_BOOT_ESP_SIZE_KB))
+    used="$(du -sk --apparent-size "$BOOT_ESP" | cut -f1)" || used=""
+    if [[ "$used" =~ ^[0-9]+$ ]] && ((GNOMARCHY_BOOT_ESP_SIZE_KB > 0)); then
+      pct=$((used * 100 / GNOMARCHY_BOOT_ESP_SIZE_KB))
+    fi
   else
-    df -P "$BOOT_ESP" | awk 'NR == 2 { sub("%", "", $5); print $5 }'
+    pct="$(df -P "$BOOT_ESP" | awk 'NR == 2 { sub("%", "", $5); print $5 }')" || pct=""
   fi
+  # Unknown usage skips enforcement (0 is under 80) rather than failing the add.
+  if [[ ! "$pct" =~ ^[0-9]+$ ]]; then
+    boot_log "cannot read ESP usage; skipping the ESP budget"
+    pct=0
+  fi
+  printf '%s\n' "$pct"
 }
 
 # Keep the ESP at or under 80%: drop menu entries oldest first. The snapshots
