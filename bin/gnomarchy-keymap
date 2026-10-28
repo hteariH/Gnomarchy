@@ -168,13 +168,13 @@ apply_gnome() {
   gsettings set "$WM" switch-applications "['<Super>Tab', '<Alt>Tab']"
   gsettings reset "$WM" switch-input-source 2>/dev/null || true
 
-  register_slots custom0 custom1 custom2 custom3 custom4 custom5 custom6 custom7 custom8
+  # custom5 is the Omarchy layout's system menu; this layout has nothing on it.
+  register_slots custom0 custom1 custom2 custom3 custom4 custom6 custom7 custom8
   set_custom custom0 'Terminal' 'gnome-terminal' '<Super>Return'
   set_custom custom1 'Browser' "$BROWSER_CMD" '<Super>b'
   set_custom custom2 'Files' 'nautilus' '<Super>e'
   set_custom custom3 'Annotate Screenshot' 'gnomarchy-capture annotate' '<Control>Print'
   set_custom custom4 'Voxtype AI Dictation' 'gnomarchy voxtype toggle' '<Super>d'
-  set_custom custom5 'Retro Screensaver' 'gnomarchy screensaver' '<Super>Escape'
   set_custom custom6 'Gnomarchy Menu' 'gnomarchy-menu' '<Super><Alt>space'
   set_custom custom7 'Keybindings' 'gnomarchy-keybindings' "$KEYS_BINDING"
   set_custom custom8 'Manual' 'gnomarchy-manual' "$MANUAL_BINDING"
@@ -231,7 +231,6 @@ EOF
   Super + B                 browser
   Super + E                 file manager
   Super + Alt + Space       Gnomarchy menu
-  Super + Escape            screensaver
   $(printf '%-24s' "$KEYS_LABEL")searchable keybindings
   $(printf '%-24s' "$MANUAL_LABEL")the manual
   Super + T                 cycle the zone layout (Tiling Shell)

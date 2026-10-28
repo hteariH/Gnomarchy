@@ -50,7 +50,7 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys next "['<Shift>AudioP
 # Custom Keybindings Slot Setup
 BINDING_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
-  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/', '$BINDING_PATH/custom4/', '$BINDING_PATH/custom5/', '$BINDING_PATH/custom6/', '$BINDING_PATH/custom7/', '$BINDING_PATH/custom8/']"
+  "['$BINDING_PATH/custom0/', '$BINDING_PATH/custom1/', '$BINDING_PATH/custom2/', '$BINDING_PATH/custom3/', '$BINDING_PATH/custom4/', '$BINDING_PATH/custom6/', '$BINDING_PATH/custom7/', '$BINDING_PATH/custom8/']"
 
 # 1. Terminal (Super + Return)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom0/ name 'Terminal'
@@ -77,22 +77,20 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BI
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom4/ command 'gnomarchy voxtype toggle'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom4/ binding '<Super>d'
 
-# 6. Retro Terminal Screensaver (Super + Escape)
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ name 'Retro Screensaver'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ command 'gnomarchy screensaver'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom5/ binding '<Super>Escape'
+# custom5 is unused here: it was the screensaver, which is gone. The Omarchy
+# layout (gnomarchy keymap omarchy) puts the system menu in it.
 
-# 7. Gnomarchy Command Center Menu (Super + Alt + Space)
+# 6. Gnomarchy Command Center Menu (Super + Alt + Space)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ name 'Gnomarchy Menu'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ command 'gnomarchy-menu'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom6/ binding '<Super><Alt>space'
 
-# 8. Searchable Keybindings (Super + K)
+# 7. Searchable Keybindings (Super + K)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom7/ name 'Keybindings'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom7/ command 'gnomarchy-keybindings'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom7/ binding '<Super>k'
 
-# 9. The Manual (Super + Shift + K)
+# 8. The Manual (Super + Shift + K)
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom8/ name 'Manual'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom8/ command 'gnomarchy-manual'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$BINDING_PATH/custom8/ binding '<Super><Shift>k'

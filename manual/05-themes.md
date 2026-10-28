@@ -14,7 +14,6 @@ gnomarchy theme current
 - the Papirus icon variant, which follows the light or dark mode
 - GTK3 and GTK4 window colours, generated from the theme palette
 - GNOME Terminal - all 16 ANSI colours, plus background and foreground
-- Alacritty, if you use it as a secondary terminal
 - Neovim, through a LazyVim colorscheme
 - btop
 - The wallpaper
@@ -49,7 +48,6 @@ themes take precedence over bundled ones with the same name.
 
 Do not hand-edit these; they are rewritten on every theme switch:
 
-    ~/.config/alacritty/colors.toml
     ~/.config/btop/themes/current.theme
     ~/.config/nvim/lua/plugins/theme.lua
     ~/.config/nvim/lua/plugins/gnomarchy-colorscheme.lua

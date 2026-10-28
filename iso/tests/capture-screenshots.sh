@@ -113,6 +113,11 @@ close_launched() {
   for pid in "${launched_pids[@]}"; do
     kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
   done
+  # GNOME Terminal's windows belong to gnome-terminal-server, not to the client
+  # launched above, so they close when the program inside them exits. Nothing
+  # to end is the normal case for every other stage.
+  pkill -x btop || true
+  pkill -x nvim || true
   launched_pids=()
   sleep 4
 }
@@ -164,10 +169,10 @@ if [[ "$phase" == "1" ]]; then
   stage 05-control-center-manual
   close_launched
 
-  launch alacritty -e btop
+  launch gnome-terminal --wait -- btop
   stage 06-terminal-btop
 
-  launch alacritty -e nvim "$HOME/.local/share/gnomarchy/README.md"
+  launch gnome-terminal --wait -- nvim "$HOME/.local/share/gnomarchy/README.md"
   stage 07-neovim
   close_launched
 
@@ -178,7 +183,7 @@ if [[ "$phase" == "1" ]]; then
   # The theme engine is the headline feature and the one that photographs
   # best, so it gets a stage per theme with a terminal and a GTK window open -
   # both of which the switch repaints.
-  launch alacritty -e btop
+  launch gnome-terminal --wait -- btop
   launch nautilus
   n=9
   for theme in kanagawa gruvbox rose-pine catppuccin-latte; do

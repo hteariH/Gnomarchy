@@ -23,7 +23,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 ## Highlights & Features
 
 - **⌨️ Command Center (`Super + Alt + Space`)**: A GTK application with three pages—Menu, Keybindings and Manual—covering themes, web apps, screen capture, snapshots, updates and power actions, rebindable shortcuts, and the full manual. Also opens on `Super + K` (Keybindings) and `Super + Shift + K` (Manual).
-- **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Alacritty, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
+- **🎨 Unified Cross-Desktop Theme Engine**: Change your entire system theme—GNOME dark/light mode, Libadwaita accent color, GTK3/GTK4 window colors, wallpaper, GNOME Terminal, Neovim (LazyVim), and btop—with a single command (`gnomarchy theme set <name>`).
 - **🧩 Zone Tiling**: Tiling Shell, configured so nothing moves unless you move it — hold Ctrl while dragging to pick a zone, drag to the top for snap assist, `Super+Shift+arrows` to throw a window into the next tile.
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
 - **🌐 Web App Generator (`gnomarchy webapp`)**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles, auto-fetched favicons, and Dash to Dock pinning.
@@ -33,7 +33,6 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🤖 AI Agent OS Control Layer & Lifecycle Hooks**: Pre-installed agent skill (`AGENTS.md`) and hooks directory (`~/.config/gnomarchy/hooks/`) allowing Claude Code, Antigravity, OpenCode, or user scripts to orchestrate and react to system events.
 - **🛡️ Bootable Btrfs Snapshots**: Snapper takes a snapshot before and after every pacman transaction, and each one appears in the Limine boot menu. Boot one to try it — changes stay in memory — and `gnomarchy snapshot restore` makes it the system.
 - **⚡ Fast Shutdown Tuning**: Systemd timeout stop limits tuned from 90s down to 10s for instantaneous power-offs and reboots.
-- **👾 Retro Terminal Screensaver (`gnomarchy screensaver`)**: Fullscreen matrix rain screensaver triggered via `<Super>Escape`.
 - **🛡️ Default Privacy Browser (Brave Origin)**: **Brave Origin** pre-configured as the default system browser—completely debloated of crypto, AI (Leo), rewards, and telemetry, delivering uncompromising speed and ad-blocking out of the box.
 - **🖥️ Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (GNOME Terminal, Brave Origin, Files, VS Code, Bazaar App Store).
 - **📝 VS Code as the Default Editor**: Preinstalled from the official Arch repository and wired up as the graphical default for source and text files. `$EDITOR` resolves to `code --wait` under a graphical session and `nano` in a TTY or over SSH. Neovim stays installed and themed for those who prefer it.
@@ -65,7 +64,6 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 | <kbd>Super</kbd> + <kbd>7</kbd> – <kbd>9</kbd> | GNOME's app switcher: focus or launch the Nth pinned app |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd> – <kbd>6</kbd> | Move focused window to workspace 1 through 6 |
 | <kbd>Super</kbd> + <kbd>D</kbd> | **Voxtype**: Toggle AI Speech-to-Text Dictation |
-| <kbd>Super</kbd> + <kbd>Escape</kbd> | **Screensaver**: Fullscreen Retro Matrix terminal screensaver |
 | <kbd>Print</kbd> | Native GNOME interactive screenshot & recording grabber |
 | <kbd>Ctrl</kbd> + <kbd>Print</kbd> | Region capture (grim + slurp) straight into the **Satty** annotation editor |
 
@@ -99,7 +97,7 @@ Control the desktop and OS layer using the `gnomarchy` CLI:
 
 ### Unified Theme Engine (22 Built-in Themes)
 
-Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every theme carries a Libadwaita accent color, generated GTK3/GTK4 window colors, a 16-color ANSI palette applied to both GNOME Terminal and Alacritty, a Neovim colorscheme, a btop system monitor theme, and the matching Papirus icon variant.
+Gnomarchy includes **22 built-in themes** (18 Dark, 4 Light) matching the complete Omarchy palette suite. Every theme carries a Libadwaita accent color, generated GTK3/GTK4 window colors, a 16-color ANSI palette applied to GNOME Terminal, a Neovim colorscheme, a btop system monitor theme, and the matching Papirus icon variant.
 
 Wallpapers are **downloaded at install time** from the upstream Omarchy repository (pinned commit, every file checksum-verified) into `/usr/share/backgrounds/gnomarchy/<theme>/`. Gnomarchy does not redistribute them — see [BACKGROUNDS.md](BACKGROUNDS.md) for the provenance and licensing reasoning. Each theme also ships a small generated SVG wallpaper as an offline fallback, and you can override either with your own images in `~/.config/gnomarchy/backgrounds/<theme>/`.
 

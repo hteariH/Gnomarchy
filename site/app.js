@@ -132,7 +132,7 @@
     theme: {
       cmd: 'gnomarchy theme set nord',
       output: 'Applied theme: nord',
-      note: 'Terse on purpose. The palette reaches Alacritty, GNOME Terminal, ' +
+      note: 'Terse on purpose. The palette reaches GNOME Terminal, ' +
             'GTK 3 and 4, Neovim, btop, the GNOME accent and the wallpaper — ' +
             'all generated from the theme’s alacritty.toml.'
     },
@@ -174,7 +174,6 @@ Snapshot created successfully.`,
   Super + B                 browser
   Super + E                 file manager
   Super + Alt + Space       Gnomarchy menu
-  Super + Escape            screensaver
   Super + K                 searchable keybindings
   Super + Shift + K         the manual
   Super + T                 cycle the zone layout (manual tiling)

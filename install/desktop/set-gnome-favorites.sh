@@ -37,7 +37,7 @@ add_first_available \
   "com.brave.Browser.desktop" \
   "chromium.desktop"
 
-add_first_available "org.gnome.Terminal.desktop" "alacritty.desktop"
+add_first_available "org.gnome.Terminal.desktop"
 add_first_available "org.gnome.Nautilus.desktop"
 add_first_available "code-oss.desktop" "visual-studio-code.desktop" "code.desktop"
 add_first_available "io.github.kolunmi.Bazaar.desktop"

@@ -50,7 +50,6 @@ Commands:
   reminder <time|dur> <msg>    Schedule desktop notification reminders
   capture <annotate|region|screen>
                                Screenshot, optionally into the Satty annotator
-  screensaver                  Launch retro fullscreen Matrix terminal screensaver
   hook <run|list>              Trigger or inspect Gnomarchy lifecycle hooks
   update                       Perform system & Gnomarchy configuration updates
   migrate [--list]             Apply pending Gnomarchy migrations
@@ -199,9 +198,6 @@ case "$command_group" in
   capture)
     shift
     exec gnomarchy-capture "$@"
-    ;;
-  screensaver)
-    exec gnomarchy-screensaver
     ;;
   hook)
     shift

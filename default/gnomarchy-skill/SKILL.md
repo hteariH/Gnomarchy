@@ -34,7 +34,7 @@ Gnomarchy is an opinionated, developer-first Arch Linux distribution built with:
 
 ## 1. Theme Management
 
-Gnomarchy syncs desktop themes across GNOME (accent color, dark/light mode, wallpaper), Alacritty terminal, Neovim, and btop.
+Gnomarchy syncs desktop themes across GNOME (accent color, dark/light mode, wallpaper), GNOME Terminal, Neovim, and btop.
 
 ```bash
 # List all 22 available themes
