@@ -413,6 +413,23 @@ sources="$(gsettings get org.gnome.desktop.input-sources sources)"
 tz="$(timedatectl show -p Timezone --value)"
 [[ "$tz" == Europe/Berlin ]] && ok "the timezone is Europe/Berlin" || no "the timezone is $tz"
 
+# --- Windows apps: WinBoat is opt-in, its prerequisites are not -------------
+# WinBoat itself is not installed here (AUR, and a Windows download), but
+# what it needs from the base install is: Docker running, the user in its
+# group from the first login on, FreeRDP. KVM is not checked: this session
+# runs in a VM without nested virtualization.
+if windows_status="$(gnomarchy windows status 2>&1)"; then
+  ok "gnomarchy windows status runs"
+else
+  no "gnomarchy windows status failed" "$windows_status"
+fi
+[[ "$windows_status" == *"not installed (gnomarchy windows install)"* ]] &&
+  ok "WinBoat is not installed until asked for" || no "WinBoat status is unexpected" "$windows_status"
+[[ "$windows_status" == *"Docker: the service is running"* ]] &&
+  ok "Docker is running for WinBoat" || no "Docker is not running" "$windows_status"
+[[ "$windows_status" == *"is in the docker group"* ]] &&
+  ok "the user is in the docker group in the session" || no "the session lacks the docker group" "$windows_status"
+
 # --- The control center ----------------------------------------------------
 # GJS has no compile step, so a syntax error or a bad import is invisible until
 # something runs the app. An application that owns its D-Bus name has parsed

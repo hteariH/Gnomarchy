@@ -125,13 +125,8 @@ grim
 slurp
 satty
 libnotify
-cmatrix
 imagemagick
 perl-image-exiftool
 sox
 whisper-cpp
 ydotool
-qemu-desktop
-edk2-ovmf
-swtpm
-dnsmasq

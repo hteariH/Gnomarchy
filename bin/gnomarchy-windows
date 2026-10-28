@@ -1,182 +1,193 @@
 #!/bin/bash
+# Windows applications through WinBoat (https://www.winboat.app).
+#
+# WinBoat runs Windows in a Docker container and opens its applications as
+# ordinary desktop windows over FreeRDP. It is opt-in: it is AUR-only, and the
+# container needs KVM, several GB of RAM and a Windows download.
+#
+#   gnomarchy windows install   install WinBoat: paru winboat-bin, else the
+#                               release AppImage (checksum-pinned)
+#   gnomarchy windows status    what WinBoat needs, and whether this machine has it
+#   gnomarchy windows           start WinBoat
+set -eEo pipefail
 
-# Gnomarchy Windows: One-Command Hardware-Accelerated Windows 11 VM
-# Uses KVM, VirtIO, and TPM 2.0 (swtpm)
-set -e
-
-VM_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/vms/windows-11"
-DISK_IMG="$VM_DIR/windows-11.qcow2"
-TPM_DIR="$VM_DIR/tpm"
-PID_FILE="$VM_DIR/qemu.pid"
-CONFIG_FILE="$VM_DIR/vm.conf"
+WINBOAT_VERSION="0.9.2"
+APPIMAGE_URL="https://github.com/winboat-org/winboat/releases/download/v${WINBOAT_VERSION}/winboat-${WINBOAT_VERSION}-x86_64.AppImage"
+# The digest GitHub publishes for that release asset.
+APPIMAGE_SHA256="6336843b911e344bf6182ebaea2d42e8960ef11820a0cc84239a848ba0a140e4"
+APPIMAGE="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/winboat/WinBoat.AppImage"
+DESKTOP_ENTRY="${XDG_DATA_HOME:-$HOME/.local/share}/applications/gnomarchy-winboat.desktop"
+OLD_VM_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnomarchy/vms/windows-11"
 
 usage() {
   cat <<'EOF'
-Usage: gnomarchy windows <action>
+Usage: gnomarchy windows [install|status]
 
-Actions:
-  setup     Download / initialize Windows 11 VM environment
-  start     Launch Windows 11 with hardware acceleration
-  stop      Gracefully shut down running VM
-  status    Show VM status and disk utilization
-  info      Display connection details and VirtIO specs
+  install   install WinBoat (Windows apps in a container, shown as windows)
+  status    check KVM, Docker and FreeRDP, and whether WinBoat is installed
+  (none)    start WinBoat
 EOF
 }
 
-action="$1"
+ok() { printf '  \033[32mok\033[0m    %s\n' "$*"; }
+bad() { printf '  \033[31mno\033[0m    %s\n' "$*"; }
 
-check_kvm() {
-  if [[ ! -e /dev/kvm ]]; then
-    echo "Warning: /dev/kvm not found. Hardware virtualization (VT-x/AMD-V) may be disabled in BIOS." >&2
-  elif [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
-    echo "Notice: Current user cannot access /dev/kvm. Ensure you are in the 'kvm' group." >&2
+# The command that starts WinBoat, or nothing when it is not installed.
+winboat_command() {
+  if command -v winboat >/dev/null 2>&1; then
+    command -v winboat
+  elif [[ -x "$APPIMAGE" ]]; then
+    printf '%s\n' "$APPIMAGE"
   fi
 }
 
-case "$action" in
-  setup)
-    mkdir -p "$VM_DIR" "$TPM_DIR"
-    echo "==> Setting up Gnomarchy Windows 11 VM Environment"
-    check_kvm
+# Each check prints one line; the status is the number of unmet requirements.
+check_requirements() {
+  local missing=0
+  if [[ -w /dev/kvm ]]; then
+    ok "KVM: /dev/kvm is usable"
+  elif [[ -e /dev/kvm ]]; then
+    bad "KVM: /dev/kvm exists but $USER cannot open it"
+    missing=$((missing + 1))
+  else
+    bad "KVM: no /dev/kvm - enable virtualization (VT-x / AMD-V) in the firmware"
+    missing=$((missing + 1))
+  fi
 
-    # If quickget is available, use it
-    if command -v quickget >/dev/null 2>&1; then
-      cd "$VM_DIR"
-      quickget windows 11
+  if ! command -v docker >/dev/null 2>&1; then
+    bad "Docker: not installed"
+    missing=$((missing + 1))
+  else
+    if systemctl is-active --quiet docker.service; then
+      ok "Docker: the service is running"
     else
-      # Provision sparse 64GB QCOW2 disk image if not present
-      if [[ ! -f "$DISK_IMG" ]]; then
-        echo "Creating 64GB dynamic disk image at $DISK_IMG..."
-        qemu-img create -f qcow2 "$DISK_IMG" 64G
-      fi
+      bad "Docker: the service is not running (sudo systemctl enable --now docker)"
+      missing=$((missing + 1))
+    fi
+    if docker compose version >/dev/null 2>&1; then
+      ok "Docker: compose is available"
+    else
+      bad "Docker: compose is missing (sudo pacman -S docker-compose)"
+      missing=$((missing + 1))
+    fi
+  fi
 
-      cat > "$CONFIG_FILE" <<'EOF'
-# Gnomarchy Windows 11 VM Configuration
-RAM="8G"
-CORES="4"
-DISK="windows-11.qcow2"
-ISO="windows-11.iso"
+  # The docker group in /etc/group is not enough: it reaches a session only at
+  # the next login.
+  if id -nG | tr ' ' '\n' | grep -qx docker; then
+    ok "Docker: $USER is in the docker group"
+  elif getent group docker | cut -d: -f4 | tr ',' '\n' | grep -qx "$USER"; then
+    bad "Docker: $USER was added to the docker group; log out and back in"
+    missing=$((missing + 1))
+  else
+    bad "Docker: $USER is not in the docker group (sudo usermod -aG docker $USER, then log in again)"
+    missing=$((missing + 1))
+  fi
+
+  if command -v xfreerdp3 >/dev/null 2>&1; then
+    ok "FreeRDP: xfreerdp3 is installed"
+  else
+    bad "FreeRDP: not installed (sudo pacman -S freerdp)"
+    missing=$((missing + 1))
+  fi
+  return "$missing"
+}
+
+install_appimage() {
+  local tmp
+  echo "==> Installing the WinBoat $WINBOAT_VERSION AppImage"
+  # AppImages mount themselves with FUSE 2; freerdp is what WinBoat drives.
+  sudo pacman -S --needed --noconfirm fuse2 freerdp
+  mkdir -p "${APPIMAGE%/*}"
+  tmp="$APPIMAGE.download"
+  curl -fL --retry 3 -o "$tmp" "$APPIMAGE_URL"
+  if [[ "$(sha256sum "$tmp" | cut -d' ' -f1)" != "$APPIMAGE_SHA256" ]]; then
+    rm -f "$tmp"
+    echo "The downloaded AppImage does not match its published checksum; not installing it." >&2
+    return 1
+  fi
+  chmod +x "$tmp"
+  mv -f "$tmp" "$APPIMAGE"
+
+  mkdir -p "${DESKTOP_ENTRY%/*}"
+  cat >"$DESKTOP_ENTRY" <<EOF
+[Desktop Entry]
+Type=Application
+Name=WinBoat
+Comment=Windows applications in a container
+Exec=$APPIMAGE
+Icon=computer
+Categories=System;Emulator;
+Terminal=false
 EOF
-      echo "✓ VM directory configured at: $VM_DIR"
-      echo "  Place your Windows 11 installation ISO at: $VM_DIR/windows-11.iso"
-      echo "  Run 'gnomarchy windows start' to boot the VM."
+  echo "Installed $APPIMAGE"
+}
+
+cmd_install() {
+  if [[ -n "$(winboat_command)" ]]; then
+    echo "WinBoat is already installed: $(winboat_command)"
+    return 0
+  fi
+
+  if [[ ! -e /dev/kvm ]]; then
+    echo "No /dev/kvm: WinBoat runs Windows under KVM. Enable virtualization (VT-x / AMD-V) in the firmware first." >&2
+    exit 1
+  fi
+
+  # Docker is in the base install; make sure it is actually running.
+  if ! systemctl is-active --quiet docker.service; then
+    sudo systemctl enable --now docker.service
+  fi
+
+  if command -v paru >/dev/null 2>&1 && paru -S --needed --noconfirm winboat-bin; then
+    echo "Installed winboat-bin from the AUR."
+  else
+    echo "paru could not install winboat-bin; using the release AppImage instead."
+    install_appimage
+  fi
+
+  echo
+  echo "==> Requirements"
+  if check_requirements; then
+    echo
+    echo "Start it with: gnomarchy windows"
+    echo "The first start downloads Windows and creates the container; that takes a while."
+  else
+    echo
+    echo "Fix the lines marked 'no' above, then start it with: gnomarchy windows"
+  fi
+}
+
+cmd_status() {
+  echo "WinBoat:"
+  if [[ -n "$(winboat_command)" ]]; then
+    ok "installed: $(winboat_command)"
+  else
+    bad "not installed (gnomarchy windows install)"
+  fi
+  # The QEMU VM this command used to create is not touched: it may hold data.
+  if [[ -d "$OLD_VM_DIR" ]]; then
+    echo "  note  the old QEMU VM is still in $OLD_VM_DIR; Gnomarchy no longer runs it"
+  fi
+  echo "Requirements:"
+  # Reported, never fatal: status describes the machine.
+  check_requirements || true
+}
+
+case "${1:-}" in
+  install) cmd_install ;;
+  status) cmd_status ;;
+  -h | --help | help) usage ;;
+  "")
+    winboat="$(winboat_command)"
+    if [[ -z "$winboat" ]]; then
+      echo "WinBoat is not installed. Install it with: gnomarchy windows install" >&2
+      exit 1
     fi
+    exec "$winboat"
     ;;
-
-  start)
-    check_kvm
-    if [[ ! -d "$VM_DIR" ]]; then
-      echo "VM environment not found. Running setup first..."
-      exec "$0" setup
-    fi
-
-    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-      echo "Windows 11 VM is already running (PID: $(cat "$PID_FILE"))."
-      exit 0
-    fi
-
-    # Check if quickemu is available
-    if command -v quickemu >/dev/null 2>&1 && [[ -f "$VM_DIR/windows-11.conf" ]]; then
-      cd "$VM_DIR"
-      exec quickemu --vm windows-11.conf
-    fi
-
-    echo "==> Starting Windows 11 VM..."
-
-    # Launch swtpm (TPM 2.0 emulator required for Win11)
-    if command -v swtpm >/dev/null 2>&1; then
-      swtpm socket --tpmstate dir="$TPM_DIR" \
-        --ctrl type=unixio,path="$TPM_DIR/swtpm-sock" \
-        --tpm2 -d 2>/dev/null || true
-      TPM_ARGS="-chardev socket,id=chrtpm,path=$TPM_DIR/swtpm-sock -tpmdev emulator,id=tpm0,chardev=chrtpm -device tpm-tis,tpmdev=tpm0"
-    else
-      TPM_ARGS=""
-    fi
-
-    # Find OVMF UEFI firmware
-    OVMF_CODE=""
-    OVMF_VARS=""
-    for p in /usr/share/edk2-ovmf/x64/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE.fd; do
-      if [[ -f "$p" ]]; then OVMF_CODE="$p"; break; fi
-    done
-
-    # QEMU parameters
-    ISO_ARG=""
-    if [[ -f "$VM_DIR/windows-11.iso" ]]; then
-      ISO_ARG="-cdrom $VM_DIR/windows-11.iso"
-    fi
-
-    qemu_cmd=(
-      qemu-system-x86_64
-      -enable-kvm
-      -m 8192
-      -smp cores=4,threads=2
-      -cpu host
-      -drive file="$DISK_IMG",format=qcow2,if=virtio
-      -netdev user,id=net0 -device virtio-net-pci,netdev=net0
-      -device virtio-vga
-      -display gtk,gl=on
-      -device intel-hda -device hda-duplex
-      -usb -device usb-tablet
-    )
-
-    if [[ -n "$OVMF_CODE" ]]; then
-      qemu_cmd+=(-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE")
-    fi
-
-    if [[ -n "$TPM_ARGS" ]]; then
-      qemu_cmd+=($TPM_ARGS)
-    fi
-
-    if [[ -n "$ISO_ARG" ]]; then
-      qemu_cmd+=($ISO_ARG)
-    fi
-
-    nohup "${qemu_cmd[@]}" >/dev/null 2>&1 &
-    echo $! > "$PID_FILE"
-    echo "✓ Windows 11 VM started in background (PID: $(cat "$PID_FILE"))."
-    ;;
-
-  stop)
-    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-      pid=$(cat "$PID_FILE")
-      echo "Stopping Windows 11 VM (PID: $pid)..."
-      kill "$pid" 2>/dev/null || true
-      rm -f "$PID_FILE"
-      echo "✓ VM stopped."
-    else
-      echo "Windows 11 VM is not running."
-      rm -f "$PID_FILE"
-    fi
-    ;;
-
-  status)
-    echo "Windows 11 VM Status:"
-    if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-      echo "  State:   Running (PID: $(cat "$PID_FILE"))"
-    else
-      echo "  State:   Stopped"
-    fi
-    if [[ -f "$DISK_IMG" ]]; then
-      disk_size=$(du -h "$DISK_IMG" 2>/dev/null | awk '{print $1}')
-      echo "  Disk:    $DISK_IMG (Allocated: $disk_size)"
-    else
-      echo "  Disk:    Not initialized (Run 'gnomarchy windows setup')"
-    fi
-    ;;
-
-  info)
-    echo "Windows 11 VM Configuration:"
-    echo "  Location: $VM_DIR"
-    echo "  RAM:      8 GB"
-    echo "  CPUs:     4 Cores (Host Passthrough)"
-    echo "  Disk:     VirtIO SCSI / QCOW2"
-    echo "  Graphics: VirtIO GPU (OpenGL Accelerated)"
-    echo "  TPM:      Software TPM 2.0 (swtpm)"
-    ;;
-
   *)
-    usage
-    exit 0
+    usage >&2
+    exit 2
     ;;
 esac

@@ -28,7 +28,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🎙️ Voxtype (System-Wide AI Dictation)**: Speech-to-text dictation on `<Super>D` powered by local, offline Whisper AI models with zero cloud fees and zero telemetry.
 - **🌐 Web App Generator (`gnomarchy webapp`)**: Turn web tools (Claude, ChatGPT, Linear, Notion, Basecamp) into standalone desktop apps with isolated profiles, auto-fetched favicons, and Dash to Dock pinning.
 - **📁 Nautilus Context Superpowers**: Native right-click file actions — H.264 video compression (CRF 28, no fixed size target), animated GIF conversion, MP3 extraction, WebP conversion, EXIF stripping, resize to 1080p, open in VS Code, and LocalSend sharing.
-- **🪟 Windows 11 VM Automation (`gnomarchy windows`)**: One-command creation and execution of hardware-accelerated Windows 11 KVM VMs with VirtIO and software TPM 2.0 (`swtpm`).
+- **🪟 Windows Apps, Opt-In (`gnomarchy windows install`)**: [WinBoat](https://www.winboat.app) runs Windows in a Docker container and opens its applications as ordinary desktop windows. Installed only when you ask: from the AUR, or the checksum-pinned release AppImage.
 - **⏰ Desktop Reminders & Alarms (`gnomarchy reminder`)**: Instant notification alarms with chime audio cues for pomodoro breaks, standups, or deploy checks.
 - **🤖 AI Agent OS Control Layer & Lifecycle Hooks**: Pre-installed agent skill (`AGENTS.md`) and hooks directory (`~/.config/gnomarchy/hooks/`) allowing Claude Code, Antigravity, OpenCode, or user scripts to orchestrate and react to system events.
 - **🛡️ Bootable Btrfs Snapshots**: Snapper takes a snapshot before and after every pacman transaction, and each one appears in the Limine boot menu. Boot one to try it — changes stay in memory — and `gnomarchy snapshot restore` makes it the system.
@@ -203,7 +203,7 @@ gnomarchy manual --grep whisper     # search every page, as plain text
 
 Seventeen pages covering keybindings, tiling, themes, backgrounds, the menu,
 terminal, Neovim, web apps, dictation, screenshots, updates and migrations,
-snapshots, the Windows VM, gaming, and troubleshooting. With no arguments the
+snapshots, Windows apps, gaming, and troubleshooting. With no arguments the
 command opens the control center's Manual page, which full-text searches all
 seventeen and renders the one you pick; `--list`, `--grep` and opening a page
 by number or name stay plain text so the manual keeps working over SSH and in
@@ -292,12 +292,12 @@ gnomarchy voxtype toggle
 gnomarchy voxtype status
 ```
 
-### Windows 11 VM Automation
+### Windows Apps (WinBoat)
 ```bash
-# Setup and launch hardware-accelerated Windows 11 KVM VM
-gnomarchy windows setup
-gnomarchy windows start
+# Install WinBoat (opt-in), check what it needs, start it
+gnomarchy windows install
 gnomarchy windows status
+gnomarchy windows
 ```
 
 ### GNOME Management
