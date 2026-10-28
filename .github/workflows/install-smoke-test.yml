@@ -441,7 +441,7 @@ jobs:
         if: always() && inputs.keep_image
         uses: actions/upload-artifact@v4
         with:
-          name: installed-disk-image
+          name: installed-disk-image-${{ matrix.variant }}
           path: disk.qcow2
           retention-days: 3
 

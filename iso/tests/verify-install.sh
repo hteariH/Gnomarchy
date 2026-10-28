@@ -407,7 +407,8 @@ else
   no "limine-bios.sys missing from the ESP"
 fi
 if [[ -n "${GNOMARCHY_TEST_DISK:-}" ]]; then
-  # wipefs leaves the boot code zeroed; only limine bios-install writes it.
+  # The CI disk is a fresh qcow2, so the boot code area is zeroed (wipefs only
+  # erases signatures); only limine bios-install writes it.
   if (($(head -c 440 "$GNOMARCHY_TEST_DISK" | tr -d '\0' | wc -c) > 0)); then
     ok "the MBR carries boot code (limine bios-install ran)"
   else
@@ -434,6 +435,9 @@ if [[ -f "$DROPIN" ]]; then
     no "busybox hooks in a systemd initramfs" "$hooks"
   if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" == y ]]; then
     [[ "$hooks" == *" sd-encrypt "* ]] && ok "sd-encrypt is in HOOKS" || no "an encrypted install without sd-encrypt"
+  else
+    [[ "$hooks" == *" sd-encrypt "* ]] &&
+      no "sd-encrypt in HOOKS on a plain install" "$hooks" || ok "no sd-encrypt in HOOKS on a plain install"
   fi
 else
   no "no /etc/mkinitcpio.conf.d/gnomarchy.conf"
@@ -503,10 +507,18 @@ fi
 grep -q 'Installation complete' "$ROOT/var/log/gnomarchy-installer.log" &&
   ok "the installer log is on the target" || no "no complete installer log at /var/log/gnomarchy-installer.log"
 
+if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" != y ]]; then
+  [[ "$cmdline" == *"rd.luks.name="* ]] &&
+    no "rd.luks.name on a plain install" "$cmdline" || ok "no rd.luks.name on a plain install"
+fi
 if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" == y ]]; then
-  luks_uuid="$(blkid -s UUID -o value "$GNOMARCHY_TEST_LUKS_DEV")"
-  [[ -n "$luks_uuid" && " $cmdline " == *" rd.luks.name=$luks_uuid=cryptroot "* ]] &&
-    ok "rd.luks.name opens the LUKS partition" || no "rd.luks.name does not name $luks_uuid" "$cmdline"
+  if [[ -n "${GNOMARCHY_TEST_LUKS_DEV:-}" ]]; then
+    luks_uuid="$(blkid -s UUID -o value "$GNOMARCHY_TEST_LUKS_DEV")"
+    [[ -n "$luks_uuid" && " $cmdline " == *" rd.luks.name=$luks_uuid=cryptroot "* ]] &&
+      ok "rd.luks.name opens the LUKS partition" || no "rd.luks.name does not name $luks_uuid" "$cmdline"
+  else
+    echo "  SKIP  rd.luks.name check: GNOMARCHY_TEST_LUKS_DEV is not set"
+  fi
   if [[ -f "$ROOT/etc/crypttab" ]] && grep -q '^cryptroot' "$ROOT/etc/crypttab"; then
     no "crypttab also opens cryptroot" "the root is opened from the command line"
   else
