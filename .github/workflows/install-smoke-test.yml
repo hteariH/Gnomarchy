@@ -506,6 +506,13 @@ jobs:
           # earlier step never got that far, which that step already reported.
           ROOT_DEV="${{ steps.mount.outputs.root_dev }}"
           if [ -n "$ROOT_DEV" ]; then
+            # The session-read step disconnects the image. A disconnected nbd
+            # device reads as size 0, and so does a missing one (hence the
+            # fallback echo). On the encrypted variant it stays connected. A
+            # failed reconnect must not stop the rest of the collection.
+            [ "$(cat /sys/block/nbd0/size 2>/dev/null || echo 0)" != 0 ] ||
+              { sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2 && sleep 5; } ||
+              echo "Could not reconnect disk.qcow2; the logs inside it are not collected."
             sudo mkdir -p /mnt/ci-log /mnt/ci-home
             sudo mount -o subvol=@var_log,ro "$ROOT_DEV" /mnt/ci-log || true
             sudo mount -o subvol=@home,ro "$ROOT_DEV" /mnt/ci-home || true
@@ -548,6 +555,9 @@ jobs:
           fi
 
           sudo umount -R /mnt/gnomarchy 2>/dev/null || true
+          # The session-read step disconnects the image; a disconnected or
+          # missing nbd device reads as size 0 (hence the fallback echo).
+          [ "$(cat /sys/block/nbd0/size 2>/dev/null || echo 0)" != 0 ] || { sudo qemu-nbd --connect=/dev/nbd0 disk.qcow2; sleep 5; }
           sudo mount -o subvol=@ ${{ steps.mount.outputs.root_dev }} /mnt/gnomarchy
           sudo mount -o subvol=@home ${{ steps.mount.outputs.root_dev }} /mnt/gnomarchy/home
 
