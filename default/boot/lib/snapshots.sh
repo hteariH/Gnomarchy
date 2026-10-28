@@ -57,7 +57,7 @@ boot_store_put() {
 }
 
 boot_snapshot_add() {
-  local n="$1" info kernel version kh ih taken desc base
+  local n="$1" info kernel version kh ih taken desc base reason
   if [[ ! "$n" =~ ^[1-9][0-9]*$ ]]; then
     boot_log "snapshot number must be a positive integer, got '$n'"
     return 1
@@ -66,6 +66,13 @@ boot_snapshot_add() {
   if [[ ! -f "$info" || ! -d "$BOOT_SNAPSHOTS/$n/snapshot" ]]; then
     boot_log "snapshot $n not found in $BOOT_SNAPSHOTS"
     return 1
+  fi
+  # libalpm still runs snap-pac's pre hook after the guard hook has refused a
+  # transaction, so a snapshot can arrive from a root that is being discarded.
+  # It is a copy of nothing anyone keeps: no menu entry.
+  if reason="$(boot_discarded_root)"; then
+    boot_log "snapshot $n gets no menu entry: $reason"
+    return 0
   fi
   base="$(boot_base_cmdline)" || return 1
   boot_snapshot_cmdline "$base" "$n" >/dev/null || return 1

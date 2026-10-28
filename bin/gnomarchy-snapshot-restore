@@ -38,6 +38,10 @@ if [[ ! "$n" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 if ((!yes)); then
+  if ! command -v gum >/dev/null; then
+    echo "gum is not installed, so there is no way to confirm; run: gnomarchy snapshot restore $n --yes" >&2
+    exit 1
+  fi
   gum confirm "Restore snapshot $n? The current system is kept as a backup until the next restore." || exit 1
 fi
 

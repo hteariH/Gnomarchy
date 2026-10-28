@@ -39,11 +39,22 @@ install -Dm644 "$SRC/snapshot-notify.desktop" "$DEST/etc/xdg/autostart/gnomarchy
 # after systemd and before the crypt hook, so the passphrase prompt is drawn.
 encrypt=""
 if grep -qx 'ENCRYPTED=1' "$BOOT_CONF"; then encrypt=" sd-encrypt"; fi
-install -Dm644 /dev/null "$DEST/etc/mkinitcpio.conf.d/gnomarchy.conf"
-cat >"$DEST/etc/mkinitcpio.conf.d/gnomarchy.conf" <<EOF
+DROPIN="$DEST/etc/mkinitcpio.conf.d/gnomarchy.conf"
+previous=""
+if [[ -f "$DROPIN" ]]; then previous="$(<"$DROPIN")"; fi
+mkdir -p "${DROPIN%/*}"
+cat >"$DROPIN" <<EOF
 # Written by Gnomarchy's default/boot/deploy.sh from /etc/gnomarchy/boot.conf.
 HOOKS=(base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block${encrypt} filesystems fsck gnomarchy-overlay)
 EOF
+# New HOOKS mean nothing until the images are rebuilt. On a first deploy the
+# installer builds them right after this; on a later one (gnomarchy update)
+# nothing else would until the next kernel upgrade. The post hook then
+# regenerates the menu's hashes.
+if [[ -z "$DEST" && -n "$previous" && "$previous" != "$(<"$DROPIN")" ]]; then
+  echo "Initramfs hooks changed; rebuilding the images."
+  mkinitcpio -P
+fi
 
 # The one file a user writes: gnomarchy-theme-set, as a member of wheel. It is
 # parsed as data and never executed.

@@ -398,6 +398,16 @@ echo 'root=UUID=1111-2222 rw rootflags=subvol=@ quiet splash' >"$T/proc/cmdline"
 export GNOMARCHY_BOOT_ROOT_FSTYPE=btrfs GNOMARCHY_BOOT_ROOT_FSROOT=/@restore-backup-20261028-101500
 t_false "guard refuses while a restore is pending" "$BOOT" guard 2>"$T/log"
 t_true "and says to reboot" grep -qF "a restore is pending; reboot first" "$T/log"
+# libalpm runs snap-pac's pre hook even after the guard aborts the transaction;
+# the snapshot it takes of a discarded root must not reach the menu.
+add_snapshot 9 "2026-10-28 10:20:00" "pacman -S refused"
+t_true "snapshot-add on a pending restore still succeeds" "$BOOT" snapshot-add 9 2>"$T/log"
+t_false "but adds no entry" test -e "$T/boot/gnomarchy/entries/9.conf"
+t_true "and says why" grep -qF "snapshot 9 gets no menu entry: a restore is pending" "$T/log"
+echo 'root=UUID=1111-2222 ro rootflags=subvol=@snapshots/12/snapshot quiet systemd.volatile=overlay gnomarchy.snapshot=12' >"$T/proc/cmdline"
+export GNOMARCHY_BOOT_ROOT_FSTYPE=overlay GNOMARCHY_BOOT_ROOT_FSROOT=/
+t_true "snapshot-add on a snapshot boot still succeeds" "$BOOT" snapshot-add 9 2>"$T/log"
+t_false "but adds no entry either" test -e "$T/boot/gnomarchy/entries/9.conf"
 unset GNOMARCHY_BOOT_ROOT_FSTYPE GNOMARCHY_BOOT_ROOT_FSROOT
 
 t_done

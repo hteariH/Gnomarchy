@@ -22,24 +22,31 @@ boot_booted_snapshot() {
   return 1
 }
 
-boot_guard() {
+# boot_discarded_root — prints why the running root will be thrown away and
+# succeeds, or fails silently when it will not. An unreadable /proc/cmdline or
+# root mount counts as "not discarded": a bare chroot without /proc is a
+# rescue, where refusing pacman would do more harm than the check prevents.
+boot_discarded_root() {
   local n fstype fsroot
-  if [[ ! -r "$BOOT_ROOT/proc/cmdline" ]]; then
-    # Never the case on a booted system. A bare chroot without /proc is a
-    # rescue, where refusing pacman would do more harm than the check prevents.
-    boot_log "warning: cannot read $BOOT_ROOT/proc/cmdline; not checking for a snapshot boot"
-  elif n="$(boot_booted_snapshot)"; then
-    boot_log "this system is running snapshot $n; changes here are lost at reboot - restore it first with gnomarchy snapshot restore $n"
-    return 1
-  fi
-  # The same reasoning: a chroot onto a directory that is no mount point gives
-  # findmnt no root to read, and that must not block package management.
-  if ! fstype="$(boot_root_fstype)" || ! fsroot="$(boot_root_fsroot)"; then
-    boot_log "warning: cannot read the running root's mount; not checking for a pending restore"
+  if [[ -r "$BOOT_ROOT/proc/cmdline" ]] && n="$(boot_booted_snapshot)"; then
+    printf 'this system is running snapshot %s; changes here are lost at reboot - restore it first with gnomarchy snapshot restore %s\n' "$n" "$n"
     return 0
   fi
-  if [[ "$fstype" == btrfs && "$fsroot" == /@restore-backup-* ]]; then
-    boot_log "a restore is pending; reboot first"
+  if fstype="$(boot_root_fstype)" && fsroot="$(boot_root_fsroot)" &&
+    [[ "$fstype" == btrfs && "$fsroot" == /@restore-backup-* ]]; then
+    printf 'a restore is pending; reboot first\n'
+    return 0
+  fi
+  return 1
+}
+
+boot_guard() {
+  local reason
+  if [[ ! -r "$BOOT_ROOT/proc/cmdline" ]]; then
+    boot_log "warning: cannot read $BOOT_ROOT/proc/cmdline; not checking for a snapshot boot"
+  fi
+  if reason="$(boot_discarded_root)"; then
+    boot_log "$reason"
     return 1
   fi
   return 0
