@@ -1,0 +1,7 @@
+# Cloudflare Pages redirects (https://developers.cloudflare.com/pages/configuration/redirects/).
+#
+# The online installer, so a clean Arch system can run
+#   curl -fsSL https://gnomarchy.pages.dev/install | bash
+# A redirect rather than a copy: it always serves boot.sh from main, and the
+# -L in -fsSL follows it.
+/install  https://raw.githubusercontent.com/hteariH/Gnomarchy/main/boot.sh  302
