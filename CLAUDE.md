@@ -156,8 +156,12 @@ times:
 /dev/nbd0p3  subvol=@         /
 /dev/nbd0p3  subvol=@home     /home
 /dev/nbd0p3  subvol=@var_log  /var/log
+/dev/nbd0p3  subvol=@snapshots /.snapshots
 /dev/nbd0p2                   /boot     (EFI partition, holds limine.conf)
 ```
+
+On the encrypted variant the Btrfs is `/dev/mapper/ci-root`, opened from
+`/dev/nbd0p3` with the answers' password.
 
 Also: absolute symlinks inside a mounted image resolve against the **host**
 filesystem, so `-e` is false however correct the link is. Test with `-L`.
