@@ -7,8 +7,12 @@ published extensions.gnome.org builds and can be refreshed from there.
 ## The extensions
 
 `AlphabeticalAppGrid`, `appindicatorsupport`, `blur-my-shell`, `dash-to-dock`,
-`just-perfection-desktop`, `space-bar`, `tilingshell` are the
-extensions.gnome.org builds. `install-extensions.py` falls back to fetching
+`gsconnect`, `just-perfection-desktop`, `space-bar`, `tilingshell` are the
+extensions.gnome.org builds.
+
+`gsconnect@andyholmes.github.io` is version 74, the extensions.gnome.org build
+for GNOME 46-51 (Arch only has it in the AUR). It is KDE Connect for GNOME;
+`install/config/systemd.sh` adds the ufw rules for its ports 1714-1764. `install-extensions.py` falls back to fetching
 them from there by UUID when a zip is absent, so they can simply be replaced.
 
 `tilingshell@ferrarodomenico.com` is Gnomarchy's tiling, with

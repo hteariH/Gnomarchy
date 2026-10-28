@@ -252,6 +252,16 @@ else
   no "${#stale[@]} extension(s) do not declare GNOME $shell_major" "${stale[*]} -- the shell will not load them; see default/gnome/extensions/PROVENANCE.md"
 fi
 
+# GSConnect: the extension, and the ufw rules it needs once the firewall is on.
+[[ -f "$HOME_DIR/.local/share/gnome-shell/extensions/gsconnect@andyholmes.github.io/metadata.json" ]] &&
+  ok "GSConnect is deployed" || no "GSConnect is not deployed"
+if grep -q '1714:1764' "$ROOT/etc/ufw/user.rules" 2>/dev/null; then
+  ok "ufw allows GSConnect's ports 1714-1764"
+else
+  # Unreadable or missing user.rules is the failure being reported here.
+  no "ufw has no rule for GSConnect's ports 1714-1764"
+fi
+
 # --- Regression: tiling that cannot be configured -------------------------
 #
 # Tiling Shell is Gnomarchy's tiling, configured by first-run with its

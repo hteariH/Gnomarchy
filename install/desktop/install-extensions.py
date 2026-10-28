@@ -17,6 +17,7 @@ EXTENSIONS = [
     "space-bar@luchrioh",
     "AlphabeticalAppGrid@stuarthayhurst",
     "appindicatorsupport@rgcjonas.gmail.com",
+    "gsconnect@andyholmes.github.io",
 ]
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

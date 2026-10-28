@@ -225,6 +225,13 @@ else
   no "Tiling Shell is not running" "shell reports state: ${ts_state:-unknown}"
 fi
 
+gc_state="$(gnome-extensions info gsconnect@andyholmes.github.io 2>/dev/null | grep -i '^ *State:' | sed 's/.*: *//')"
+if [[ "$gc_state" == "ACTIVE" ]]; then
+  ok "GSConnect is running"
+else
+  no "GSConnect is not running" "shell reports state: ${gc_state:-unknown}"
+fi
+
 ts_auto="$(gsettings get org.gnome.shell.extensions.tilingshell enable-autotiling 2>/dev/null)"
 if [[ "$ts_auto" == "false" ]]; then
   ok "Tiling Shell auto-placement is off"

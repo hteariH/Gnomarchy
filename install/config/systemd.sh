@@ -47,6 +47,17 @@ enable_service avahi-daemon.service
 enable_service ufw.service
 enable_service plocate-updatedb.timer
 
+# GSConnect (KDE Connect) talks to phones on 1714-1764, TCP and UDP. ufw ships
+# inactive, so nothing blocks it today; the rules are there for when the
+# firewall is turned on, which would otherwise cut GSConnect off silently.
+if command -v ufw >/dev/null 2>&1; then
+  if sudo ufw allow 1714:1764/tcp >/dev/null && sudo ufw allow 1714:1764/udp >/dev/null; then
+    gnomarchy_substep "ufw: GSConnect ports 1714-1764 allowed"
+  else
+    gnomarchy_warn "Could not add the GSConnect ufw rules; run: sudo ufw allow 1714:1764/tcp && sudo ufw allow 1714:1764/udp"
+  fi
+fi
+
 # ydotoold backs Voxtype's "type the transcription into the focused window"
 # step; it needs the daemon plus a writable /dev/uinput.
 if systemctl list-unit-files 2>/dev/null | grep -q '^ydotoold.service'; then
