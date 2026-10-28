@@ -74,6 +74,23 @@ else
   no "whisper-cli missing" "the whisper-cpp package did not install"
 fi
 
+# --- Regression: a package list nothing read --------------------------------
+# These sat in gnomarchy-other.packages, which no stage ever installed.
+for pkg in chromium obs-studio libreoffice-fresh obsidian spotify-launcher mise; do
+  if compgen -G "$ROOT/var/lib/pacman/local/$pkg-[0-9]*" >/dev/null; then
+    ok "$pkg is installed"
+  else
+    no "$pkg is not installed"
+  fi
+done
+# Claude Code's native installer links ~/.local/bin/claude to its versions
+# directory; the link is absolute, so test it with -L (see CLAUDE.md).
+if [[ -L "$HOME_DIR/.local/bin/claude" || -x "$HOME_DIR/.local/bin/claude" ]]; then
+  ok "Claude Code is installed"
+else
+  no "Claude Code is not installed" "expected $HOME_DIR/.local/bin/claude"
+fi
+
 # --- Regression: only the dispatcher reached the session PATH --------------
 missing_links=()
 link=""

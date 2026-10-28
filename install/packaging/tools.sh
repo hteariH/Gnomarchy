@@ -11,10 +11,18 @@ if ! command -v gext >/dev/null 2>&1; then
   pipx install gnome-extensions-cli --system-site-packages >/dev/null 2>&1 || true
 fi
 
-# Ensure Mise is installed if not already available
-if ! command -v mise >/dev/null 2>&1; then
-  echo "Installing Mise for multi-language runtime management..."
-  curl https://mise.run | sh >/dev/null 2>&1 || true
+# mise comes from the official repositories (gnomarchy-base.packages).
+
+# Claude Code, with Anthropic's native installer: it is not in the official
+# repositories, and the installer keeps it updated itself, into ~/.local/bin.
+if ! command -v claude >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/claude" ]]; then
+  echo "Installing Claude Code..."
+  if curl -fsSL https://claude.ai/install.sh | bash; then
+    gnomarchy_substep "Claude Code installed"
+  else
+    # Not fatal: gnomarchy agent claude falls back to npx.
+    gnomarchy_warn "Claude Code could not be installed; run: curl -fsSL https://claude.ai/install.sh | bash"
+  fi
 fi
 
 # Install Paru AUR helper (pre-compiled x86_64 binary)
