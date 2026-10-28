@@ -1,0 +1,16 @@
+# Refuses every transaction on a root that is about to be thrown away: a
+# snapshot boot, or the old root after a restore and before the reboot. A
+# kernel upgrade there would land on the persistent ESP while its modules
+# vanish with the root. Sorted first, so nothing else runs before it.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = *
+
+[Action]
+Description = Checking that this root survives the next reboot...
+When = PreTransaction
+Exec = /usr/local/lib/gnomarchy/boot/gnomarchy-boot guard
+AbortOnFail

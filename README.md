@@ -31,7 +31,7 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🪟 Windows 11 VM Automation (`gnomarchy windows`)**: One-command creation and execution of hardware-accelerated Windows 11 KVM VMs with VirtIO and software TPM 2.0 (`swtpm`).
 - **⏰ Desktop Reminders & Alarms (`gnomarchy reminder`)**: Instant notification alarms with chime audio cues for pomodoro breaks, standups, or deploy checks.
 - **🤖 AI Agent OS Control Layer & Lifecycle Hooks**: Pre-installed agent skill (`AGENTS.md`) and hooks directory (`~/.config/gnomarchy/hooks/`) allowing Claude Code, Antigravity, OpenCode, or user scripts to orchestrate and react to system events.
-- **🛡️ Bulletproof Btrfs & Snapper Rollbacks**: Automated boot snapshots integrated with the Limine bootloader let you roll back kernel or package updates directly from the boot menu.
+- **🛡️ Bootable Btrfs Snapshots**: Snapper takes a snapshot before and after every pacman transaction, and each one appears in the Limine boot menu. Boot one to try it — changes stay in memory — and `gnomarchy snapshot restore` makes it the system.
 - **⚡ Fast Shutdown Tuning**: Systemd timeout stop limits tuned from 90s down to 10s for instantaneous power-offs and reboots.
 - **👾 Retro Terminal Screensaver (`gnomarchy screensaver`)**: Fullscreen matrix rain screensaver triggered via `<Super>Escape`.
 - **🛡️ Default Privacy Browser (Brave Origin)**: **Brave Origin** pre-configured as the default system browser—completely debloated of crypto, AI (Leo), rewards, and telemetry, delivering uncompromising speed and ad-blocking out of the box.
@@ -80,8 +80,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
    ```bash
    sudo dd if=gnomarchy-linux.iso of=/dev/sdX bs=4M status=progress oflag=sync
    ```
-3. Boot your system in **UEFI mode** with Secure Boot temporarily disabled.
-4. The automated installer will launch on TTY1, partition your drive with Btrfs subvolumes (`@`, `@home`, `@snapshots`, `@var_log`, `@var_cache`), optionally set up LUKS2 disk encryption, install packages, configure Limine + Snapper, and deploy the desktop.
+3. Boot your system in **UEFI or BIOS mode** with Secure Boot temporarily disabled.
+4. The installer starts on TTY1: pick a disk, fill in a short form (keyboard layout, user, password, computer name, timezone, optional LUKS2 encryption), check the summary and watch seven stages run. It lays out Btrfs subvolumes (`@`, `@home`, `@snapshots`, `@var_log`, `@var_cache`), installs Limine for both UEFI and BIOS, and takes a first snapshot.
 
 ### Method 2: Quick Install Over Clean Arch Linux
 
@@ -325,7 +325,18 @@ gnomarchy snapshot create "Before system refactor"
 
 # List snapshots
 gnomarchy snapshot list
+
+# Make a snapshot the system from the next boot on (asks which, without a number)
+gnomarchy snapshot restore 12
+
+# Regenerate the Limine boot menu after editing /etc/kernel/cmdline
+gnomarchy boot update
 ```
+
+The menu also regenerates itself after every kernel update, snapshot, theme
+change and initramfs rebuild. While a snapshot is booted, pacman and
+`gnomarchy update` refuse to change packages: the snapshot's changes are lost
+at reboot, the kernel they would install is not.
 
 ### Command Center
 ```bash

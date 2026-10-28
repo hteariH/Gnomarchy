@@ -1,0 +1,6 @@
+[Unit]
+Description=Recolour the Limine menu from the Gnomarchy theme
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/gnomarchy/boot/gnomarchy-boot update

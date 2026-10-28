@@ -1,0 +1,13 @@
+# Regenerates the Limine menu after every transaction. Sorted after
+# 90-mkinitcpio-install.hook, so it always hashes the images on the ESP.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = *
+
+[Action]
+Description = Updating the Limine boot menu...
+When = PostTransaction
+Exec = /usr/local/lib/gnomarchy/boot/gnomarchy-boot update

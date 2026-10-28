@@ -1,0 +1,18 @@
+#!/bin/bash
+# mkinitcpio install hook: lets a snapshot boot with systemd.volatile=overlay.
+# The systemd hook ships neither the service nor the overlay module, so
+# without this the parameter does nothing and a read-only snapshot boots
+# read-only. systemd-fstab-generator pulls the service in when the parameter
+# is set.
+
+build() {
+  add_module overlay
+  add_systemd_unit systemd-volatile-root.service
+}
+
+help() {
+  cat <<HELPEOF
+Adds systemd-volatile-root and the overlay module, so that booting with
+systemd.volatile=overlay puts a tmpfs overlay over a read-only root.
+HELPEOF
+}

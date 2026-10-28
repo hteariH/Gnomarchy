@@ -1,0 +1,33 @@
+# id	xkb_layout	xkb_variant	console_keymap	console_font	latin	label
+us	us	-	us	-	yes	English (US)
+us-intl	us	intl	us-acentos	-	yes	English (US, international)
+gb	gb	-	uk	-	yes	English (UK)
+de	de	-	de-latin1	-	yes	German
+ch	ch	-	de_CH-latin1	-	yes	German (Switzerland)
+fr	fr	-	fr-latin1	-	yes	French
+be	be	-	be-latin1	-	yes	Belgian
+es	es	-	es	-	yes	Spanish
+latam	latam	-	la-latin1	-	yes	Spanish (Latin America)
+pt	pt	-	pt-latin1	-	yes	Portuguese
+br	br	-	br-abnt2	-	yes	Portuguese (Brazil)
+it	it	-	it	-	yes	Italian
+nl	nl	-	nl	-	yes	Dutch
+se	se	-	sv-latin1	-	yes	Swedish
+no	no	-	no-latin1	-	yes	Norwegian
+dk	dk	-	dk-latin1	-	yes	Danish
+fi	fi	-	fi	-	yes	Finnish
+pl	pl	-	pl2	-	yes	Polish
+cz	cz	-	cz-qwertz	-	yes	Czech
+sk	sk	-	sk-qwertz	-	yes	Slovak
+hu	hu	-	hu	-	yes	Hungarian
+ro	ro	-	ro	-	yes	Romanian
+tr	tr	-	trq	-	yes	Turkish
+ee	ee	-	et	-	yes	Estonian
+lt	lt	-	lt.baltic	-	yes	Lithuanian
+lv	lv	-	lv	-	yes	Latvian
+ru	ru	-	ru	cyr-sun16	no	Russian
+ua	ua	-	ua	cyr-sun16	no	Ukrainian
+by	by	-	by	cyr-sun16	no	Belarusian
+bg	bg	-	bg_bds-utf8	cyr-sun16	no	Bulgarian
+gr	gr	-	gr	iso07u-16	no	Greek
+jp	jp	-	jp106	-	yes	Japanese

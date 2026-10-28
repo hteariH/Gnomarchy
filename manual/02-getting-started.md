@@ -1,5 +1,24 @@
 # Getting Started
 
+## Installing
+
+Boot the ISO; the installer starts on its own on the first console.
+
+1. **Disk.** Choose the disk. All of it is used and erased; disks under
+   20 GiB are refused.
+2. **Form.** Keyboard layout first — the console switches to it, so the
+   passwords that follow are typed the way you will type them later. Then
+   your name, user name, password, the computer's name and the timezone (type
+   to search). Encryption is optional; the disk password can be the same as
+   your own.
+3. **Summary.** Check it. *Edit* goes back to the form with your answers
+   kept for the keyboard layout, names, computer name and timezone; the
+   passwords and the encryption choice are asked again. Nothing is written
+   until you choose *Install*.
+4. **Progress.** Seven stages. If one fails, the screen shows the end of the
+   log and offers the full log, a shell, or power off. The log is
+   `/var/log/gnomarchy-installer.log`, copied to the installed system.
+
 ## The first five minutes
 
 Press `Super + Alt + Space`. That is the command center: themes, web apps,

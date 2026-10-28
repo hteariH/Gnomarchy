@@ -1,0 +1,27 @@
+#!/bin/bash
+# Started at login by /etc/xdg/autostart/gnomarchy-snapshot-notify.desktop.
+# On a snapshot boot it says that changes will not survive a reboot and
+# offers to make the snapshot the real system; otherwise it exits at once.
+set -euo pipefail
+
+trace() { logger -t gnomarchy-snapshot-notify -- "$*"; }
+
+n=""
+read -ra words </proc/cmdline
+for word in "${words[@]}"; do
+  [[ "$word" == gnomarchy.snapshot=* ]] && n="${word#*=}"
+done
+[[ -n "$n" ]] || exit 0
+
+trace "booted from snapshot $n"
+# --wait blocks until the notification is answered or dismissed; dismissing
+# it is a normal answer, not a failure.
+action="$(notify-send --app-name=Gnomarchy --icon=document-revert --urgency=critical \
+  --action=restore="Restore this snapshot" --wait \
+  "Booted snapshot $n" \
+  "Changes made now are lost at reboot. Restore the snapshot to keep this state.")" || action=""
+
+if [[ "$action" == restore ]]; then
+  trace "restore requested for snapshot $n"
+  exec gnome-terminal -- gnomarchy snapshot restore "$n"
+fi

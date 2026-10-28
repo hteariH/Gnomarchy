@@ -83,7 +83,7 @@
       <div class="container">
         <div class="hero-pill-badge">
           <span>🐧</span>
-          <span>Arch Linux rolling · GNOME 51 · Btrfs + Snapper rollbacks</span>
+          <span>Arch Linux rolling · GNOME 51 · Btrfs + bootable Snapper snapshots</span>
         </div>
 
         <h1 class="hero-h1">
@@ -150,7 +150,8 @@ Commands:
                                Steam, Proton-GE, Wine and launchers in one go
   asus &lt;status|charge|profile|keyboard|graphics&gt;
                                Asus ROG/TUF laptop controls
-  snapshot &lt;create|list&gt;       Manage Btrfs Snapper rollback snapshots
+  snapshot &lt;create|list|restore&gt;
+                               Btrfs snapshots; restore makes one the system
   webapp &lt;add|list|remove&gt;     Turn websites into isolated desktop applications
   voxtype [toggle|start|stop]  Speech-to-text AI dictation (Super+D)
   windows &lt;setup|start|stop&gt;   Manage accelerated Windows 11 KVM VM
@@ -655,7 +656,7 @@ sudo dd if=gnomarchy-linux-*-x86_64.iso of=/dev/sdX bs=4M status=progress</div>
           </div>
           <div class="fact-item">
             <span class="fact-key">If something looks wrong</span>
-            <span class="fact-val"><code>/var/log/gnomarchy-install.log</code> carries per-stage markers</span>
+            <span class="fact-val"><code>/var/log/gnomarchy-installer.log</code> shows the failing stage; <code>/var/log/gnomarchy-install.log</code> carries per-stage markers</span>
           </div>
         </div>
       </div>

@@ -1,0 +1,101 @@
+#!/bin/bash
+# gnomarchy-boot — the only program that writes limine.conf.
+#
+# Runs as root from /usr/local/lib/gnomarchy/boot (root never executes scripts
+# from a user's home). Called by the installer, the pacman hooks, the snapper
+# plugin, the mkinitcpio post hook, the theme path unit, `gnomarchy boot
+# update` and `gnomarchy snapshot restore`; `guard` by pacman and `gnomarchy
+# update` before every transaction.
+# Design: docs/superpowers/specs/2026-10-28-installer-limine-design.md
+# shellcheck source-path=SCRIPTDIR
+set -Eeuo pipefail
+
+BOOT_LIB="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib"
+# shellcheck source=lib/common.sh
+source "$BOOT_LIB/common.sh"
+# shellcheck source=lib/menu.sh
+source "$BOOT_LIB/menu.sh"
+# shellcheck source=lib/snapshots.sh
+source "$BOOT_LIB/snapshots.sh"
+# shellcheck source=lib/install.sh
+source "$BOOT_LIB/install.sh"
+# shellcheck source=lib/snapper.sh
+source "$BOOT_LIB/snapper.sh"
+# shellcheck source=lib/restore.sh
+source "$BOOT_LIB/restore.sh"
+# shellcheck source=lib/guard.sh
+source "$BOOT_LIB/guard.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: gnomarchy-boot <command>
+
+  install                 put Limine on the ESP and the disk (UEFI and BIOS)
+  update [--default ID]   regenerate limine.conf; ID is snapshot:N or a kernel
+  snapshot-add N          give snapper snapshot N a menu entry
+  snapshot-remove N       drop snapshot N's menu entry
+  snapper-init            create the root snapper config and snapshot 1
+  restore N               make snapshot N the root filesystem from next boot
+  guard                   fail on a snapshot boot or with a restore pending
+EOF
+}
+
+# guard only reads, so gnomarchy update can ask it before it asks for sudo.
+if [[ $EUID -ne 0 && -z "$BOOT_ROOT" && "${1:-}" != guard ]]; then
+  boot_die "must run as root"
+fi
+
+# One writer at a time: a pacman hook, the snapper plugin and a theme change
+# can all fire at once.
+boot_lock() {
+  mkdir -p "$BOOT_STATE"
+  exec 9>"$BOOT_STATE/lock"
+  flock 9
+}
+
+cmd="${1:-}"
+(($#)) && shift
+
+case "$cmd" in
+  update)
+    default=""
+    if [[ "${1:-}" == --default ]]; then
+      default="${2:?--default needs snapshot:N or a kernel name}"
+    fi
+    boot_lock
+    boot_write_conf "$default"
+    ;;
+  snapshot-add)
+    boot_lock
+    boot_snapshot_add "${1:?snapshot-add needs a snapshot number}"
+    boot_write_conf
+    ;;
+  snapshot-remove)
+    boot_lock
+    boot_snapshot_remove "${1:?snapshot-remove needs a snapshot number}"
+    boot_write_conf
+    ;;
+  install)
+    boot_lock
+    boot_install
+    ;;
+  snapper-init)
+    # No lock: creating snapshot 1 calls back into snapshot-add, which takes it.
+    boot_snapper_init
+    ;;
+  restore)
+    boot_lock
+    boot_restore "${1:?restore needs a snapshot number}"
+    ;;
+  guard)
+    # No lock: it writes nothing, and pacman runs it before every transaction.
+    boot_guard
+    ;;
+  -h | --help | help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac

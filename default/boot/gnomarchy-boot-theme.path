@@ -1,0 +1,8 @@
+[Unit]
+Description=Watch the Gnomarchy boot menu theme
+
+[Path]
+PathChanged=/etc/gnomarchy/boot-theme.conf
+
+[Install]
+WantedBy=paths.target

@@ -151,10 +151,10 @@ Switch with: gnomarchy tiling <enable|disable>`,
       cmd: 'gnomarchy snapshot create "Before the kernel upgrade"',
       output: `Creating Snapper root snapshot: Before the kernel upgrade
 Snapshot created successfully.`,
-      note: 'Snapper is configured on root, with timeline and cleanup timers and ' +
-            'a retention limit of 10. Roll back with snapper rollback and a ' +
-            'reboot — limine does not currently list snapshots as boot entries. ' +
-            '/home is a separate subvolume and is not part of a root snapshot.'
+      note: 'Snapper snapshots the root before and after every pacman transaction. ' +
+            'Each snapshot appears in the Limine menu and boots with its own kernel; ' +
+            'gnomarchy snapshot restore makes one the system. /home is a separate ' +
+            'subvolume and is not part of a root snapshot.'
     },
     webapp: {
       cmd: 'gnomarchy webapp add Claude https://claude.ai',

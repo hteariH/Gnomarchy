@@ -343,6 +343,199 @@ for cmd in gnomarchy-menu gnomarchy-manual gnomarchy-keybindings; do
 done
 (( terminal_relics == 0 )) && ok "the three commands no longer spawn a terminal"
 
+# --- Boot: Limine, initramfs and snapshots ---------------------------------
+# README promised snapshots in the Limine menu while nothing wrote them; the
+# snapper config was never created; LUKS installs got a busybox hook in a
+# systemd initramfs; plymouth was never added. Each check below is one of those.
+BOOT_DIR="$ROOT/boot"
+LIMINE_CONF="$BOOT_DIR/limine.conf"
+CMDLINE_FILE="$ROOT/etc/kernel/cmdline"
+b2() { b2sum "$1" | cut -d' ' -f1; }
+
+cmdline=""
+if [[ -f "$CMDLINE_FILE" ]]; then
+  cmdline="$(<"$CMDLINE_FILE")"
+  ok "/etc/kernel/cmdline exists"
+else
+  no "no /etc/kernel/cmdline" "gnomarchy-boot has nothing to build the menu from"
+fi
+
+if [[ -f "$LIMINE_CONF" ]]; then
+  refs=0
+  bad=0
+  while read -r path hash; do
+    refs=$((refs + 1))
+    if [[ ! -f "$BOOT_DIR$path" ]]; then
+      no "limine.conf points at a missing file" "$path"
+      bad=$((bad + 1))
+    elif [[ "$(b2 "$BOOT_DIR$path")" != "$hash" ]]; then
+      no "limine.conf hash does not match" "$path"
+      bad=$((bad + 1))
+    fi
+  done < <(sed -nE 's/^[[:space:]]*(kernel_path|module_path): boot\(\):([^#]+)#([0-9a-f]{128})$/\2 \3/p' "$LIMINE_CONF")
+  unhashed="$(grep -cE '^[[:space:]]*(kernel_path|module_path): boot\(\):[^#]*$' "$LIMINE_CONF")"
+  if ((refs > 0 && bad == 0 && unhashed == 0)); then
+    ok "limine.conf: all $refs boot files exist and match their blake2b hashes"
+  elif ((refs == 0)); then
+    no "limine.conf has no hashed kernel or initramfs paths"
+  elif ((unhashed > 0)); then
+    no "limine.conf has $unhashed boot paths without a hash"
+  fi
+  grep -qx 'default_entry: Gnomarchy/linux' "$LIMINE_CONF" &&
+    ok "the menu defaults to Gnomarchy/linux" || no "the menu does not default to Gnomarchy/linux"
+  grep -qx 'interface_branding: Gnomarchy' "$LIMINE_CONF" && grep -q '^term_palette: ' "$LIMINE_CONF" &&
+    ok "the menu carries the theme palette" || no "no theme palette in limine.conf"
+  [[ -n "$cmdline" ]] && grep -qxF "    kernel_cmdline: $cmdline" "$LIMINE_CONF" &&
+    ok "the kernel entry boots /etc/kernel/cmdline" || no "no entry boots /etc/kernel/cmdline"
+  fs_uuid="$(findmnt -no UUID --target "$ROOT")"
+  [[ -n "$fs_uuid" && " $cmdline " == *" root=UUID=$fs_uuid "* ]] &&
+    ok "root=UUID matches the installed Btrfs" || no "root=UUID does not match the Btrfs UUID" "fs: $fs_uuid, cmdline: $cmdline"
+else
+  no "no limine.conf on the ESP"
+fi
+
+for efi in EFI/BOOT/BOOTX64.EFI EFI/limine/BOOTX64.EFI; do
+  if [[ -f "$BOOT_DIR/$efi" && "$(b2 "$BOOT_DIR/$efi")" == "$(b2 "$ROOT/usr/share/limine/BOOTX64.EFI")" ]]; then
+    ok "$efi is the installed Limine"
+  else
+    no "$efi is missing or not the installed Limine"
+  fi
+done
+if [[ -f "$BOOT_DIR/limine-bios.sys" && "$(b2 "$BOOT_DIR/limine-bios.sys")" == "$(b2 "$ROOT/usr/share/limine/limine-bios.sys")" ]]; then
+  ok "limine-bios.sys is on the ESP"
+else
+  no "limine-bios.sys missing from the ESP"
+fi
+if [[ -n "${GNOMARCHY_TEST_DISK:-}" ]]; then
+  # The CI disk is a fresh qcow2, so the boot code area is zeroed (wipefs only
+  # erases signatures); only limine bios-install writes it.
+  if (($(head -c 440 "$GNOMARCHY_TEST_DISK" | tr -d '\0' | wc -c) > 0)); then
+    ok "the MBR carries boot code (limine bios-install ran)"
+  else
+    no "the MBR boot code is empty" "limine bios-install never ran on $GNOMARCHY_TEST_DISK"
+  fi
+fi
+esp_dev="$(findmnt -no SOURCE --target "$BOOT_DIR")"
+if [[ -n "$esp_dev" ]] && (($(blockdev --getsize64 "$esp_dev") >= 4 * 1024 * 1024 * 1024)); then
+  ok "the ESP is at least 4 GiB"
+else
+  no "the ESP is smaller than 4 GiB" "$esp_dev"
+fi
+
+DROPIN="$ROOT/etc/mkinitcpio.conf.d/gnomarchy.conf"
+if [[ -f "$DROPIN" ]]; then
+  hooks=" $(sed -n 's/^HOOKS=(\(.*\))$/\1/p' "$DROPIN") "
+  missing=()
+  for h in systemd plymouth sd-vconsole gnomarchy-overlay; do
+    [[ "$hooks" == *" $h "* ]] || missing+=("$h")
+  done
+  ((${#missing[@]} == 0)) && ok "initramfs HOOKS include systemd, plymouth, sd-vconsole, gnomarchy-overlay" ||
+    no "initramfs HOOKS lack: ${missing[*]}" "$hooks"
+  [[ "$hooks" == *" udev "* || "$hooks" == *" encrypt "* ]] &&
+    no "busybox hooks in a systemd initramfs" "$hooks"
+  if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" == y ]]; then
+    [[ "$hooks" == *" sd-encrypt "* ]] && ok "sd-encrypt is in HOOKS" || no "an encrypted install without sd-encrypt"
+  else
+    [[ "$hooks" == *" sd-encrypt "* ]] &&
+      no "sd-encrypt in HOOKS on a plain install" "$hooks" || ok "no sd-encrypt in HOOKS on a plain install"
+  fi
+else
+  no "no /etc/mkinitcpio.conf.d/gnomarchy.conf"
+fi
+[[ -f "$ROOT/etc/initcpio/install/gnomarchy-overlay" ]] &&
+  ok "the gnomarchy-overlay initcpio hook is installed" || no "no gnomarchy-overlay initcpio hook"
+grep -q 'subvolid=' "$ROOT/etc/fstab" &&
+  no "fstab pins subvolid=" "snapshots and a restored @ cannot mount" || ok "fstab mounts by subvolume name only"
+
+SNAPCFG="$ROOT/etc/snapper/configs/root"
+if [[ -f "$SNAPCFG" ]]; then
+  for kv in 'TIMELINE_CREATE="no"' 'NUMBER_LIMIT="10"' 'ALLOW_GROUPS="wheel"'; do
+    grep -qxF "$kv" "$SNAPCFG" && ok "snapper root config: $kv" || no "snapper root config lacks $kv"
+  done
+else
+  no "no snapper root config" "snapper-init never ran"
+fi
+grep -qE '^SNAPPER_CONFIGS="(.* )?root( .*)?"$' "$ROOT/etc/conf.d/snapper" &&
+  ok "SNAPPER_CONFIGS lists root" || no "SNAPPER_CONFIGS does not list root"
+[[ -L "$ROOT/etc/systemd/system/timers.target.wants/snapper-cleanup.timer" ]] &&
+  ok "snapper-cleanup.timer is enabled" || no "snapper-cleanup.timer is not enabled"
+[[ -L "$ROOT/etc/systemd/system/timers.target.wants/snapper-timeline.timer" ]] &&
+  no "snapper-timeline.timer is enabled" "timeline snapshots are off by design"
+[[ -L "$ROOT/etc/systemd/system/paths.target.wants/gnomarchy-boot-theme.path" ]] &&
+  ok "the boot-theme path unit is enabled" || no "gnomarchy-boot-theme.path is not enabled"
+[[ -x "$ROOT/usr/lib/snapper/plugins/50-gnomarchy-boot" ]] &&
+  ok "the snapper plugin is installed" || no "no executable snapper plugin"
+for hook in 00-gnomarchy-guard.hook 95-gnomarchy-boot.hook 95-gnomarchy-limine.hook; do
+  [[ -f "$ROOT/etc/pacman.d/hooks/$hook" ]] && ok "pacman hook $hook" || no "no pacman hook $hook"
+done
+# A hand-run mkinitcpio -P left the menu naming the old image's hash.
+[[ -x "$ROOT/etc/initcpio/post/gnomarchy-boot" ]] &&
+  ok "the mkinitcpio post hook is installed" || no "no executable mkinitcpio post hook"
+compgen -G "$ROOT/var/lib/pacman/local/snap-pac-[0-9]*" >/dev/null &&
+  ok "snap-pac is installed" || no "snap-pac is not installed"
+if grep -q '<description>Gnomarchy installed</description>' "$ROOT/.snapshots/1/info.xml" 2>/dev/null; then
+  ok "snapshot 1 \"Gnomarchy installed\" exists"
+else
+  # The test reads .snapshots through the @snapshots mount; without it this
+  # file cannot exist, which the workflow guards against.
+  no "no snapshot 1 \"Gnomarchy installed\""
+fi
+[[ -f "$BOOT_DIR/gnomarchy/entries/1.conf" ]] && grep -q '^///1 | ' "$LIMINE_CONF" &&
+  ok "snapshot 1 is in the boot menu" || no "snapshot 1 is not in the boot menu"
+
+# --- The installer's answers ------------------------------------------------
+# In CI the answers must arrive; an unset variable would otherwise skip every
+# check below without a word (sudo -E dropped them once).
+if [[ -n "${CI:-}" && -z "${GNOMARCHY_TEST_HOSTNAME:-}" ]]; then
+  no "GNOMARCHY_TEST_* variables did not reach the script" "CI is set but GNOMARCHY_TEST_HOSTNAME is not; the environment was dropped on the way in"
+fi
+if [[ -n "${GNOMARCHY_TEST_HOSTNAME:-}" ]]; then
+  [[ "$(<"$ROOT/etc/hostname")" == "$GNOMARCHY_TEST_HOSTNAME" ]] &&
+    ok "hostname is $GNOMARCHY_TEST_HOSTNAME" || no "hostname is not $GNOMARCHY_TEST_HOSTNAME" "$(<"$ROOT/etc/hostname")"
+fi
+if [[ -n "${GNOMARCHY_TEST_TIMEZONE:-}" ]]; then
+  tz_link="$(readlink "$ROOT/etc/localtime")"
+  [[ -L "$ROOT/etc/localtime" && "$tz_link" == */zoneinfo/$GNOMARCHY_TEST_TIMEZONE ]] &&
+    ok "timezone is $GNOMARCHY_TEST_TIMEZONE" || no "timezone is not $GNOMARCHY_TEST_TIMEZONE" "$tz_link"
+fi
+if [[ -n "${GNOMARCHY_TEST_KEYMAP:-}" ]]; then
+  # shellcheck source=../installer/lib/form.sh
+  source "$(dirname "$0")/../installer/lib/form.sh"
+  if keymap_load "$GNOMARCHY_TEST_KEYMAP"; then
+    grep -qx "KEYMAP=$KB_CONSOLE_KEYMAP" "$ROOT/etc/vconsole.conf" &&
+      ok "console keymap is $KB_CONSOLE_KEYMAP" || no "console keymap is not $KB_CONSOLE_KEYMAP"
+    grep -qF "Option \"XkbLayout\" \"$KB_XKB_LAYOUT\"" "$ROOT/etc/X11/xorg.conf.d/00-keyboard.conf" &&
+      ok "X11 layout is $KB_XKB_LAYOUT" || no "X11 layout is not $KB_XKB_LAYOUT"
+    grep -qx "XKB_LAYOUT=$KB_XKB_LAYOUT" "$ROOT/etc/gnomarchy/keyboard.conf" &&
+      ok "first-run will set input source $KB_XKB_LAYOUT" || no "keyboard.conf does not name $KB_XKB_LAYOUT"
+  else
+    no "GNOMARCHY_TEST_KEYMAP $GNOMARCHY_TEST_KEYMAP is not in keymaps.tsv"
+  fi
+fi
+grep -q 'Installation complete' "$ROOT/var/log/gnomarchy-installer.log" &&
+  ok "the installer log is on the target" || no "no complete installer log at /var/log/gnomarchy-installer.log"
+
+if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" != y ]]; then
+  [[ "$cmdline" == *"rd.luks.name="* ]] &&
+    no "rd.luks.name on a plain install" "$cmdline" || ok "no rd.luks.name on a plain install"
+fi
+if [[ "${GNOMARCHY_TEST_ENCRYPT:-n}" == y ]]; then
+  if [[ -n "${GNOMARCHY_TEST_LUKS_DEV:-}" ]]; then
+    luks_uuid="$(blkid -s UUID -o value "$GNOMARCHY_TEST_LUKS_DEV")"
+    [[ -n "$luks_uuid" && " $cmdline " == *" rd.luks.name=$luks_uuid=cryptroot "* ]] &&
+      ok "rd.luks.name opens the LUKS partition" || no "rd.luks.name does not name $luks_uuid" "$cmdline"
+  else
+    echo "  SKIP  rd.luks.name check: GNOMARCHY_TEST_LUKS_DEV is not set"
+  fi
+  if [[ -f "$ROOT/etc/crypttab" ]] && grep -q '^cryptroot' "$ROOT/etc/crypttab"; then
+    no "crypttab also opens cryptroot" "the root is opened from the command line"
+  else
+    ok "crypttab does not compete with rd.luks.name"
+  fi
+  grep -qx 'AutomaticLoginEnable=true' "$ROOT/etc/gdm/custom.conf" &&
+    ok "GDM autologin on the encrypted install" || no "GDM autologin not enabled on the encrypted install"
+fi
+
 echo
 echo "=== $pass passed, $fail failed ==="
 ((fail == 0))

@@ -7,8 +7,10 @@
 # that cannot be made offline: dconf only holds them once a session with a
 # D-Bus bus has actually applied them.
 #
-# Writes results to /var/tmp/gnomarchy-session-verify.txt and powers off, so
-# CI reads the outcome from the disk image rather than the serial console.
+# Writes its report to ~/.local/state/gnomarchy/verify/<mode>.txt and powers
+# off, so CI reads the outcome from the disk image rather than the serial
+# console. /home is its own subvolume: the report survives a snapshot boot,
+# whose root is a tmpfs overlay that /var/tmp used to vanish with.
 # Progress also goes to the journal. A report written only to a file tells us
 # nothing when the script hangs before finishing, which is exactly what
 # happened: the run timed out with no output at all.
@@ -16,7 +18,16 @@ trace() { logger -t gnomarchy-verify -- "$*" 2>/dev/null || true; }
 
 trace "verify-session started as $(whoami), session=${XDG_SESSION_TYPE:-unknown}"
 
-exec >"/var/tmp/gnomarchy-session-verify.txt" 2>&1
+MODE=session
+SNAPSHOT_BOOTED=""
+read -ra cmdline_words </proc/cmdline
+for word in "${cmdline_words[@]}"; do
+  [[ "$word" == gnomarchy.snapshot=* ]] && SNAPSHOT_BOOTED="${word#*=}"
+done
+[[ -n "$SNAPSHOT_BOOTED" ]] && MODE=snapshot
+REPORT_DIR="$HOME/.local/state/gnomarchy/verify"
+mkdir -p "$REPORT_DIR"
+exec >"$REPORT_DIR/$MODE.txt" 2>&1
 
 pass=0
 fail=0
@@ -29,6 +40,22 @@ no() {
   echo "FAIL  $1${2:+ -- $2}"
   trace "FAIL $1 ${2:-}"
   fail=$((fail + 1))
+}
+
+finish() {
+  echo
+  echo "=== $pass passed, $fail failed ==="
+  echo "RESULT: $([[ $fail -eq 0 ]] && echo SUCCESS || echo FAILURE)"
+  sync
+  trace "verification finished ($MODE): $pass passed, $fail failed"
+  # Powering off ends the CI run. Go through sudo, which has an explicit
+  # NOPASSWD rule: a bare systemctl poweroff depends on polkit granting it, and
+  # if that is refused the script hangs and the whole job times out.
+  sudo -n systemctl poweroff 2>/dev/null ||
+    systemctl poweroff 2>/dev/null ||
+    sudo -n reboot 2>/dev/null ||
+    trace "could not power off"
+  exit 0
 }
 
 # first-run is an autostart entry; give it time to finish before sampling
@@ -48,6 +75,61 @@ if [[ -f "$HOME/.local/state/gnomarchy/first-run.done" ]]; then
   ok "gnomarchy-first-run completed"
 else
   no "gnomarchy-first-run never completed" "autostart entry did not run"
+fi
+
+# --- Third boot: running from a snapshot ------------------------------------
+if [[ "$MODE" == snapshot ]]; then
+  n="$SNAPSHOT_BOOTED"
+  echo "booted from snapshot $n"
+  ok "a GNOME session came up from snapshot $n"
+  [[ "$(findmnt -no FSTYPE /)" == overlay ]] && ok "/ is an overlay" ||
+    no "/ is not an overlay" "$(findmnt -no FSTYPE,SOURCE,OPTIONS /)"
+  [[ " ${cmdline_words[*]} " == *" rootflags=subvol=@snapshots/$n/snapshot "* ]] &&
+    ok "the root is snapshot $n" || no "the command line does not point at snapshot $n"
+  if echo probe >/var/tmp/gnomarchy-overlay-probe; then
+    ok "the root accepts writes (CI checks they never reach the snapshot)"
+  else
+    no "the snapshot root is not writable"
+  fi
+  notified=0
+  for _ in $(seq 1 30); do
+    if journalctl --user -t gnomarchy-snapshot-notify --no-pager | grep -q "booted from snapshot $n"; then
+      notified=1
+      break
+    fi
+    sleep 1
+  done
+  ((notified)) && ok "the snapshot notice ran" || no "the snapshot notice never ran"
+  echo "--- failed units (diagnostic only) ---"
+  systemctl --failed --no-legend --no-pager
+  # A transaction here put the new kernel on the persistent ESP while its
+  # modules vanished with the overlay, so the guard hook must refuse it.
+  if guard_out="$(/usr/local/lib/gnomarchy/boot/gnomarchy-boot guard 2>&1)"; then
+    no "gnomarchy-boot guard lets a snapshot boot through"
+  elif [[ "$guard_out" == *"running snapshot $n"* ]]; then
+    ok "gnomarchy-boot guard refuses a snapshot boot and names it"
+  else
+    no "gnomarchy-boot guard refused without naming snapshot $n" "$guard_out"
+  fi
+  menu_before="$(b2sum /boot/limine.conf)"
+  pkg="$(find /var/cache/pacman/pkg -name 'file-[0-9]*.pkg.tar.zst' | sort | tail -n1)"
+  if [[ -z "$pkg" ]]; then
+    no "no cached package to try a transaction with"
+  elif sudo -n pacman -U --noconfirm "$pkg"; then
+    no "pacman ran a transaction on a snapshot boot"
+  else
+    ok "pacman refuses a transaction on a snapshot boot"
+  fi
+  [[ "$(b2sum /boot/limine.conf)" == "$menu_before" ]] &&
+    ok "the refused transaction left the menu alone" || no "the refused transaction changed limine.conf"
+  if gnomarchy snapshot restore "$n" --yes; then
+    ok "gnomarchy snapshot restore $n succeeded"
+  else
+    no "gnomarchy snapshot restore $n failed"
+  fi
+  grep -qx 'default_entry: Gnomarchy/linux' /boot/limine.conf &&
+    ok "the menu defaults to linux again" || no "the menu does not default to linux after the restore"
+  finish
 fi
 
 # --- Regression: no keyboard shortcut worked at all ------------------------
@@ -260,6 +342,77 @@ for entry in /usr/share/applications/code-oss.desktop   /usr/share/applications/
   echo "INFO  provided by: ${found:-nothing}"
 done
 
+# --- Boot menu: snapshots, snap-pac and the theme ---------------------------
+BOOT_BIN=/usr/local/lib/gnomarchy/boot/gnomarchy-boot
+LIMINE=/boot/limine.conf
+
+limine_refs_ok() {
+  local path hash bad=0
+  while read -r path hash; do
+    if [[ ! -f "/boot$path" || "$(b2sum "/boot$path" | cut -d' ' -f1)" != "$hash" ]]; then
+      echo "      bad reference: $path"
+      bad=1
+    fi
+  done < <(sed -nE 's/^[[:space:]]*(kernel_path|module_path): boot\(\):([^#]+)#([0-9a-f]+)$/\2 \3/p' "$LIMINE")
+  return "$bad"
+}
+
+snap="$(sudo -n snapper -c root create --print-number --description 'CI session snapshot')"
+if [[ "$snap" =~ ^[0-9]+$ ]] && grep -q "^///$snap | " "$LIMINE"; then
+  ok "snapshot $snap, made through snapperd, is in the boot menu"
+else
+  no "a snapshot made through snapperd did not reach the boot menu" "snapper printed: $snap"
+fi
+limine_refs_ok && ok "every boot file in limine.conf matches its hash" || no "limine.conf has stale references"
+
+pkg="$(find /var/cache/pacman/pkg -name 'file-[0-9]*.pkg.tar.zst' | sort | tail -n1)"
+if [[ -n "$pkg" ]] && sudo -n pacman -U --noconfirm "$pkg"; then
+  post="$(sudo -n snapper --csvout --no-headers -c root list --columns number,type |
+    awk -F, '$2 == "post" { n = $1 } END { print n }')"
+  if [[ -n "$post" ]] && ((post > snap)) && grep -q "^///$post | " "$LIMINE"; then
+    ok "snap-pac's post snapshot $post of a pacman transaction is in the boot menu"
+  else
+    no "no post snapshot of the pacman transaction in the boot menu" "newest post: ${post:-none}"
+  fi
+else
+  no "could not reinstall the file package from the cache" "${pkg:-no package found}"
+fi
+
+# shellcheck source=../../default/boot/lib/palette.sh
+source "$HOME/.local/share/gnomarchy/default/boot/lib/palette.sh"
+want="$(boot_palette_from_alacritty "$HOME/.local/share/gnomarchy/themes/gruvbox/alacritty.toml" |
+  sed -n 's/^BACKGROUND=//p')"
+gnomarchy-theme-set gruvbox >/dev/null
+recoloured=0
+for _ in $(seq 1 20); do
+  grep -qx "term_background: 00$want" "$LIMINE" && { recoloured=1; break; }
+  sleep 1
+done
+((recoloured)) && ok "a theme change recolours the Limine menu" ||
+  no "the Limine menu kept its colours after a theme change" "$(grep '^term_background' "$LIMINE")"
+gnomarchy-theme-set tokyo-night >/dev/null
+# The theme change queues a menu regeneration (a path unit) that renders the
+# default entry. Wait for it to land and finish, or it can run after the
+# hand-over below and reset the third boot's default.
+want_back="$(boot_palette_from_alacritty "$HOME/.local/share/gnomarchy/themes/tokyo-night/alacritty.toml" |
+  sed -n 's/^BACKGROUND=//p')"
+settled=0
+for _ in $(seq 1 30); do
+  if grep -qx "term_background: 00$want_back" "$LIMINE" &&
+    ! systemctl is-active --quiet gnomarchy-boot-theme.service; then
+    settled=1
+    break
+  fi
+  sleep 1
+done
+((settled)) || no "the menu did not return to tokyo-night" "$(grep '^term_background' "$LIMINE")"
+
+sources="$(gsettings get org.gnome.desktop.input-sources sources)"
+[[ "$sources" == "[('xkb', 'de')]" ]] && ok "GNOME input sources are the installer's layout" ||
+  no "GNOME input sources are not [('xkb', 'de')]" "$sources"
+tz="$(timedatectl show -p Timezone --value)"
+[[ "$tz" == Europe/Berlin ]] && ok "the timezone is Europe/Berlin" || no "the timezone is $tz"
+
 # --- The control center ----------------------------------------------------
 # GJS has no compile step, so a syntax error or a bad import is invisible until
 # something runs the app. An application that owns its D-Bus name has parsed
@@ -286,17 +439,19 @@ fi
 
 kill "$gui_pid" 2>/dev/null || true  # already gone if it crashed; not a failure
 
-echo
-echo "=== $pass passed, $fail failed ==="
-echo "RESULT: $([[ $fail -eq 0 ]] && echo SUCCESS || echo FAILURE)"
+# Hand over to the third boot: the snapshot made above, which, unlike
+# snapshot 1, includes CI's autologin and this script. No queued regeneration
+# may follow --default, so let the theme service go idle first.
+for _ in $(seq 1 30); do
+  systemctl is-active --quiet gnomarchy-boot-theme.service || break
+  sleep 1
+done
+if [[ "$snap" =~ ^[0-9]+$ ]] && sudo -n "$BOOT_BIN" update --default "snapshot:$snap" &&
+  grep -q "^default_entry: Gnomarchy/Snapshots/$snap | " "$LIMINE"; then
+  ok "the next boot defaults to snapshot $snap"
+  echo "SNAPSHOT: $snap"
+else
+  no "could not make snapshot $snap the next boot's default"
+fi
 
-sync
-trace "verification finished: $pass passed, $fail failed"
-
-# Powering off ends the CI run. Go through sudo, which has an explicit
-# NOPASSWD rule: a bare systemctl poweroff depends on polkit granting it, and
-# if that is refused the script hangs and the whole job times out.
-sudo -n systemctl poweroff 2>/dev/null ||
-  systemctl poweroff 2>/dev/null ||
-  sudo -n reboot 2>/dev/null ||
-  trace "could not power off"
+finish

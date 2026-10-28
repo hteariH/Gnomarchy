@@ -1,0 +1,21 @@
+#!/bin/bash
+# snapper plugin: keeps the Limine menu in step with the root config.
+#
+# snapper runs every executable in /usr/lib/snapper/plugins as
+#   <event> <subvolume> <fstype> [<snapshot number>]
+# and treats a non-zero exit as an error it reports. Plugins must not call
+# snapper and must finish within seconds; gnomarchy-boot reads snapper's files.
+set -euo pipefail
+
+BOOT="${GNOMARCHY_BOOT_BIN:-/usr/local/lib/gnomarchy/boot/gnomarchy-boot}"
+
+event="${1:-}"
+subvolume="${2:-}"
+[[ "$subvolume" == / ]] || exit 0
+
+case "$event" in
+  create-snapshot-post) exec "$BOOT" snapshot-add "${4:?no snapshot number}" ;;
+  delete-snapshot-post) exec "$BOOT" snapshot-remove "${4:?no snapshot number}" ;;
+  create-config-post) exec "$BOOT" update ;;
+esac
+exit 0

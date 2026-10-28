@@ -27,7 +27,7 @@ install/
   config/                system and user configuration
     hardware/            per-vendor profiles, sourced by all.sh
   desktop/               GNOME configuration (dconf; needs a session)
-  login/                 GDM, Plymouth, limine + snapper
+  login/                 GDM, Plymouth, the Limine menu (boot.sh)
   post-install/          cleanup, migration baseline
   gnomarchy-base.packages   pacman list, official repos only
 migrations/              timestamped, once-per-machine repair scripts
@@ -36,9 +36,11 @@ manual/                  numbered pages read by `gnomarchy manual`
 gui/                     the control center: GTK4/libadwaita in GJS, no build step
 iso/
   builder/build-iso.sh   archiso profile assembly
-  configs/airootfs/root/.automated_script.sh   the installer itself
+  installer/             the installer (gnomarchy-install + lib/)
+  configs/airootfs/root/.automated_script.sh   starts iso/installer/gnomarchy-install on tty1
   tests/                 smoke-test verification scripts
 default/                 files deployed onto the installed system
+  boot/                  gnomarchy-boot, snapper plugin, pacman hooks, initcpio install and post hooks (deployed root-owned)
 ```
 
 `install.sh` sources the stages in order and wraps each in `run_stage`, which
@@ -142,6 +144,14 @@ QEMU** and checks the result in two layers:
 Every check corresponds to a defect that once shipped. Add one when you fix
 something the test would not have caught.
 
+A `unit` job runs first (`iso/tests/unit.sh`: the fast tests plus shellcheck)
+and the install job needs it. The install job runs twice, a `plain` and an
+`encrypted` variant; the encrypted one is checked offline only. The plain
+variant then boots a session, takes a snapshot, boots that snapshot and
+restores it. Session reports are under `~/.local/state/gnomarchy/verify/`
+(`session.txt`, `snapshot.txt`) because a snapshot boot's `/var/tmp` is
+volatile.
+
 **Cut a release only from a commit where this job is green.** The release
 workflow only proves the ISO builds; five releases shipped installation
 defects through green builds.
@@ -156,8 +166,12 @@ times:
 /dev/nbd0p3  subvol=@         /
 /dev/nbd0p3  subvol=@home     /home
 /dev/nbd0p3  subvol=@var_log  /var/log
+/dev/nbd0p3  subvol=@snapshots /.snapshots
 /dev/nbd0p2                   /boot     (EFI partition, holds limine.conf)
 ```
+
+On the encrypted variant the Btrfs is `/dev/mapper/ci-root`, opened from
+`/dev/nbd0p3` with the answers' password.
 
 Also: absolute symlinks inside a mounted image resolve against the **host**
 filesystem, so `-e` is false however correct the link is. Test with `-L`.
@@ -178,10 +192,12 @@ mcopy -i answers.img gnomarchy-unattended.conf ::/
 ## Diagnosing a failure
 
 ```bash
-/var/log/gnomarchy-install.log        installation; STAGE markers show where it stopped
+/var/log/gnomarchy-installer.log            the installer's own log; the [n/7] lines show the stage
+/var/log/gnomarchy-install.log              installation; STAGE markers show where it stopped
+/var/log/pacman.log                         gnomarchy-boot output from the pacman hooks
 journalctl --user -t gnomarchy-first-run    desktop configuration
 journalctl --user -t gnomarchy-verify       the CI session check
-gnomarchy version --verbose           version, theme, migrations applied
+gnomarchy version --verbose                 version, theme, migrations applied
 ```
 
 The install log is written by `install.sh` teeing into it. Before that existed,
@@ -197,6 +213,7 @@ the installer told users to read a file that was always empty.
 ~/.config/nvim/lua/plugins/theme.lua
 ~/.config/nvim/lua/plugins/gnomarchy-colorscheme.lua
 ~/.config/gtk-{3,4}.0/gnomarchy-theme.css
+/etc/gnomarchy/boot-theme.conf
 ```
 
 Each theme's `alacritty.toml` is the canonical palette: GNOME Terminal's dconf
@@ -207,6 +224,37 @@ default after the theme spec runs and silently undoes the switch.
 
 GNOME Terminal keeps colours in dconf, not a file, which is why a fixed profile
 UUID (`b1dcc9dd-…`) is created at install time.
+
+## The bootloader and snapshots
+
+`gnomarchy-boot` is the only thing that writes `/boot/limine.conf`. It
+regenerates the whole file from `/etc/kernel/cmdline`, the kernels on the ESP,
+per-snapshot records in `/boot/gnomarchy/entries/` and the theme in
+`/etc/gnomarchy/boot-theme.conf`. Change the command line in
+`/etc/kernel/cmdline`, never in `limine.conf`, then `gnomarchy boot update`.
+
+What regenerates it: the `Target = *` pacman hook, the snapper plugin, the
+theme path unit, and the mkinitcpio post hook `/etc/initcpio/post/gnomarchy-boot`,
+which catches a hand-run `mkinitcpio -P`. Kernel entries carry a `#b2sum`, so
+a stale menu would otherwise panic; `hash_mismatch_panic: no` turns that into
+a warning.
+
+`00-gnomarchy-guard.hook` runs `gnomarchy-boot guard` before every pacman
+transaction and aborts it on a snapshot boot (`gnomarchy.snapshot=` on the
+command line) or with a restore pending (root FSROOT `/@restore-backup-*`):
+the ESP survives the reboot and the root does not, so a kernel upgrade would
+leave a kernel with no modules. `gnomarchy update` asks the same guard first.
+
+It runs as root from `/usr/local/lib/gnomarchy/boot/`, copied there by
+`default/boot/deploy.sh` (installer, `install.sh`, `gnomarchy update`). Root
+never executes scripts from a user's home.
+
+Snapshot kernels are content-addressed in `/boot/gnomarchy/store/`; a
+snapshot boots read-only under `systemd.volatile=overlay`, which needs the
+`gnomarchy-overlay` initcpio hook. fstab must not contain `subvolid=`.
+
+`gnomarchy-boot`'s fast tests run its real code against a fake tree through
+`GNOMARCHY_BOOT_ROOT`: `iso/tests/unit.sh`, in an archlinux container.
 
 ## The control center GUI
 
