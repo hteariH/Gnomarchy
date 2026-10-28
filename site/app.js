@@ -193,8 +193,8 @@ Switch with: gnomarchy keymap <omarchy|gnome>`,
       output: `==> Updating Gnomarchy System Packages
 ==> Updating Gnomarchy Configurations
     Configuration updated
-==> Applying pending migrations
-    2026-09-11-1500-bind-keybindings-and-manual.sh
+==> Updating Boot Tooling
+    Boot menu regenerated
 
 ✓ System up to date!`,
       note: 'No set -e here on purpose: each stage may fail on its own and is ' +
