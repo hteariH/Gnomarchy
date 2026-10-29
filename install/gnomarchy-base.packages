@@ -39,6 +39,16 @@ papirus-icon-theme
 telegram-desktop
 discord
 
+# Desktop Applications
+# Brave is installed by packaging/brave-origin.sh; Chromium is the fallback
+# browser web apps and the Super+B binding already look for.
+chromium
+obs-studio
+libreoffice-fresh
+obsidian
+# The official Spotify client, fetched and kept current by Spotify's launcher.
+spotify-launcher
+
 # Sound, Media, & PipeWire
 pipewire
 pipewire-alsa
@@ -93,6 +103,7 @@ tldr
 git
 github-cli
 gum
+mise
 tree-sitter-cli
 lazygit
 lazydocker

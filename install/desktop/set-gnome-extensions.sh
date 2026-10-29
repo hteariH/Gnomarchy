@@ -10,6 +10,7 @@ EXTENSIONS=(
   "space-bar@luchrioh"
   "AlphabeticalAppGrid@stuarthayhurst"
   "appindicatorsupport@rgcjonas.gmail.com"
+  "gsconnect@andyholmes.github.io"
 )
 
 # Extension files and schemas are deployed earlier by

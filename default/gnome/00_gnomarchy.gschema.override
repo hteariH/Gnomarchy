@@ -3,7 +3,7 @@
 
 [org.gnome.shell]
 disable-user-extensions=false
-enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'tilingshell@ferrarodomenico.com', 'just-perfection-desktop@just-perfection', 'blur-my-shell@aunetx', 'space-bar@luchrioh', 'AlphabeticalAppGrid@stuarthayhurst', 'appindicatorsupport@rgcjonas.gmail.com']
+enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'tilingshell@ferrarodomenico.com', 'just-perfection-desktop@just-perfection', 'blur-my-shell@aunetx', 'space-bar@luchrioh', 'AlphabeticalAppGrid@stuarthayhurst', 'appindicatorsupport@rgcjonas.gmail.com', 'gsconnect@andyholmes.github.io']
 # Recomputed from what is actually installed by set-gnome-favorites.sh; this
 # default only covers the case where that step has not run yet. Listing
 # several browser ids here produced duplicate dash icons.

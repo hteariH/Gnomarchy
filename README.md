@@ -37,7 +37,8 @@ Gnomarchy is an opinionated, developer-first Linux distribution built on **Arch 
 - **🖥️ Ubuntu-Style Left Dock (Dash to Dock)**: Full-height, clean left panel with pinned favorites (GNOME Terminal, Brave Origin, Files, VS Code, Bazaar App Store).
 - **📝 VS Code as the Default Editor**: Preinstalled from the official Arch repository and wired up as the graphical default for source and text files. `$EDITOR` resolves to `code --wait` under a graphical session and `nano` in a TTY or over SSH. Neovim stays installed and themed for those who prefer it.
 - **🎮 One-Command Gaming Stack**: `gnomarchy gaming install` sets up Steam, Proton-GE, Wine, Lutris, Faugus Launcher, gamescope, GameMode and MangoHud, with the 32-bit Vulkan driver matched to your GPU.
-- **💬 Telegram & Discord Preinstalled**
+- **💬 Apps Preinstalled**: Telegram, Discord, Chromium, OBS Studio, LibreOffice, Obsidian, Spotify (through Spotify's own launcher), mise and Claude Code.
+- **📱 GSConnect**: KDE Connect for GNOME — notifications, files, clipboard and media control with your phone. Enabled out of the box, with its ports open in ufw for when you turn the firewall on.
 - **🛍️ Flatpak & Bazaar App Store**: Out-of-the-box Flatpak and Flathub integration with **Bazaar**, the modern, native GNOME software store for Flatpaks.
 - **💻 Hardware Profiles**: Detected and applied at install time — **Asus ROG and TUF** laptops (asusctl and ROG Control Center: fan curves, platform profiles, keyboard backlight, battery charge limit, plus supergfxctl for GPU switching on hybrid models), **Framework 13/16** (keyboard RGB access and the AMD microphone profile), **Apple T2** Macs, **Nvidia** (DRM modesetting and suspend/resume services), and **Intel** graphics (media drivers and Vulkan).
 
